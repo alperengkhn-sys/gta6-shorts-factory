@@ -41,7 +41,7 @@ def split_caption(text,limit=38):
         if len(nxt)>limit and cur: lines.append(cur); cur=word
         else: cur=nxt
     if cur: lines.append(cur)
-    return ["\n".join(lines[i:i+2]) for i in range(0,len(lines),2)]
+    return ["\\n".join(lines[i:i+2]) for i in range(0,len(lines),2)]
 
 def stamp(t):
     ms=int(t*1000); h=ms//3600000; m=(ms%3600000)//60000; s=(ms%60000)//1000
@@ -92,17 +92,20 @@ def main():
         chunks=split_caption(narration)
         with srt.open("w",encoding="utf-8") as f:
             for i,chunk in enumerate(chunks):
-                f.write(f"{i+1}\n{stamp(voice_duration*i/len(chunks))} --> {stamp(voice_duration*(i+1)/len(chunks))}\n{chunk}\n\n")
+                f.write(f"{i+1}\\n{stamp(voice_duration*i/len(chunks))} --> {stamp(voice_duration*(i+1)/len(chunks))}\\n{chunk}\\n\\n")
         titlefile.write_text(title,encoding="utf-8")
         vf=("scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,"
             "drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:"
             "textfile="+str(titlefile)+":fontcolor=white:fontsize=58:borderw=4:bordercolor=black:"
             "x=(w-text_w)/2:y=120,"
-            "subtitles="+str(srt).replace("\\","\\\\").replace(":","\\:"))
+            "subtitles="+str(srt).replace("\\\\","\\\\\\\\").replace(":","\\\\:"))
         if has_source_audio:
-            audio_filter=f"[0:a:0]volume=0.22[bg];[1:a:0]volume=1.0[vo];[bg][vo]amix=inputs=2:duration=longest:dropout_transition=2,apad=whole_dur={duration}[aout]"
+            audio_filter=(f"[0:a:0]atrim=duration={duration},asetpts=PTS-STARTPTS,volume=0.22[bg];"
+                          f"[1:a:0]atrim=duration={duration},asetpts=PTS-STARTPTS,apad=whole_dur={duration}[vo];"
+                          "[bg][vo]amix=inputs=2:duration=longest:dropout_transition=2,"
+                          f"atrim=duration={duration}[aout]")
         else:
-            audio_filter=f"[1:a:0]apad=whole_dur={duration}[aout]"
+            audio_filter=f"[1:a:0]apad=whole_dur={duration},atrim=duration={duration}[aout]"
         run(["ffmpeg","-nostdin","-hide_banner","-loglevel","warning","-y","-stream_loop","-1","-i",str(media),"-i",str(voice),
              "-vf",vf,"-filter_complex",audio_filter,"-map","0:v:0","-map","[aout]","-t",str(duration),
              "-r","30","-c:v","libx264","-preset","veryfast","-crf","22",
