@@ -32,6 +32,7 @@ jobs:
         run: |
           sudo apt-get install -y --no-install-recommends ffmpeg espeak-ng fonts-dejavu-core
       - name: Render synthetic clip end-to-end
+        timeout-minutes: 6
         env:
           RENDER_TEST_MODE: "1"
         run: |
