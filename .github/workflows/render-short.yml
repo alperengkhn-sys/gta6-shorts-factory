@@ -1,0 +1,63 @@
+name: Render GTA6 Short
+on:
+  workflow_dispatch:
+    inputs:
+      source_url:
+        description: Authorized source clip URL
+        required: true
+        type: string
+      title:
+        description: Short title
+        required: true
+        type: string
+      narration:
+        description: Original English narration script
+        required: true
+        type: string
+      rights_approved:
+        description: Confirm you have the rights/permission to use this footage
+        required: true
+        type: choice
+        options: ["false", "true"]
+        default: "false"
+permissions:
+  contents: read
+  actions: read
+jobs:
+  render:
+    if: inputs.rights_approved == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install media tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg espeak-ng
+          python -m pip install --upgrade pip
+          pip install yt-dlp
+      - name: Render vertical MP4
+        env:
+          SOURCE_URL: \${{ inputs.source_url }}
+          SHORT_TITLE: \${{ inputs.title }}
+          NARRATION: \${{ inputs.narration }}
+          RIGHTS_APPROVED: \${{ inputs.rights_approved }}
+        run: |
+          python renderer/render.py \
+            --source-url "$SOURCE_URL" \
+            --title "$SHORT_TITLE" \
+            --narration "$NARRATION" \
+            --rights-approved "$RIGHTS_APPROVED" \
+            --output short.mp4
+      - name: Upload rendered MP4
+        uses: actions/upload-artifact@v4
+        with:
+          name: gta6-short-\${{ github.run_number }}
+          path: short.mp4
+          if-no-files-found: error
+          retention-days: 7
+  blocked:
+    if: inputs.rights_approved != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Rendering blocked: rights approval was not confirmed." && exit 1
