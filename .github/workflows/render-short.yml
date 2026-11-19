@@ -3,7 +3,7 @@ name: Render GTA6 Short
   workflow_dispatch:
     inputs:
       source_url:
-        description: Authorized direct MP4 URL or Twitch clip URL
+        description: Authorized Twitch clip URL
         required: true
         type: string
       title:
