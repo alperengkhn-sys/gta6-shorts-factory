@@ -130,6 +130,9 @@ async function dispatchRender(db,env,draftId,evidenceReference,authorizationConf
  const row=await db.prepare(`SELECT d.id AS draft_id,d.source_id,d.title AS draft_title,d.script,d.status AS draft_status,s.source_url,s.title AS source_title,s.creator_name,s.rights_status,j.id AS job_id,j.status AS job_status FROM shorts_drafts d JOIN sources s ON s.id=d.source_id LEFT JOIN jobs j ON j.source_id=s.id WHERE d.id=? ORDER BY j.created_at DESC LIMIT 1`).bind(draftId).first();
  if(!row)return {error:"Üretim paketi bulunamadı."};
  if(!row.job_id)return {error:"Bu paket için üretim işi kaydı bulunamadı. Önce paketleri güncelle."};
+ if(["dispatching","rendering","rendered"].includes(row.job_status))return {error:"Bu paket zaten render kuyruğunda veya tamamlanmış."};
+ const narration=extractNarration(row.script);
+ if(narration.length<20)return {error:"Üretim metninden voiceover çıkarılamadı; render başlatılmadı."};
  if(row.rights_status!=="approved"){
   const evidence=String(evidenceReference||"").trim();
   const confirmation=String(authorizationConfirmation||"").trim();
@@ -139,9 +142,6 @@ async function dispatchRender(db,env,draftId,evidenceReference,authorizationConf
   await db.prepare("UPDATE sources SET rights_status='approved' WHERE id=?").bind(row.source_id).run();
   await db.prepare("INSERT INTO permission_requests(id,source_id,contact_method,request_message,request_status,response_notes,evidence_reference,created_at,updated_at) VALUES(?,?,'manual',?,'user_attested',?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)").bind(uid(),row.source_id,"User explicitly attested that they hold permission to reuse this clip for a Short.", "USER ATTESTATION ONLY: evidence URL supplied; the system has not independently verified the permission or the URL contents: "+evidence, evidence).run();
  }
- if(["dispatching","rendering","rendered"].includes(row.job_status))return {error:"Bu paket zaten render kuyruğunda veya tamamlanmış."};
- const narration=extractNarration(row.script);
- if(narration.length<20)return {error:"Üretim metninden voiceover çıkarılamadı; render başlatılmadı."};
  const title=String(row.draft_title||row.source_title||"GTA 6 Short").slice(0,90);
  const questionMatch=String(row.script||"").match(/ENDING QUESTION:\s*([^\n]+)/);
  const description=["GTA 6 clip featuring "+String(row.source_title||title).slice(0,180)+".","Clip creator: "+String(row.creator_name||"Unknown").slice(0,100)+".",questionMatch?questionMatch[1].trim():"What stood out to you?","#GTA6 #GTAVI #Shorts"].join("\n\n").slice(0,5000);
