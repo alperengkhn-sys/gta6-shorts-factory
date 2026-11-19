@@ -10,6 +10,10 @@ name: Render GTA6 Short
         description: Short title
         required: true
         type: string
+      description:
+        description: YouTube description and credit
+        required: false
+        type: string
       narration:
         description: Original English narration script
         required: true
@@ -67,6 +71,7 @@ jobs:
         if: success()
         env:
           SHORT_TITLE: ${{ inputs.title }}
+          SHORT_DESCRIPTION: ${{ inputs.description }}
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
