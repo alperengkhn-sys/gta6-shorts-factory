@@ -36,8 +36,8 @@ jobs:
         env:
           RENDER_TEST_MODE: "1"
         run: |
-          ffmpeg -y -f lavfi -i testsrc2=size=640x360:rate=30 -f lavfi -i sine=frequency=440:duration=4 -t 4 -c:v libx264 -pix_fmt yuv420p -c:a aac fixture.mp4
-          python renderer/render.py --source-url https://clips.twitch.tv/CIOnlyFixture --test-local-source fixture.mp4 --title "GTA 6 CI Render Test" --narration "This is an isolated rendering test for the vertical video pipeline." --rights-approved true --output ci-short.mp4
+          ffmpeg -nostdin -hide_banner -loglevel error -y -f lavfi -i testsrc2=size=320x180:rate=10 -f lavfi -i sine=frequency=440:duration=1 -t 1 -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac fixture.mp4
+          python renderer/render.py --source-url https://clips.twitch.tv/CIOnlyFixture --test-local-source fixture.mp4 --title "GTA 6 CI Render Test" --narration "Synthetic voiceover render test." --rights-approved true --output ci-short.mp4
           ffprobe -v error -select_streams v:0 -show_entries stream=width,height,codec_name -of csv=p=0 ci-short.mp4
       - name: Check required deployment files
         run: |
