@@ -1,0 +1,31 @@
+name: Validate GTA6 Shorts Factory
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check Worker JavaScript syntax
+        run: node --input-type=module --check < src/index.js
+      - name: Compile renderer scripts
+        run: python -m py_compile renderer/render.py renderer/youtube_upload.py
+      - name: Check required deployment files
+        run: |
+          test -s wrangler.toml
+          test -s package.json
+          test -s .github/workflows/render-short.yml
+          test -s renderer/render.py
+          test -s renderer/youtube_upload.py
