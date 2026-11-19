@@ -1,9 +1,0 @@
-name: Workflow Syntax Smoke Test
-on:
-  push:
-    branches: [main]
-jobs:
-  smoke:
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "GitHub Actions workflow parser is active."
