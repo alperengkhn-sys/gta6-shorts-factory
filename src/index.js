@@ -163,6 +163,22 @@ async function prepareAll(db){const result=await db.prepare(`SELECT s.id,s.title
 for(const source of rows){const categoryConfirmed=!!source.twitch_game_id,markedRelevant=source.relevance_status==="relevant",titleRelevant=isGta6Relevant(source.title);if(!categoryConfirmed&&!markedRelevant&&!titleRelevant){skippedIrrelevant++;continue;}const pack=makeEditorialPackage(source),found=await db.prepare("SELECT id,status FROM shorts_drafts WHERE source_id=? LIMIT 1").bind(source.id).first();if(found){existing++;await db.prepare("UPDATE shorts_drafts SET title=?,script=?,source_url=?,creator_name=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(pack.title,pack.script,source.source_url,source.creator_name||"Unknown",found.id).run();updated++;continue;}const draftId=uid();statements.push(db.prepare(`INSERT INTO shorts_drafts(id,source_id,status,title,script,created_at,updated_at,source_url,creator_name) VALUES (?,?,'queued_review',?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,?,?)`).bind(draftId,source.id,pack.title,pack.script,source.source_url,source.creator_name||"Unknown"));statements.push(db.prepare(`INSERT INTO jobs(id,source_id,status,target_format,editorial_note,output_key) VALUES (?,?,'queued_review','shorts_9_16',?,NULL)`).bind(uid(),source.id,"Editorial package prepared. Rights status: "+source.rights_status+". Rendering service not connected."));created++;}
 for(let i=0;i<statements.length;i+=40)await db.batch(statements.slice(i,i+40));const total=await db.prepare("SELECT COUNT(*) AS n FROM shorts_drafts WHERE status='queued_review'").first();return{checked:rows.length,created,updated,existing,skipped_irrelevant:skippedIrrelevant,total:Number(total?.n||0)};}
 async function getData(db){const sources=await db.prepare(`SELECT s.id,s.platform,s.source_url,s.creator_name,s.title,s.rights_status,s.relevance_status,s.twitch_game_id,a.score FROM sources s LEFT JOIN clip_analysis a ON a.source_id=s.id ORDER BY s.created_at DESC LIMIT 500`).all(),drafts=await db.prepare(`SELECT d.id,d.source_id,d.status,d.title,d.script,d.source_url,d.creator_name,d.created_at,s.rights_status,j.status AS job_status,j.output_key,j.youtube_status,j.youtube_url FROM shorts_drafts d JOIN sources s ON s.id=d.source_id LEFT JOIN jobs j ON j.source_id=d.source_id ORDER BY d.created_at DESC LIMIT 500`).all();return{sources:sources.results||[],drafts:drafts.results||[]};}
+async function runScheduled(env){
+ if(!env.DB)return {error:"D1 binding missing"};
+ await ensureSchema(env.DB);await ensureTwitchSchema(env.DB);
+ let discovery;
+ try{discovery=await discover(env.DB,env);}catch(error){discovery={error:String(error&&error.message||error).slice(0,500)};}
+ const prepared=await prepareAll(env.DB);
+ let dispatched=0,dispatchErrors=0;
+ if(env.GITHUB_TOKEN){
+  const candidates=await env.DB.prepare(`SELECT d.id AS draft_id FROM shorts_drafts d JOIN sources s ON s.id=d.source_id JOIN jobs j ON j.source_id=s.id WHERE s.rights_status='approved' AND j.status IN ('queued_review','dispatch_failed') ORDER BY j.created_at ASC LIMIT 2`).all();
+  for(const row of candidates.results||[]){
+   const result=await dispatchRender(env.DB,env,row.draft_id,"");
+   if(result.ok)dispatched++;else if(result.error){dispatchErrors++;console.error("Scheduled render dispatch:",result.error);}
+  }
+ }
+ return {discovery,prepared,dispatched,dispatchErrors};
+}
 function escHtml(v){return String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 export default{async fetch(request,env){try{if(!env.DB)return json({error:"D1 DB binding bulunamadı."},500);await ensureSchema(env.DB);await ensureTwitchSchema(env.DB);const url=new URL(request.url),path=url.pathname,method=request.method;
 if(path==="/")return new Response(HTML,{headers:{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store"}});
@@ -184,4 +200,4 @@ if(path==="/api/prepare"&&method==="POST")return json(await prepareAll(env.DB));
 if(path==="/api/render/dispatch"&&method==="POST"){const data=await readBody(request);const result=await dispatchRender(env.DB,env,String(data.draft_id||""),data.evidence_reference);return result.error?json({error:result.error},400):json(result);}
 if(path==="/api/source/manual"&&method==="POST"){const data=await readBody(request);if(!data.url||!/^https?:\/\//i.test(data.url))return json({error:"Geçerli bir kaynak URL gir."},400);const exists=await env.DB.prepare("SELECT id FROM sources WHERE source_url=? LIMIT 1").bind(data.url).first();if(exists)return json({error:"Bu kaynak zaten kayıtlı."},409);const id=uid(),title=data.title||"Untitled",isRelevant=isGta6Relevant(title);await env.DB.prepare(`INSERT INTO sources(id,platform,source_url,creator_name,title,rights_status,relevance_status) VALUES(?,?,?,?,?,'pending',?)`).bind(id,"manual",data.url,data.creator||"Unknown",title,isRelevant?"relevant":"unknown").run();await analyzeSource(env.DB,{id,title});return json({ok:true,id,relevance_status:isRelevant?"relevant":"unknown"});}
 return json({error:"Endpoint bulunamadı.",version:VERSION},404);
-}catch(error){return json({error:error&&error.message?error.message:"Bilinmeyen sunucu hatası.",version:VERSION},500);}}};
+}catch(error){return json({error:error&&error.message?error.message:"Bilinmeyen sunucu hatası.",version:VERSION},500);}},async scheduled(event,env,ctx){const work=runScheduled(env);if(ctx&&typeof ctx.waitUntil==="function")ctx.waitUntil(work);else await work;}};
