@@ -1,5 +1,5 @@
 name: Render GTA6 Short
-on:
+"on":
   workflow_dispatch:
     inputs:
       source_url:
