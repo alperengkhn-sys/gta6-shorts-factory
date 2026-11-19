@@ -32,7 +32,7 @@ The baseline creates editorial text packages only. It does not render MP4 files,
 
 ## Deployment
 
-The repository contains the GTA6-FACTORY-3.6 Worker, Wrangler configuration, and a GitHub Actions cloud renderer. A six-hour Cloudflare Cron discovers new clips and prepares packages; it dispatches at most two already-approved jobs per run. The Worker can dispatch approved draft jobs to GitHub Actions and receive completion callbacks. Configure these secrets before using the render button:
+The repository contains the GTA6-FACTORY-3.7 Worker, Wrangler configuration, and a GitHub Actions cloud renderer. A six-hour Cloudflare Cron discovers new clips and prepares packages; it dispatches at most two already-approved jobs per run. The Worker can dispatch approved draft jobs to GitHub Actions and receive completion callbacks. Configure these secrets before using the render button:
 
 - Cloudflare Worker secrets: existing `APP_PASSWORD`, `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`, plus `GITHUB_TOKEN` (a GitHub token with Actions: write access to this repository) and `RENDER_WEBHOOK_SECRET` (a long random value).
 - GitHub repository Actions secrets: `RENDER_WEBHOOK_SECRET` (same value as Cloudflare) and, if private YouTube upload is wanted, `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, `YOUTUBE_REFRESH_TOKEN` (OAuth scope `youtube.upload`).
@@ -40,3 +40,13 @@ The repository contains the GTA6-FACTORY-3.6 Worker, Wrangler configuration, and
 A push to `main` starts the connected Cloudflare Workers Build (`npx wrangler deploy`). Keep the existing D1 binding and all existing records; migrations are additive. Do not paste secrets into chat or commit them to the repository.
 
 See `docs/IMPLEMENTATION.md`.
+
+
+## 3.7 safeguards and diagnostics
+
+- The dashboard's **Bulut bağlantıları** panel reports whether the required Cloudflare and GitHub secrets are configured. It never displays secret values.
+- Pending sources require an explicit rights confirmation and an evidence reference before the Worker records approval. A Twitch login or clip download permission is not copyright permission.
+- The renderer accepts HTTPS Twitch clip URLs only. Its local-file test mode is enabled only inside the isolated CI test environment.
+- Voiceovers longer than 59.9 seconds are rejected rather than silently cut off.
+- The optional YouTube upload is private by default; an upload failure does not discard a successfully rendered MP4.
+- CI includes helper tests and a synthetic end-to-end 1080x1920 MP4 render. This test does not verify a real Twitch clip, Cloudflare deployment, or YouTube OAuth credentials.
