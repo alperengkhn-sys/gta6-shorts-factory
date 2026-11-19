@@ -11,6 +11,9 @@ def run(cmd):
 
 def clean(s): return " ".join((s or "").split())
 
+def tts_executable():
+    return shutil.which("espeak-ng") or shutil.which("espeak")
+
 def validate_source_url(value):
     try:
         parsed = urlsplit(value)
@@ -68,7 +71,9 @@ def main():
                 found=list(w.glob("source.*"))
                 if not found: raise RuntimeError("Source download produced no media file.")
                 media=found[0]
-        run(["espeak-ng","-v","en-us","-s","165","-w",str(voice),narration])
+        tts=tts_executable()
+        if not tts: raise RuntimeError("No offline TTS engine found; install espeak-ng or espeak.")
+        run([tts,"-v","en-us","-s","165","-w",str(voice),narration])
         voice_info=json.loads(run(["ffprobe","-v","error","-show_entries","format=duration","-of","json",str(voice)]))
         voice_duration=float(voice_info["format"]["duration"])
         if voice_duration > 59.9:
