@@ -41,6 +41,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install yt-dlp
       - name: Render vertical MP4
+        id: render
         env:
           SOURCE_URL: ${{ inputs.source_url }}
           SHORT_TITLE: ${{ inputs.title }}
@@ -61,12 +62,25 @@ jobs:
           path: short.mp4
           if-no-files-found: error
           retention-days: 7
+      - name: Upload MP4 to YouTube privately (optional)
+        id: youtube
+        if: success()
+        env:
+          SHORT_TITLE: ${{ inputs.title }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: python renderer/youtube_upload.py
       - name: Report render result to Cloudflare Worker
         if: always()
         env:
           WEBHOOK_SECRET: ${{ secrets.RENDER_WEBHOOK_SECRET }}
           JOB_ID: ${{ inputs.job_id }}
           CONCLUSION: ${{ job.status }}
+          RENDER_CONCLUSION: ${{ steps.render.outcome }}
+          YOUTUBE_STATUS: ${{ steps.youtube.outputs.upload_status }}
+          YOUTUBE_URL: ${{ steps.youtube.outputs.video_url }}
+          YOUTUBE_ERROR: ${{ steps.youtube.outputs.error }}
           ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
@@ -77,9 +91,12 @@ jobs:
           print(json.dumps({
             "job_id": os.environ["JOB_ID"],
             "conclusion": os.environ["CONCLUSION"],
+            "render_conclusion": os.environ.get("RENDER_CONCLUSION", ""),
+            "youtube_status": os.environ.get("YOUTUBE_STATUS", "") or "not_configured",
+            "youtube_url": os.environ.get("YOUTUBE_URL", ""),
+            "error": os.environ.get("YOUTUBE_ERROR", "") or ("" if os.environ["RENDER_CONCLUSION"] == "success" else "GitHub Actions render failed; inspect the workflow run."),
             "artifact_url": os.environ.get("ARTIFACT_URL", ""),
-            "run_url": os.environ.get("RUN_URL", ""),
-            "error": "" if os.environ["CONCLUSION"] == "success" else "GitHub Actions render failed; inspect the workflow run."
+            "run_url": os.environ.get("RUN_URL", "")
           }))
           PY
           curl --fail-with-body --silent --show-error -X POST \
