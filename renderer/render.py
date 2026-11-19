@@ -71,6 +71,8 @@ def main():
         run(["espeak-ng","-v","en-us","-s","165","-w",str(voice),narration])
         voice_info=json.loads(run(["ffprobe","-v","error","-show_entries","format=duration","-of","json",str(voice)]))
         voice_duration=float(voice_info["format"]["duration"])
+        if voice_duration > 59.9:
+            raise RuntimeError("Narration exceeds the 59.9-second Shorts limit; shorten the voiceover.")
         source_info=json.loads(run(["ffprobe","-v","error","-show_entries","format=duration:stream=codec_type","-of","json",str(media)]))
         source_duration=float(source_info["format"].get("duration") or 0)
         if source_duration<=0: raise RuntimeError("Could not determine source clip duration.")
