@@ -94,8 +94,10 @@ def main():
             for i,chunk in enumerate(chunks):
                 f.write(f"{i+1}\n{stamp(voice_duration*i/len(chunks))} --> {stamp(voice_duration*(i+1)/len(chunks))}\n{chunk}\n\n")
         titlefile.write_text(title,encoding="utf-8")
+        video_pad=max(0.0,duration-source_duration)
         vf=("scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,"
-            "drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:"
+            + (f"tpad=stop_mode=clone:stop_duration={video_pad}," if video_pad > 0 else "")
+            + "drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:"
             "textfile="+str(titlefile)+":fontcolor=white:fontsize=58:borderw=4:bordercolor=black:"
             "x=(w-text_w)/2:y=120,"
             "subtitles="+str(srt).replace("\\\\","\\\\\\\\").replace(":","\\\\:"))
@@ -106,7 +108,7 @@ def main():
                           f"atrim=duration={duration}[aout]")
         else:
             audio_filter=f"[1:a:0]apad=whole_dur={duration},atrim=duration={duration}[aout]"
-        run(["ffmpeg","-nostdin","-hide_banner","-loglevel","warning","-y","-stream_loop","-1","-i",str(media),"-i",str(voice),
+        run(["ffmpeg","-nostdin","-hide_banner","-loglevel","warning","-y","-i",str(media),"-i",str(voice),
              "-vf",vf,"-filter_complex",audio_filter,"-map","0:v:0","-map","[aout]","-t",str(duration),
              "-r","30","-c:v","libx264","-preset","veryfast","-crf","22",
              "-pix_fmt","yuv420p","-c:a","aac","-b:a","160k","-movflags","+faststart",str(out)])
