@@ -2,6 +2,7 @@
 """Rights-gated vertical Shorts renderer. Requires ffmpeg, ffprobe, yt-dlp and espeak-ng."""
 import argparse, json, subprocess, sys, tempfile
 from pathlib import Path
+from urllib.parse import urlsplit
 
 def run(cmd):
     p=subprocess.run(cmd,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
@@ -9,6 +10,20 @@ def run(cmd):
     return p.stdout
 
 def clean(s): return " ".join((s or "").split())
+
+def validate_source_url(value):
+    try:
+        parsed = urlsplit(value)
+        host = (parsed.hostname or "").lower().rstrip(".")
+        return (
+            parsed.scheme == "https"
+            and parsed.username is None
+            and parsed.password is None
+            and parsed.port in (None, 443)
+            and (host == "twitch.tv" or host.endswith(".twitch.tv"))
+        )
+    except ValueError:
+        return False
 
 def split_caption(text,limit=38):
     words=clean(text).split(); lines=[]; cur=""
@@ -32,7 +47,7 @@ def main():
     ap.add_argument("--rights-approved",required=True)
     a=ap.parse_args()
     if a.rights_approved.lower()!="true": raise SystemExit("BLOCKED: rights approval is not true.")
-    if not a.source_url.startswith(("https://","http://")): raise SystemExit("Invalid source URL.")
+    if not validate_source_url(a.source_url): raise SystemExit("Invalid source URL: use an HTTPS Twitch clip URL only.")
     title=clean(a.title)[:90]; narration=clean(a.narration)
     if len(narration)<20: raise SystemExit("Narration is too short.")
     out=Path(a.output).resolve(); out.parent.mkdir(parents=True,exist_ok=True)
