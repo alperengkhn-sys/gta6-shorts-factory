@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       source_url:
-        description: Authorized source clip URL
+        description: Authorized direct MP4 URL or Twitch clip URL
         required: true
         type: string
       title:
@@ -15,11 +15,15 @@ on:
         required: true
         type: string
       rights_approved:
-        description: Confirm you have the rights/permission to use this footage
+        description: Confirm documented rights/permission
         required: true
         type: choice
         options: ["false", "true"]
         default: "false"
+      job_id:
+        description: Optional originating Worker job ID
+        required: false
+        type: string
 permissions:
   contents: read
   actions: read
@@ -33,15 +37,15 @@ jobs:
       - name: Install media tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg espeak-ng
+          sudo apt-get install -y ffmpeg espeak-ng fonts-dejavu-core
           python -m pip install --upgrade pip
           pip install yt-dlp
       - name: Render vertical MP4
         env:
-          SOURCE_URL: \${{ inputs.source_url }}
-          SHORT_TITLE: \${{ inputs.title }}
-          NARRATION: \${{ inputs.narration }}
-          RIGHTS_APPROVED: \${{ inputs.rights_approved }}
+          SOURCE_URL: ${{ inputs.source_url }}
+          SHORT_TITLE: ${{ inputs.title }}
+          NARRATION: ${{ inputs.narration }}
+          RIGHTS_APPROVED: ${{ inputs.rights_approved }}
         run: |
           python renderer/render.py \
             --source-url "$SOURCE_URL" \
@@ -52,7 +56,7 @@ jobs:
       - name: Upload rendered MP4
         uses: actions/upload-artifact@v4
         with:
-          name: gta6-short-\${{ github.run_number }}
+          name: gta6-short-${{ github.run_number }}
           path: short.mp4
           if-no-files-found: error
           retention-days: 7
