@@ -17,7 +17,7 @@ def output(name, value):
 def request(url, data=None, headers=None, method=None):
     req = urllib.request.Request(url, data=data, headers=headers or {}, method=method)
     try:
-        with urllib.request.urlopen(req, timeout=90) as response:
+        with urllib.request.urlopen(req, timeout=600) as response:
             return response.status, dict(response.headers), response.read()
     except urllib.error.HTTPError as e:
         detail = e.read().decode("utf-8", "replace")[:2500]
