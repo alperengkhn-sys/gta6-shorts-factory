@@ -32,6 +32,11 @@ The baseline creates editorial text packages only. It does not render MP4 files,
 
 ## Deployment
 
-The repository now contains `src/index.js` (the 3.5 Worker), `wrangler.toml` (the existing Worker name and existing D1 database binding), and a Wrangler deploy script. Cloudflare Workers Builds uses the connected `main` branch and defaults to `npx wrangler deploy`; no separate build step is required. A push to `main` starts the Cloudflare build. Keep the existing runtime secrets (`APP_PASSWORD`, `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`) configured in Worker Settings → Variables & Secrets. The Wrangler config uses the existing D1 database ID and performs additive schema checks only.
+The repository contains the 3.5 Worker, Wrangler configuration, and a GitHub Actions cloud renderer. The Worker can dispatch approved draft jobs to GitHub Actions and receive completion callbacks. Configure these secrets before using the render button:
+
+- Cloudflare Worker secrets: existing `APP_PASSWORD`, `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`, plus `GITHUB_TOKEN` (a GitHub token with Actions: write access to this repository) and `RENDER_WEBHOOK_SECRET` (a long random value).
+- GitHub repository Actions secret: `RENDER_WEBHOOK_SECRET`, set to the exact same random value as the Cloudflare Worker secret.
+
+A push to `main` starts the connected Cloudflare Workers Build (`npx wrangler deploy`). Keep the existing D1 binding and all existing records; migrations are additive. Do not paste secrets into chat or commit them to the repository.
 
 See `docs/IMPLEMENTATION.md`.
