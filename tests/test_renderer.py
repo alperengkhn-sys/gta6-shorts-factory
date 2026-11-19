@@ -1,5 +1,6 @@
 import unittest
-from renderer.render import clean, split_caption, stamp, validate_source_url
+from unittest.mock import patch
+from renderer.render import clean, split_caption, stamp, validate_source_url, tts_executable
 
 class RendererHelpersTest(unittest.TestCase):
     def test_clean_collapses_whitespace(self):
@@ -18,6 +19,12 @@ class RendererHelpersTest(unittest.TestCase):
 
     def test_stamp_formats_hours(self):
         self.assertEqual(stamp(3661.005), "01:01:01,005")
+
+    def test_tts_prefers_espeak_ng_and_falls_back_to_espeak(self):
+        with patch("renderer.render.shutil.which", side_effect=lambda name: "/usr/bin/espeak-ng" if name == "espeak-ng" else "/usr/bin/espeak"):
+            self.assertEqual(tts_executable(), "/usr/bin/espeak-ng")
+        with patch("renderer.render.shutil.which", side_effect=lambda name: "/usr/bin/espeak" if name == "espeak" else None):
+            self.assertEqual(tts_executable(), "/usr/bin/espeak")
 
     def test_accepts_https_twitch_clip_urls(self):
         self.assertTrue(validate_source_url("https://clips.twitch.tv/SomeClip"))
