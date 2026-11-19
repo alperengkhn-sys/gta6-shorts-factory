@@ -10,7 +10,7 @@
 
 ## Optional private YouTube upload
 
-Create a Google Cloud project, enable **YouTube Data API v3**, and create OAuth credentials that can grant the scope `https://www.googleapis.com/auth/youtube.upload`. Obtain an offline refresh token for the channel and add these GitHub Actions repository secrets: `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, and `YOUTUBE_REFRESH_TOKEN`. When all three are present, every successful render uploads as **private**; public publishing is not enabled. If they are absent, rendering still completes and the upload step is marked `not_configured`.
+Create a Google Cloud project, enable **YouTube Data API v3**, and create OAuth credentials that can grant the scope `https://www.googleapis.com/auth/youtube.upload`. Obtain an offline refresh token for the channel and add these GitHub Actions repository secrets: `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, and `YOUTUBE_REFRESH_TOKEN`. When all three are present, every successful render uploads as **private**; public publishing is not enabled. YouTube Data API quota is finite and controls daily upload volume. If the secrets are absent, rendering still completes and the upload step is marked `not_configured`.
 
 ## Manual fallback
 
