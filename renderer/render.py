@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Rights-gated vertical Shorts renderer. Requires ffmpeg, ffprobe, yt-dlp and espeak-ng."""
-import argparse, json, subprocess, sys, tempfile
+import argparse, json, os, shutil, subprocess, sys, tempfile
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -45,19 +45,29 @@ def main():
     ap.add_argument("--narration",required=True)
     ap.add_argument("--output",default="short.mp4")
     ap.add_argument("--rights-approved",required=True)
+    ap.add_argument("--test-local-source", help=argparse.SUPPRESS)
     a=ap.parse_args()
     if a.rights_approved.lower()!="true": raise SystemExit("BLOCKED: rights approval is not true.")
-    if not validate_source_url(a.source_url): raise SystemExit("Invalid source URL: use an HTTPS Twitch clip URL only.")
+    if a.test_local_source:
+        if os.environ.get("RENDER_TEST_MODE") != "1":
+            raise SystemExit("Local test input is disabled outside the isolated CI test mode.")
+        if not Path(a.test_local_source).is_file():
+            raise SystemExit("Test source file does not exist.")
+    elif not validate_source_url(a.source_url):
+        raise SystemExit("Invalid source URL: use an HTTPS Twitch clip URL only.")
     title=clean(a.title)[:90]; narration=clean(a.narration)
     if len(narration)<20: raise SystemExit("Narration is too short.")
     out=Path(a.output).resolve(); out.parent.mkdir(parents=True,exist_ok=True)
     with tempfile.TemporaryDirectory() as td:
         w=Path(td); media=w/"source.mp4"; voice=w/"voice.wav"; srt=w/"captions.srt"; titlefile=w/"title.txt"
-        run(["yt-dlp","--no-playlist","--merge-output-format","mp4","-o",str(media),a.source_url])
-        if not media.exists():
-            found=list(w.glob("source.*"))
-            if not found: raise RuntimeError("Source download produced no media file.")
-            media=found[0]
+        if a.test_local_source:
+            shutil.copyfile(a.test_local_source, media)
+        else:
+            run(["yt-dlp","--no-playlist","--merge-output-format","mp4","-o",str(media),a.source_url])
+            if not media.exists():
+                found=list(w.glob("source.*"))
+                if not found: raise RuntimeError("Source download produced no media file.")
+                media=found[0]
         run(["espeak-ng","-v","en-us","-s","165","-w",str(voice),narration])
         voice_info=json.loads(run(["ffprobe","-v","error","-show_entries","format=duration","-of","json",str(voice)]))
         voice_duration=float(voice_info["format"]["duration"])
