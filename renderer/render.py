@@ -111,7 +111,6 @@ def main():
                    "textfile="+str(cf)+":fontcolor=white:fontsize=64:borderw=4:bordercolor=black:"
                    "line_spacing=12:x=(w-text_w)/2:y=h-430:"
                    f"enable='between(t,{start:.3f},{end:.3f})'")
-        vf += ","
         if has_source_audio:
             audio_filter=(f"[0:a:0]atrim=duration={duration},asetpts=PTS-STARTPTS,volume=0.22[bg];"
                           f"[1:a:0]atrim=duration={duration},asetpts=PTS-STARTPTS,apad=whole_dur={duration}[vo];"
