@@ -20,6 +20,8 @@ def request(url, data=None, headers=None, method=None):
         with urllib.request.urlopen(req, timeout=600) as response:
             return response.status, dict(response.headers), response.read()
     except urllib.error.HTTPError as e:
+        if e.code == 308:
+            return e.code, dict(e.headers), e.read()
         detail = e.read().decode("utf-8", "replace")[:2500]
         raise RuntimeError(f"HTTP {e.code}: {detail}") from e
 
@@ -83,12 +85,38 @@ def main():
     if status not in (200, 201) or not upload_url:
         raise RuntimeError("YouTube did not return a resumable upload URL.")
 
-    _, _, result_raw = request(
-        upload_url,
-        video.read_bytes(),
-        {"Authorization": "Bearer " + access_token, "Content-Type": "video/mp4"},
-        "PUT",
-    )
+    # Stream the resumable upload in bounded chunks instead of loading the
+    # entire MP4 into memory. YouTube acknowledges intermediate chunks with 308.
+    total_size = video.stat().st_size
+    chunk_size = 8 * 1024 * 1024
+    offset = 0
+    result_raw = b""
+    while offset < total_size:
+        with video.open("rb") as stream:
+            stream.seek(offset)
+            chunk = stream.read(min(chunk_size, total_size - offset))
+        end = offset + len(chunk) - 1
+        status, _, response_raw = request(
+            upload_url,
+            chunk,
+            {
+                "Authorization": "Bearer " + access_token,
+                "Content-Type": "video/mp4",
+                "Content-Length": str(len(chunk)),
+                "Content-Range": f"bytes {offset}-{end}/{total_size}",
+            },
+            "PUT",
+        )
+        if status == 308:
+            offset = end + 1
+            continue
+        if status not in (200, 201):
+            raise RuntimeError(f"YouTube resumable upload returned unexpected HTTP {status}.")
+        result_raw = response_raw
+        offset = end + 1
+        break
+    if offset != total_size or not result_raw:
+        raise RuntimeError("YouTube resumable upload ended before the final acknowledgement.")
     video_id = json.loads(result_raw).get("id")
     if not video_id:
         raise RuntimeError("YouTube upload response did not contain a video ID.")
