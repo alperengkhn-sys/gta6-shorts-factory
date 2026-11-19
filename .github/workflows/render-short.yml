@@ -54,12 +54,39 @@ jobs:
             --rights-approved "$RIGHTS_APPROVED" \
             --output short.mp4
       - name: Upload rendered MP4
+        id: upload
         uses: actions/upload-artifact@v4
         with:
-          name: gta6-short-${{ github.run_number }}
+          name: gta6-short-\${{ github.run_number }}
           path: short.mp4
           if-no-files-found: error
           retention-days: 7
+      - name: Report render result to Cloudflare Worker
+        if: always()
+        env:
+          WEBHOOK_SECRET: \${{ secrets.RENDER_WEBHOOK_SECRET }}
+          JOB_ID: \${{ inputs.job_id }}
+          CONCLUSION: \${{ job.status }}
+          ARTIFACT_URL: \${{ steps.upload.outputs.artifact-url }}
+          RUN_URL: \${{ github.server_url }}/\${{ github.repository }}/actions/runs/\${{ github.run_id }}
+        run: |
+          if [ -z "$JOB_ID" ]; then echo "No originating Worker job; callback skipped."; exit 0; fi
+          if [ -z "$WEBHOOK_SECRET" ]; then echo "::warning::RENDER_WEBHOOK_SECRET is not configured; Worker status will not update."; exit 0; fi
+          python - <<'PY' > callback.json
+          import json, os
+          print(json.dumps({
+            "job_id": os.environ["JOB_ID"],
+            "conclusion": os.environ["CONCLUSION"],
+            "artifact_url": os.environ.get("ARTIFACT_URL", ""),
+            "run_url": os.environ.get("RUN_URL", ""),
+            "error": "" if os.environ["CONCLUSION"] == "success" else "GitHub Actions render failed; inspect the workflow run."
+          }))
+          PY
+          curl --fail-with-body --silent --show-error -X POST \
+            "https://gta6-shorts-engine.alperen-gkhn.workers.dev/api/render/callback" \
+            -H "Content-Type: application/json" \
+            -H "X-Render-Secret: $WEBHOOK_SECRET" \
+            --data-binary @callback.json
   blocked:
     if: inputs.rights_approved != 'true'
     runs-on: ubuntu-latest
