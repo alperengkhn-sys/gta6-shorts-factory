@@ -1,23 +1,25 @@
 # Cloud rendering
 
-The repository now includes a GitHub Actions cloud render job.
+## Automatic dashboard flow
 
-## Run
+1. In Cloudflare Worker settings, configure `GITHUB_TOKEN` (a GitHub token with Actions: write access to this repository) and `RENDER_WEBHOOK_SECRET` (a long random secret). Keep all existing Worker secrets.
+2. In GitHub → repository Settings → Secrets and variables → Actions, create `RENDER_WEBHOOK_SECRET` with the exact same value.
+3. Open the GTA6 Shorts Factory dashboard and select a draft.
+4. Choose **İzin kanıtıyla MP4 üret**. For a source not already marked approved, enter the permission evidence URL or a clear evidence reference. This records the source as approved; do not do it without actual permission.
+5. The Worker dispatches the job to GitHub Actions. The workflow renders 1080×1920 H.264/AAC, stores the MP4 as a seven-day artifact, and posts success/failure back to the Worker. The dashboard then shows the render state and artifact link.
+
+## Manual fallback
 
 1. Open the repository's **Actions** tab.
 2. Select **Render GTA6 Short** → **Run workflow**.
-3. Enter an authorized clip URL, title, and original narration.
-4. Set rights approval to **true only when you have permission to use the footage**.
-5. Start the workflow. When it finishes, open the run and download the `gta6-short-*` artifact.
+3. Enter an authorized clip URL, title, original narration, and set rights approval to true only when documented permission exists.
+4. Start the workflow and download the artifact after it completes.
 
-The runner downloads the source with yt-dlp, creates English narration with espeak-ng, burns captions, renders 1080x1920 H.264/AAC, validates the result, and stores the MP4 as a seven-day workflow artifact.
+## Limits and safeguards
 
-## Limits
-
-- This is cloud rendering; no local PC processing is required.
+- Cloud rendering only; no local PC processing is required.
 - GitHub Actions free usage is quota-limited. This does not guarantee 5–10 renders daily.
-- The built-in voice is synthetic and basic. No paid TTS service is used.
-- Captions are timed across the narration, not word-level speech recognition.
-- It does not claim to analyze the visual content or verify ownership.
-- Only use footage you own or are authorized to use. Twitch clip availability is not permission.
-- This workflow renders on manual dispatch. Automatic Twitch discovery, editorial review, and YouTube upload still require integration with the existing Cloudflare Worker and YouTube OAuth credentials.
+- The built-in English voice is synthetic/basic. Captions are timed across narration, not word-level ASR.
+- This does not analyze the footage visually or verify ownership. Metadata/title-derived editorial text must be checked against the clip.
+- Twitch clip access is not permission to reuse it. Rights-pending sources cannot be rendered through the dashboard flow.
+- Artifact retention is seven days. The artifact link requires access to the GitHub repository.
