@@ -126,20 +126,22 @@ async function dispatchRender(db,env,draftId,evidenceReference){
  if(!env.GITHUB_TOKEN)return {error:"Cloudflare Worker'da GITHUB_TOKEN secret eksik. GitHub Actions workflow_dispatch yetkili token eklenmeli."};
  const row=await db.prepare(`SELECT d.id AS draft_id,d.source_id,d.title AS draft_title,d.script,d.status AS draft_status,s.source_url,s.title AS source_title,s.rights_status,j.id AS job_id,j.status AS job_status FROM shorts_drafts d JOIN sources s ON s.id=d.source_id LEFT JOIN jobs j ON j.source_id=s.id WHERE d.id=? ORDER BY j.created_at DESC LIMIT 1`).bind(draftId).first();
  if(!row)return {error:"Üretim paketi bulunamadı."};
+ if(!row.job_id)return {error:"Bu paket için üretim işi kaydı bulunamadı. Önce paketleri güncelle."};
  if(row.rights_status!=="approved"){
   const evidence=String(evidenceReference||"").trim();
   if(evidence.length<8)return {error:"Render engellendi: kaynak hakları onaylı değil. İzin kanıtı bağlantısı/açıklaması gerekli."};
   await db.prepare("UPDATE sources SET rights_status='approved' WHERE id=?").bind(row.source_id).run();
   await db.prepare("INSERT INTO permission_requests(id,source_id,contact_method,request_message,request_status,response_notes,evidence_reference,created_at,updated_at) VALUES(?,?,'manual',?,'approved',?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)").bind(uid(),row.source_id,"User confirmed authorization for rendering.", "User confirmed permission; evidence supplied in dashboard.",evidence).run();
  }
- if(!row.job_id)return {error:"Bu paket için üretim işi kaydı bulunamadı. Önce paketleri güncelle."};
  if(["dispatching","rendering","rendered"].includes(row.job_status))return {error:"Bu paket zaten render kuyruğunda veya tamamlanmış."};
  const narration=extractNarration(row.script);
  if(narration.length<20)return {error:"Üretim metninden voiceover çıkarılamadı; render başlatılmadı."};
  const title=String(row.draft_title||row.source_title||"GTA 6 Short").slice(0,90);
  await db.prepare("UPDATE jobs SET status='dispatching',editorial_note='Authorized render dispatched to GitHub Actions.',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.job_id).run();
  await db.prepare("UPDATE shorts_drafts SET status='rendering',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.draft_id).run();
- const response=await fetch("https://api.github.com/repos/alperengkhn-sys/gta6-shorts-factory/actions/workflows/render-short.yml/dispatches",{method:"POST",headers:{"Authorization":"Bearer "+env.GITHUB_TOKEN,"Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28","Content-Type":"application/json","User-Agent":"GTA6-Shorts-Factory"},body:JSON.stringify({ref:"main",inputs:{source_url:row.source_url,title,narration,rights_approved:"true",job_id:row.job_id}})});
+ let response;
+ try{response=await fetch("https://api.github.com/repos/alperengkhn-sys/gta6-shorts-factory/actions/workflows/render-short.yml/dispatches",{method:"POST",headers:{"Authorization":"Bearer "+env.GITHUB_TOKEN,"Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28","Content-Type":"application/json","User-Agent":"GTA6-Shorts-Factory"},body:JSON.stringify({ref:"main",inputs:{source_url:row.source_url,title,narration,rights_approved:"true",job_id:row.job_id}})});}
+ catch(error){const detail=String(error&&error.message||error).slice(0,1000);await db.prepare("UPDATE jobs SET status='dispatch_failed',editorial_note=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind("GitHub dispatch network error: "+detail,row.job_id).run();await db.prepare("UPDATE shorts_drafts SET status='render_failed',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.draft_id).run();return {error:"GitHub Actions bağlantı hatası: "+detail};}
  if(response.status!==204){const detail=(await response.text()).slice(0,1200);await db.prepare("UPDATE jobs SET status='dispatch_failed',editorial_note=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind("GitHub dispatch failed: HTTP "+response.status+" "+detail,row.job_id).run();await db.prepare("UPDATE shorts_drafts SET status='render_failed',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.draft_id).run();return {error:"GitHub Actions işi başlatılamadı (HTTP "+response.status+"). "+detail};}
  return {ok:true,job_id:row.job_id,status:"rendering"};
 }
