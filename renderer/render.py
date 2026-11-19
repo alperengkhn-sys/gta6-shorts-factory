@@ -94,13 +94,24 @@ def main():
             for i,chunk in enumerate(chunks):
                 f.write(f"{i+1}\n{stamp(voice_duration*i/len(chunks))} --> {stamp(voice_duration*(i+1)/len(chunks))}\n{chunk}\n\n")
         titlefile.write_text(title,encoding="utf-8")
+        caption_files=[]
+        for i,chunk in enumerate(chunks):
+            cf=w/f"caption_{i}.txt"
+            cf.write_text(chunk,encoding="utf-8")
+            caption_files.append(cf)
         video_pad=max(0.0,duration-source_duration)
         vf=("scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,"
             + (f"tpad=stop_mode=clone:stop_duration={video_pad}," if video_pad > 0 else "")
             + "drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:"
             "textfile="+str(titlefile)+":fontcolor=white:fontsize=58:borderw=4:bordercolor=black:"
-            "x=(w-text_w)/2:y=120,"
-            "subtitles="+str(srt).replace("\\\\","\\\\\\\\").replace(":","\\\\:"))
+            "x=(w-text_w)/2:y=120")
+        for i,cf in enumerate(caption_files):
+            start=voice_duration*i/len(chunks); end=voice_duration*(i+1)/len(chunks)
+            vf += (",drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:"
+                   "textfile="+str(cf)+":fontcolor=white:fontsize=64:borderw=4:bordercolor=black:"
+                   "line_spacing=12:x=(w-text_w)/2:y=h-430:"
+                   f"enable='between(t,{start:.3f},{end:.3f})'")
+        vf += ","
         if has_source_audio:
             audio_filter=(f"[0:a:0]atrim=duration={duration},asetpts=PTS-STARTPTS,volume=0.22[bg];"
                           f"[1:a:0]atrim=duration={duration},asetpts=PTS-STARTPTS,apad=whole_dur={duration}[vo];"
