@@ -108,7 +108,7 @@ def main():
                           f"atrim=duration={duration}[aout]")
         else:
             audio_filter=f"[1:a:0]apad=whole_dur={duration},atrim=duration={duration}[aout]"
-        run(["ffmpeg","-nostdin","-hide_banner","-loglevel","warning","-y","-i",str(media),"-i",str(voice),
+        run(["ffmpeg","-nostdin","-hide_banner","-loglevel","warning","-filter_threads","1","-filter_complex_threads","1","-threads","2","-y","-i",str(media),"-i",str(voice),
              "-vf",vf,"-filter_complex",audio_filter,"-map","0:v:0","-map","[aout]","-t",str(duration),
              "-r","30","-c:v","libx264","-preset","veryfast","-crf","22",
              "-pix_fmt","yuv420p","-c:a","aac","-b:a","160k","-movflags","+faststart",str(out)])
