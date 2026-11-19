@@ -65,7 +65,6 @@ def main():
         },
         "status": {
             "privacyStatus": "private",
-            "selfDeclaredMadeForKids": False,
         },
     }
     init_url = "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status"
