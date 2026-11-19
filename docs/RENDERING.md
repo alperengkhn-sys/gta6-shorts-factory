@@ -6,7 +6,11 @@
 2. In GitHub → repository Settings → Secrets and variables → Actions, create `RENDER_WEBHOOK_SECRET` with the exact same value.
 3. Open the GTA6 Shorts Factory dashboard and select a draft.
 4. Choose **İzin kanıtıyla MP4 üret**. For a source not already marked approved, enter the permission evidence URL or a clear evidence reference. This records the source as approved; do not do it without actual permission.
-5. The Worker dispatches the job to GitHub Actions. The workflow renders 1080×1920 H.264/AAC, stores the MP4 as a seven-day artifact, and posts success/failure back to the Worker. The dashboard then shows the render state and artifact link.
+5. The Worker dispatches the job to GitHub Actions. The workflow renders 1080×1920 H.264/AAC, stores the MP4 as a seven-day artifact, optionally uploads it to YouTube as **private**, and posts status back to the Worker. The dashboard shows the render state, artifact link, and YouTube URL/status.
+
+## Optional private YouTube upload
+
+Create a Google Cloud project, enable **YouTube Data API v3**, and create OAuth credentials that can grant the scope `https://www.googleapis.com/auth/youtube.upload`. Obtain an offline refresh token for the channel and add these GitHub Actions repository secrets: `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, and `YOUTUBE_REFRESH_TOKEN`. When all three are present, every successful render uploads as **private**; public publishing is not enabled. If they are absent, rendering still completes and the upload step is marked `not_configured`.
 
 ## Manual fallback
 
