@@ -44,20 +44,29 @@ def main():
             if not found: raise RuntimeError("Source download produced no media file.")
             media=found[0]
         run(["espeak-ng","-v","en-us","-s","165","-w",str(voice),narration])
-        info=json.loads(run(["ffprobe","-v","error","-show_entries","format=duration","-of","json",str(voice)]))
-        duration=float(info["format"]["duration"])
+        voice_info=json.loads(run(["ffprobe","-v","error","-show_entries","format=duration","-of","json",str(voice)]))
+        voice_duration=float(voice_info["format"]["duration"])
+        source_info=json.loads(run(["ffprobe","-v","error","-show_entries","format=duration:stream=codec_type","-of","json",str(media)]))
+        source_duration=float(source_info["format"].get("duration") or 0)
+        if source_duration<=0: raise RuntimeError("Could not determine source clip duration.")
+        duration=min(59.9,max(source_duration,voice_duration))
+        has_source_audio=any(stream.get("codec_type")=="audio" for stream in source_info.get("streams",[]))
         chunks=split_caption(narration)
         with srt.open("w",encoding="utf-8") as f:
             for i,chunk in enumerate(chunks):
-                f.write(f"{i+1}\n{stamp(duration*i/len(chunks))} --> {stamp(duration*(i+1)/len(chunks))}\n{chunk}\n\n")
+                f.write(f"{i+1}\n{stamp(voice_duration*i/len(chunks))} --> {stamp(voice_duration*(i+1)/len(chunks))}\n{chunk}\n\n")
         titlefile.write_text(title,encoding="utf-8")
         vf=("scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,"
             "drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:"
             "textfile="+str(titlefile)+":fontcolor=white:fontsize=58:borderw=4:bordercolor=black:"
             "x=(w-text_w)/2:y=120,"
             "subtitles="+str(srt).replace("\\","\\\\").replace(":","\\:"))
+        if has_source_audio:
+            audio_filter=f"[0:a:0]volume=0.22[bg];[1:a:0]volume=1.0[vo];[bg][vo]amix=inputs=2:duration=longest:dropout_transition=2,apad=whole_dur={duration}[aout]"
+        else:
+            audio_filter=f"[1:a:0]apad=whole_dur={duration}[aout]"
         run(["ffmpeg","-y","-stream_loop","-1","-i",str(media),"-i",str(voice),
-             "-vf",vf,"-map","0:v:0","-map","1:a:0","-t",str(duration),
+             "-vf",vf,"-filter_complex",audio_filter,"-map","0:v:0","-map","[aout]","-t",str(duration),
              "-r","30","-c:v","libx264","-preset","veryfast","-crf","22",
              "-pix_fmt","yuv420p","-c:a","aac","-b:a","160k","-movflags","+faststart",str(out)])
     check=json.loads(run(["ffprobe","-v","error","-show_entries","stream=codec_type,codec_name,width,height",
@@ -68,7 +77,8 @@ def main():
     if not any(x.get("codec_type")=="audio" and x.get("codec_name")=="aac" for x in check["streams"]):
         raise RuntimeError("Output validation failed: AAC audio missing.")
     print(json.dumps({"ok":True,"output":str(out),"duration":check["format"]["duration"],
-                      "width":1080,"height":1920,"video":"h264","audio":"aac"}))
+                      "width":1080,"height":1920,"video":"h264","audio":"aac",
+                      "source_audio_mixed":has_source_audio,"voiceover_duration":round(voice_duration,2)}))
 
 if __name__=="__main__":
     try: main()
