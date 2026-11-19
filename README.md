@@ -35,7 +35,7 @@ The baseline creates editorial text packages only. It does not render MP4 files,
 The repository contains the 3.5 Worker, Wrangler configuration, and a GitHub Actions cloud renderer. The Worker can dispatch approved draft jobs to GitHub Actions and receive completion callbacks. Configure these secrets before using the render button:
 
 - Cloudflare Worker secrets: existing `APP_PASSWORD`, `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`, plus `GITHUB_TOKEN` (a GitHub token with Actions: write access to this repository) and `RENDER_WEBHOOK_SECRET` (a long random value).
-- GitHub repository Actions secret: `RENDER_WEBHOOK_SECRET`, set to the exact same random value as the Cloudflare Worker secret.
+- GitHub repository Actions secrets: `RENDER_WEBHOOK_SECRET` (same value as Cloudflare) and, if private YouTube upload is wanted, `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, `YOUTUBE_REFRESH_TOKEN` (OAuth scope `youtube.upload`).
 
 A push to `main` starts the connected Cloudflare Workers Build (`npx wrangler deploy`). Keep the existing D1 binding and all existing records; migrations are additive. Do not paste secrets into chat or commit them to the repository.
 
