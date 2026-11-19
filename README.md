@@ -32,6 +32,6 @@ The baseline creates editorial text packages only. It does not render MP4 files,
 
 ## Deployment
 
-The production Worker remains the existing Cloudflare Worker. Deploy reviewed changes in Cloudflare Dashboard → Workers & Pages → `gta6-shorts-engine` → Edit Code. Keep the D1 binding and existing secrets unchanged.
+The repository now contains `src/index.js` (the 3.5 Worker), `wrangler.toml` (the existing Worker name and existing D1 database binding), and a Wrangler deploy script. Cloudflare Workers Builds uses the connected `main` branch and defaults to `npx wrangler deploy`; no separate build step is required. A push to `main` starts the Cloudflare build. Keep the existing runtime secrets (`APP_PASSWORD`, `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`) configured in Worker Settings → Variables & Secrets. The Wrangler config uses the existing D1 database ID and performs additive schema checks only.
 
 See `docs/IMPLEMENTATION.md`.
