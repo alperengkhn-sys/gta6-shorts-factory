@@ -69,6 +69,7 @@ jobs:
       - name: Upload MP4 to YouTube privately (optional)
         id: youtube
         if: success()
+        continue-on-error: true
         env:
           SHORT_TITLE: ${{ inputs.title }}
           SHORT_DESCRIPTION: ${{ inputs.description }}
