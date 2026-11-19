@@ -5,7 +5,13 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 def run(cmd):
-    p=subprocess.run(cmd,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+    try:
+        p=subprocess.run(cmd,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,
+                         stdin=subprocess.DEVNULL,timeout=300)
+    except subprocess.TimeoutExpired as e:
+        output=e.stdout or ""
+        if isinstance(output,bytes): output=output.decode("utf-8","replace")
+        raise RuntimeError(f"Command timed out after 300 seconds: {cmd[0]}\\n{output[-5000:]}") from e
     if p.returncode: raise RuntimeError(p.stdout[-5000:])
     return p.stdout
 
@@ -97,7 +103,7 @@ def main():
             audio_filter=f"[0:a:0]volume=0.22[bg];[1:a:0]volume=1.0[vo];[bg][vo]amix=inputs=2:duration=longest:dropout_transition=2,apad=whole_dur={duration}[aout]"
         else:
             audio_filter=f"[1:a:0]apad=whole_dur={duration}[aout]"
-        run(["ffmpeg","-y","-stream_loop","-1","-i",str(media),"-i",str(voice),
+        run(["ffmpeg","-nostdin","-hide_banner","-loglevel","warning","-y","-stream_loop","-1","-i",str(media),"-i",str(voice),
              "-vf",vf,"-filter_complex",audio_filter,"-map","0:v:0","-map","[aout]","-t",str(duration),
              "-r","30","-c:v","libx264","-preset","veryfast","-crf","22",
              "-pix_fmt","yuv420p","-c:a","aac","-b:a","160k","-movflags","+faststart",str(out)])
