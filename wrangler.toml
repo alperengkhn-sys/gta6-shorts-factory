@@ -1,0 +1,12 @@
+name = "gta6-shorts-engine"
+main = "src/index.js"
+compatibility_date = "2026-11-19"
+workers_dev = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "gta6-shorts-db"
+database_id = "3a6b99a0-cfbf-48dd-ad78-68f2cb6432dd"
+
+[observability]
+enabled = true
