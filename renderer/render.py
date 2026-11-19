@@ -11,7 +11,7 @@ def run(cmd):
     except subprocess.TimeoutExpired as e:
         output=e.stdout or ""
         if isinstance(output,bytes): output=output.decode("utf-8","replace")
-        raise RuntimeError(f"Command timed out after 300 seconds: {cmd[0]}\\n{output[-5000:]}") from e
+        raise RuntimeError(f"Command timed out after 300 seconds: {cmd[0]}\n{output[-5000:]}") from e
     if p.returncode: raise RuntimeError(p.stdout[-5000:])
     return p.stdout
 
@@ -41,7 +41,7 @@ def split_caption(text,limit=38):
         if len(nxt)>limit and cur: lines.append(cur); cur=word
         else: cur=nxt
     if cur: lines.append(cur)
-    return ["\\n".join(lines[i:i+2]) for i in range(0,len(lines),2)]
+    return ["\n".join(lines[i:i+2]) for i in range(0,len(lines),2)]
 
 def stamp(t):
     ms=int(t*1000); h=ms//3600000; m=(ms%3600000)//60000; s=(ms%60000)//1000
@@ -92,7 +92,7 @@ def main():
         chunks=split_caption(narration)
         with srt.open("w",encoding="utf-8") as f:
             for i,chunk in enumerate(chunks):
-                f.write(f"{i+1}\\n{stamp(voice_duration*i/len(chunks))} --> {stamp(voice_duration*(i+1)/len(chunks))}\\n{chunk}\\n\\n")
+                f.write(f"{i+1}\n{stamp(voice_duration*i/len(chunks))} --> {stamp(voice_duration*(i+1)/len(chunks))}\n{chunk}\n\n")
         titlefile.write_text(title,encoding="utf-8")
         vf=("scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,"
             "drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:"
