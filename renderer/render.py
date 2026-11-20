@@ -56,7 +56,6 @@ def stamp(t):
     try:
         n,d=(int(x) for x in fps.split("/",1)); fps_value=round(n/d,3) if d else 0
     except Exception: fps_value=0
-    silence_log=Path(tempfile.mkstemp(suffix=".log")[1])
     try:
         cmd=["ffmpeg","-nostdin","-hide_banner","-loglevel","info","-i",str(media),"-af","silencedetect=noise=-35dB:d=0.35","-f","null","-"]
         try:
@@ -76,9 +75,6 @@ def stamp(t):
             "silence_ratio":round(min(1.0,silence_total/duration),3) if duration else 1.0,
             "usable_for_shorts":bool(video and duration>0 and duration<=59.9)
         }
-    finally:
-        try: silence_log.unlink()
-        except OSError: pass
 
 
 def main():
@@ -121,7 +117,7 @@ def main():
         source_info=json.loads(run(["ffprobe","-v","error","-show_entries","format=duration:stream=codec_type","-of","json",str(media)]))
         source_duration=float(source_info["format"].get("duration") or 0)
         analysis=media_analysis(media)
-        analysis_path=w/"render-analysis.json"
+        analysis_path=out.parent/"render-analysis.json"
         analysis_path.write_text(json.dumps(analysis,indent=2),encoding="utf-8")
         if source_duration<=0: raise RuntimeError("Could not determine source clip duration.")
         duration=min(59.9,max(source_duration,voice_duration))
