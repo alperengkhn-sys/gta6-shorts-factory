@@ -56,7 +56,7 @@ def media_analysis(media):
     try:
         n,d=(int(x) for x in fps.split("/",1)); fps_value=round(n/d,3) if d else 0
     except Exception: fps_value=0
-        cmd=["ffmpeg","-nostdin","-hide_banner","-loglevel","info","-i",str(media),"-af","silencedetect=noise=-35dB:d=0.35","-f","null","-"]
+    cmd=["ffmpeg","-nostdin","-hide_banner","-loglevel","info","-i",str(media),"-af","silencedetect=noise=-35dB:d=0.35","-f","null","-"]
     try:
         p=subprocess.run(cmd,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,stdin=subprocess.DEVNULL,timeout=120)
         log=p.stdout or ""
