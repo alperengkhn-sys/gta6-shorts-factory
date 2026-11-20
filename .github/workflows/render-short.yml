@@ -58,12 +58,14 @@ jobs:
             --narration "$NARRATION" \
             --rights-approved "$RIGHTS_APPROVED" \
             --output short.mp4
-      - name: Upload rendered MP4
+      - name: Upload rendered MP4 and media analysis
         id: upload
         uses: actions/upload-artifact@v4
         with:
           name: gta6-short-${{ github.run_number }}
-          path: short.mp4
+          path: |
+            short.mp4
+            render-analysis.json
           if-no-files-found: error
           retention-days: 7
       - name: Upload MP4 to YouTube privately (optional)
