@@ -56,25 +56,24 @@ def media_analysis(media):
     try:
         n,d=(int(x) for x in fps.split("/",1)); fps_value=round(n/d,3) if d else 0
     except Exception: fps_value=0
-    try:
         cmd=["ffmpeg","-nostdin","-hide_banner","-loglevel","info","-i",str(media),"-af","silencedetect=noise=-35dB:d=0.35","-f","null","-"]
-        try:
-            p=subprocess.run(cmd,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,stdin=subprocess.DEVNULL,timeout=120)
-            log=p.stdout or ""
-        except subprocess.TimeoutExpired:
-            log=""
-        silence_total=0.0
-        for line in log.splitlines():
-            if "silence_duration:" in line:
-                try: silence_total+=float(line.rsplit("silence_duration:",1)[1].strip())
-                except ValueError: pass
-        return {
-            "duration":round(duration,3),
-            "video":{"width":video.get("width"),"height":video.get("height"),"fps":fps_value,"codec":video.get("codec_name")},
-            "audio":{"present":bool(audio),"codec":audio.get("codec_name"),"channels":audio.get("channels"),"sample_rate":audio.get("sample_rate")},
-            "silence_ratio":round(min(1.0,silence_total/duration),3) if duration else 1.0,
-            "usable_for_shorts":bool(video and duration>0 and duration<=59.9)
-        }
+    try:
+        p=subprocess.run(cmd,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,stdin=subprocess.DEVNULL,timeout=120)
+        log=p.stdout or ""
+    except subprocess.TimeoutExpired:
+        log=""
+    silence_total=0.0
+    for line in log.splitlines():
+        if "silence_duration:" in line:
+            try: silence_total+=float(line.rsplit("silence_duration:",1)[1].strip())
+            except ValueError: pass
+    return {
+        "duration":round(duration,3),
+        "video":{"width":video.get("width"),"height":video.get("height"),"fps":fps_value,"codec":video.get("codec_name")},
+        "audio":{"present":bool(audio),"codec":audio.get("codec_name"),"channels":audio.get("channels"),"sample_rate":audio.get("sample_rate")},
+        "silence_ratio":round(min(1.0,silence_total/duration),3) if duration else 1.0,
+        "usable_for_shorts":bool(video and duration>0 and duration<=59.9)
+    }
 
 
 def main():
