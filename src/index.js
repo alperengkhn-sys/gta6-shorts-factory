@@ -163,7 +163,7 @@ async function renderCallback(request,env,db){
  const data=await readBody(request),jobId=String(data.job_id||"");
  if(!jobId)return json({error:"job_id required."},400);
  const job=await db.prepare("SELECT id,source_id,status,render_attempts FROM jobs WHERE id=?").bind(jobId).first();
- if(data.render_attempt!==undefined&&Number(data.render_attempt)!==Number(job.render_attempts))return json({error:"Stale render callback rejected."},409);
+ if(data.render_attempt!==undefined&&data.render_attempt!==null&&data.render_attempt!==""&&Number(data.render_attempt)!==Number(job.render_attempts))return json({error:"Stale render callback rejected."},409);
  if(job.status==="rendered")return json({ok:true,status:"rendered",duplicate:true});
  if(!["dispatching","rendering","dispatch_failed","render_failed"].includes(job.status))return json({error:"Callback rejected for job state: "+job.status},409);
  if(!job)return json({error:"Job not found."},404);
@@ -197,7 +197,7 @@ async function runScheduled(env){
  try{discovery=await discover(env.DB,env);}catch(error){discovery={error:String(error&&error.message||error).slice(0,500)};}
  const prepared=await prepareAll(env.DB);
  await env.DB.prepare("UPDATE jobs SET status=CASE WHEN COALESCE(render_attempts,0)>=3 THEN 'render_failed' ELSE 'dispatch_failed' END,last_error='Recovered stale dispatch after 45 minutes without callback.',updated_at=CURRENT_TIMESTAMP WHERE status='dispatching' AND dispatch_started_at IS NOT NULL AND dispatch_started_at<datetime('now','-45 minutes')").run();
- await env.DB.prepare("UPDATE shorts_drafts SET status='render_failed',updated_at=CURRENT_TIMESTAMP WHERE source_id IN (SELECT source_id FROM jobs WHERE status='dispatch_failed' AND last_error='Recovered stale dispatch after 45 minutes without callback.')").run();
+ await env.DB.prepare("UPDATE shorts_drafts SET status='render_failed',updated_at=CURRENT_TIMESTAMP WHERE source_id IN (SELECT source_id FROM jobs WHERE status IN ('dispatch_failed','render_failed') AND last_error='Recovered stale dispatch after 45 minutes without callback.')").run();
  let dispatched=0,dispatchErrors=0;
  if(env.GITHUB_TOKEN){
   const candidates=await env.DB.prepare(`SELECT d.id AS draft_id FROM shorts_drafts d JOIN sources s ON s.id=d.source_id JOIN jobs j ON j.source_id=s.id WHERE s.rights_status='approved' AND j.status IN ('queued_review','dispatch_failed') AND COALESCE(j.render_attempts,0)<3 ORDER BY j.created_at ASC LIMIT 2`).all();
