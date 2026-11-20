@@ -67,11 +67,28 @@ def media_analysis(media):
         if "silence_duration:" in line:
             try: silence_total+=float(line.rsplit("silence_duration:",1)[1].strip())
             except ValueError: pass
+    scene_cmd=["ffmpeg","-nostdin","-hide_banner","-loglevel","info","-i",str(media),"-vf","select='gt(scene,0.30)',metadata=print","-an","-f","null","-"]
+    try:
+        scene_log=subprocess.run(scene_cmd,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,stdin=subprocess.DEVNULL,timeout=120).stdout or ""
+        scene_changes=sum(1 for line in scene_log.splitlines() if "pts_time:" in line)
+    except (subprocess.TimeoutExpired, OSError):
+        scene_changes=None
+    mean_volume_db=None
+    if audio:
+        try:
+            vol_log=run(["ffmpeg","-nostdin","-hide_banner","-i",str(media),"-vn","-af","volumedetect","-f","null","-"])
+            for line in vol_log.splitlines():
+                if "mean_volume:" in line:
+                    mean_volume_db=float(line.split("mean_volume:",1)[1].split("dB",1)[0].strip())
+        except Exception:
+            mean_volume_db=None
     return {
         "duration":round(duration,3),
         "video":{"width":video.get("width"),"height":video.get("height"),"fps":fps_value,"codec":video.get("codec_name")},
         "audio":{"present":bool(audio),"codec":audio.get("codec_name"),"channels":audio.get("channels"),"sample_rate":audio.get("sample_rate")},
         "silence_ratio":round(min(1.0,silence_total/duration),3) if duration else 1.0,
+        "scene_change_count":scene_changes,
+        "mean_volume_db":mean_volume_db,
         "usable_for_shorts":bool(video and duration>0 and duration<=59.9)
     }
 
