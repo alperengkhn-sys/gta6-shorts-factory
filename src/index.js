@@ -163,10 +163,10 @@ async function renderCallback(request,env,db){
  const data=await readBody(request),jobId=String(data.job_id||"");
  if(!jobId)return json({error:"job_id required."},400);
  const job=await db.prepare("SELECT id,source_id,status,render_attempts FROM jobs WHERE id=?").bind(jobId).first();
+ if(!job)return json({error:"Job not found."},404);
  if(data.render_attempt!==undefined&&data.render_attempt!==null&&data.render_attempt!==""&&Number(data.render_attempt)!==Number(job.render_attempts))return json({error:"Stale render callback rejected."},409);
  if(job.status==="rendered")return json({ok:true,status:"rendered",duplicate:true});
  if(!["dispatching","rendering","dispatch_failed","render_failed"].includes(job.status))return json({error:"Callback rejected for job state: "+job.status},409);
- if(!job)return json({error:"Job not found."},404);
  const ok=(data.render_conclusion||data.conclusion)==="success",status=ok?"rendered":"render_failed",output=String(data.artifact_url||data.run_url||"").slice(0,2000),youtubeStatus=String(data.youtube_status||"not_run").slice(0,40),youtubeUrl=String(data.youtube_url||"").slice(0,1000);
  const note=[ok?"Render completed.":"Render failed.", "YouTube: "+youtubeStatus, data.error||""].filter(Boolean).join(" ").slice(0,1500);
  let mediaSaved=false;
