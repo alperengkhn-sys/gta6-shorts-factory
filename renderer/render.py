@@ -46,6 +46,40 @@ def split_caption(text,limit=38):
 def stamp(t):
     ms=int(t*1000); h=ms//3600000; m=(ms%3600000)//60000; s=(ms%60000)//1000
     return f"{h:02}:{m:02}:{s:02},{ms%1000:03}"
+\ndef media_analysis(media):
+    info=json.loads(run(["ffprobe","-v","error","-show_entries","format=duration:stream=index,codec_type,codec_name,width,height,r_frame_rate,channels,sample_rate","-of","json",str(media)]))
+    streams=info.get("streams",[])
+    video=next((s for s in streams if s.get("codec_type")=="video"),{})
+    audio=next((s for s in streams if s.get("codec_type")=="audio"),{})
+    duration=float(info.get("format",{}).get("duration") or 0)
+    fps=video.get("r_frame_rate","0/1")
+    try:
+        n,d=(int(x) for x in fps.split("/",1)); fps_value=round(n/d,3) if d else 0
+    except Exception: fps_value=0
+    silence_log=Path(tempfile.mkstemp(suffix=".log")[1])
+    try:
+        cmd=["ffmpeg","-nostdin","-hide_banner","-loglevel","info","-i",str(media),"-af","silencedetect=noise=-35dB:d=0.35","-f","null","-"]
+        try:
+            p=subprocess.run(cmd,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,stdin=subprocess.DEVNULL,timeout=120)
+            log=p.stdout or ""
+        except subprocess.TimeoutExpired:
+            log=""
+        silence_total=0.0
+        for line in log.splitlines():
+            if "silence_duration:" in line:
+                try: silence_total+=float(line.rsplit("silence_duration:",1)[1].strip())
+                except ValueError: pass
+        return {
+            "duration":round(duration,3),
+            "video":{"width":video.get("width"),"height":video.get("height"),"fps":fps_value,"codec":video.get("codec_name")},
+            "audio":{"present":bool(audio),"codec":audio.get("codec_name"),"channels":audio.get("channels"),"sample_rate":audio.get("sample_rate")},
+            "silence_ratio":round(min(1.0,silence_total/duration),3) if duration else 1.0,
+            "usable_for_shorts":bool(video and duration>0 and duration<=59.9)
+        }
+    finally:
+        try: silence_log.unlink()
+        except OSError: pass
+
 
 def main():
     ap=argparse.ArgumentParser()
@@ -86,6 +120,9 @@ def main():
             raise RuntimeError("Narration exceeds the 59.9-second Shorts limit; shorten the voiceover.")
         source_info=json.loads(run(["ffprobe","-v","error","-show_entries","format=duration:stream=codec_type","-of","json",str(media)]))
         source_duration=float(source_info["format"].get("duration") or 0)
+        analysis=media_analysis(media)
+        analysis_path=w/"render-analysis.json"
+        analysis_path.write_text(json.dumps(analysis,indent=2),encoding="utf-8")
         if source_duration<=0: raise RuntimeError("Could not determine source clip duration.")
         duration=min(59.9,max(source_duration,voice_duration))
         has_source_audio=any(stream.get("codec_type")=="audio" for stream in source_info.get("streams",[]))
@@ -131,7 +168,8 @@ def main():
         raise RuntimeError("Output validation failed: AAC audio missing.")
     print(json.dumps({"ok":True,"output":str(out),"duration":check["format"]["duration"],
                       "width":1080,"height":1920,"video":"h264","audio":"aac",
-                      "source_audio_mixed":has_source_audio,"voiceover_duration":round(voice_duration,2)}))
+                      "source_audio_mixed":has_source_audio,"voiceover_duration":round(voice_duration,2),
+                      "analysis":analysis}))
 
 if __name__=="__main__":
     try: main()
