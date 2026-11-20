@@ -96,7 +96,8 @@ jobs:
           if [ -z "$WEBHOOK_SECRET" ]; then echo "::warning::RENDER_WEBHOOK_SECRET is not configured; Worker status will not update."; exit 0; fi
           python - <<'PY' > callback.json
           import json, os
-          print(json.dumps({
+          from pathlib import Path
+          payload = {
             "job_id": os.environ["JOB_ID"],
             "conclusion": os.environ["CONCLUSION"],
             "render_conclusion": os.environ.get("RENDER_CONCLUSION", ""),
@@ -105,7 +106,14 @@ jobs:
             "error": os.environ.get("YOUTUBE_ERROR", "") or ("" if os.environ["RENDER_CONCLUSION"] == "success" else "GitHub Actions render failed; inspect the workflow run."),
             "artifact_url": os.environ.get("ARTIFACT_URL", ""),
             "run_url": os.environ.get("RUN_URL", "")
-          }))
+          }
+          analysis_path = Path("render-analysis.json")
+          if analysis_path.is_file():
+            try:
+              payload["media_analysis"] = json.loads(analysis_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+              payload["media_analysis_error"] = "Analysis file could not be parsed."
+          print(json.dumps(payload))
           PY
           curl --fail-with-body --silent --show-error -X POST \
             "https://gta6-shorts-engine.alperen-gkhn.workers.dev/api/render/callback" \
