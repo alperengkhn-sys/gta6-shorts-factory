@@ -67,6 +67,8 @@ async function ensureSchema(db){
  await db.prepare(`CREATE TABLE IF NOT EXISTS jobs (id TEXT PRIMARY KEY,source_id TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'queued_review',target_format TEXT,editorial_note TEXT,output_key TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
  await ensureColumn(db,"jobs","youtube_url","TEXT");
  await ensureColumn(db,"jobs","youtube_status","TEXT DEFAULT 'not_configured'");
+ await ensureColumn(db,"jobs","render_attempts","INTEGER NOT NULL DEFAULT 0");
+ await ensureColumn(db,"jobs","last_error","TEXT");
 }
 function cookieValue(request){const list=(request.headers.get("Cookie")||"").split(";"),found=list.find(x=>x.trim().startsWith("gta6_session="));return found?found.trim().slice(13):"";}
 function b64url(bytes){let s="";for(const b of bytes)s+=String.fromCharCode(b);return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"");}
@@ -145,12 +147,12 @@ async function dispatchRender(db,env,draftId,evidenceReference,authorizationConf
  const title=String(row.draft_title||row.source_title||"GTA 6 Short").slice(0,90);
  const questionMatch=String(row.script||"").match(/ENDING QUESTION:\s*([^\n]+)/);
  const description=["GTA 6 clip featuring "+String(row.source_title||title).slice(0,180)+".","Clip creator: "+String(row.creator_name||"Unknown").slice(0,100)+".",questionMatch?questionMatch[1].trim():"What stood out to you?","#GTA6 #GTAVI #Shorts"].join("\n\n").slice(0,5000);
- await db.prepare("UPDATE jobs SET status='dispatching',editorial_note='Authorized render dispatched to GitHub Actions.',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.job_id).run();
+ await db.prepare("UPDATE jobs SET status='dispatching',render_attempts=COALESCE(render_attempts,0)+1,last_error=NULL,editorial_note='Authorized render dispatched to GitHub Actions.',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.job_id).run();
  await db.prepare("UPDATE shorts_drafts SET status='rendering',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.draft_id).run();
  let response;
  try{response=await fetch("https://api.github.com/repos/alperengkhn-sys/gta6-shorts-factory/actions/workflows/render-short.yml/dispatches",{method:"POST",headers:{"Authorization":"Bearer "+env.GITHUB_TOKEN,"Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28","Content-Type":"application/json","User-Agent":"GTA6-Shorts-Factory"},body:JSON.stringify({ref:"main",inputs:{source_url:row.source_url,title,description,narration,rights_approved:"true",job_id:row.job_id}})});}
- catch(error){const detail=String(error&&error.message||error).slice(0,1000);await db.prepare("UPDATE jobs SET status='dispatch_failed',editorial_note=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind("GitHub dispatch network error: "+detail,row.job_id).run();await db.prepare("UPDATE shorts_drafts SET status='render_failed',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.draft_id).run();return {error:"GitHub Actions bağlantı hatası: "+detail};}
- if(response.status!==204){const detail=(await response.text()).slice(0,1200);await db.prepare("UPDATE jobs SET status='dispatch_failed',editorial_note=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind("GitHub dispatch failed: HTTP "+response.status+" "+detail,row.job_id).run();await db.prepare("UPDATE shorts_drafts SET status='render_failed',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.draft_id).run();return {error:"GitHub Actions işi başlatılamadı (HTTP "+response.status+"). "+detail};}
+ catch(error){const detail=String(error&&error.message||error).slice(0,1000);await db.prepare("UPDATE jobs SET status='dispatch_failed',editorial_note=?,last_error=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind("GitHub dispatch network error: "+detail,detail,row.job_id).run();await db.prepare("UPDATE shorts_drafts SET status='render_failed',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.draft_id).run();return {error:"GitHub Actions bağlantı hatası: "+detail};}
+ if(response.status!==204){const detail=(await response.text()).slice(0,1200);await db.prepare("UPDATE jobs SET status='dispatch_failed',editorial_note=?,last_error=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind("GitHub dispatch failed: HTTP "+response.status+" "+detail,detail,row.job_id).run();await db.prepare("UPDATE shorts_drafts SET status='render_failed',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.draft_id).run();return {error:"GitHub Actions işi başlatılamadı (HTTP "+response.status+"). "+detail};}
  return {ok:true,job_id:row.job_id,status:"rendering"};
 }
 async function renderCallback(request,env,db){
@@ -161,7 +163,7 @@ async function renderCallback(request,env,db){
  if(!job)return json({error:"Job not found."},404);
  const ok=(data.render_conclusion||data.conclusion)==="success",status=ok?"rendered":"render_failed",output=String(data.artifact_url||data.run_url||"").slice(0,2000),youtubeStatus=String(data.youtube_status||"not_run").slice(0,40),youtubeUrl=String(data.youtube_url||"").slice(0,1000);
  const note=[ok?"Render completed.":"Render failed.", "YouTube: "+youtubeStatus, data.error||""].filter(Boolean).join(" ").slice(0,1500);
- await db.prepare("UPDATE jobs SET status=?,output_key=?,youtube_url=?,youtube_status=?,editorial_note=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(status,output,youtubeUrl,youtubeStatus,note,jobId).run();
+ await db.prepare("UPDATE jobs SET status=?,output_key=?,youtube_url=?,youtube_status=?,editorial_note=?,last_error=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(status,output,youtubeUrl,youtubeStatus,note,ok?null:note,jobId).run();
  await db.prepare("UPDATE shorts_drafts SET status=?,updated_at=CURRENT_TIMESTAMP WHERE source_id=?").bind(status,job.source_id).run();
  return json({ok:true,status});
 }
@@ -177,7 +179,7 @@ async function runScheduled(env){
  const prepared=await prepareAll(env.DB);
  let dispatched=0,dispatchErrors=0;
  if(env.GITHUB_TOKEN){
-  const candidates=await env.DB.prepare(`SELECT d.id AS draft_id FROM shorts_drafts d JOIN sources s ON s.id=d.source_id JOIN jobs j ON j.source_id=s.id WHERE s.rights_status='approved' AND j.status IN ('queued_review','dispatch_failed') ORDER BY j.created_at ASC LIMIT 2`).all();
+  const candidates=await env.DB.prepare(`SELECT d.id AS draft_id FROM shorts_drafts d JOIN sources s ON s.id=d.source_id JOIN jobs j ON j.source_id=s.id WHERE s.rights_status='approved' AND j.status IN ('queued_review','dispatch_failed') AND COALESCE(j.render_attempts,0)<3 ORDER BY j.created_at ASC LIMIT 2`).all();
   for(const row of candidates.results||[]){
    const result=await dispatchRender(env.DB,env,row.draft_id,"");
    if(result.ok)dispatched++;else if(result.error){dispatchErrors++;console.error("Scheduled render dispatch:",result.error);}
