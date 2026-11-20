@@ -46,7 +46,7 @@ def split_caption(text,limit=38):
 def stamp(t):
     ms=int(t*1000); h=ms//3600000; m=(ms%3600000)//60000; s=(ms%60000)//1000
     return f"{h:02}:{m:02}:{s:02},{ms%1000:03}"
-\ndef media_analysis(media):
+def media_analysis(media):
     info=json.loads(run(["ffprobe","-v","error","-show_entries","format=duration:stream=index,codec_type,codec_name,width,height,r_frame_rate,channels,sample_rate","-of","json",str(media)]))
     streams=info.get("streams",[])
     video=next((s for s in streams if s.get("codec_type")=="video"),{})
