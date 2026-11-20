@@ -153,7 +153,7 @@ async function dispatchRender(db,env,draftId,evidenceReference,authorizationConf
  await db.prepare("UPDATE jobs SET status='dispatching',render_attempts=COALESCE(render_attempts,0)+1,last_error=NULL,dispatch_started_at=CURRENT_TIMESTAMP,editorial_note='Authorized render dispatched to GitHub Actions.',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.job_id).run();
  await db.prepare("UPDATE shorts_drafts SET status='rendering',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.draft_id).run();
  let response;
- try{response=await fetch("https://api.github.com/repos/alperengkhn-sys/gta6-shorts-factory/actions/workflows/render-short.yml/dispatches",{method:"POST",headers:{"Authorization":"Bearer "+env.GITHUB_TOKEN,"Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28","Content-Type":"application/json","User-Agent":"GTA6-Shorts-Factory"},body:JSON.stringify({ref:"main",inputs:{source_url:row.source_url,title,description,narration,rights_approved:"true",job_id:row.job_id}})});}
+ try{response=await fetch("https://api.github.com/repos/alperengkhn-sys/gta6-shorts-factory/actions/workflows/render-short.yml/dispatches",{method:"POST",headers:{"Authorization":"Bearer "+env.GITHUB_TOKEN,"Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28","Content-Type":"application/json","User-Agent":"GTA6-Shorts-Factory"},body:JSON.stringify({ref:"main",inputs:{source_url:row.source_url,title,description,narration,rights_approved:"true",job_id:row.job_id,render_attempt:String(Number(row.render_attempts||0)+1)}})});}
  catch(error){const detail=String(error&&error.message||error).slice(0,1000);await db.prepare("UPDATE jobs SET status='dispatch_failed',editorial_note=?,last_error=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind("GitHub dispatch network error: "+detail,detail,row.job_id).run();await db.prepare("UPDATE shorts_drafts SET status='render_failed',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.draft_id).run();return {error:"GitHub Actions bağlantı hatası: "+detail};}
  if(response.status!==204){const detail=(await response.text()).slice(0,1200);await db.prepare("UPDATE jobs SET status='dispatch_failed',editorial_note=?,last_error=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind("GitHub dispatch failed: HTTP "+response.status+" "+detail,detail,row.job_id).run();await db.prepare("UPDATE shorts_drafts SET status='render_failed',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.draft_id).run();return {error:"GitHub Actions işi başlatılamadı (HTTP "+response.status+"). "+detail};}
  return {ok:true,job_id:row.job_id,status:"rendering"};
@@ -162,7 +162,8 @@ async function renderCallback(request,env,db){
  if(!env.RENDER_WEBHOOK_SECRET||request.headers.get("X-Render-Secret")!==env.RENDER_WEBHOOK_SECRET)return json({error:"Webhook authentication failed."},401);
  const data=await readBody(request),jobId=String(data.job_id||"");
  if(!jobId)return json({error:"job_id required."},400);
- const job=await db.prepare("SELECT id,source_id,status FROM jobs WHERE id=?").bind(jobId).first();
+ const job=await db.prepare("SELECT id,source_id,status,render_attempts FROM jobs WHERE id=?").bind(jobId).first();
+ if(data.render_attempt!==undefined&&Number(data.render_attempt)!==Number(job.render_attempts))return json({error:"Stale render callback rejected."},409);
  if(job.status==="rendered")return json({ok:true,status:"rendered",duplicate:true});
  if(!["dispatching","rendering","dispatch_failed","render_failed"].includes(job.status))return json({error:"Callback rejected for job state: "+job.status},409);
  if(!job)return json({error:"Job not found."},404);
@@ -195,7 +196,7 @@ async function runScheduled(env){
  let discovery;
  try{discovery=await discover(env.DB,env);}catch(error){discovery={error:String(error&&error.message||error).slice(0,500)};}
  const prepared=await prepareAll(env.DB);
- await env.DB.prepare("UPDATE jobs SET status='dispatch_failed',last_error='Recovered stale dispatch after 45 minutes without callback.',updated_at=CURRENT_TIMESTAMP WHERE status='dispatching' AND dispatch_started_at IS NOT NULL AND dispatch_started_at<datetime('now','-45 minutes') AND COALESCE(render_attempts,0)<3").run();
+ await env.DB.prepare("UPDATE jobs SET status=CASE WHEN COALESCE(render_attempts,0)>=3 THEN 'render_failed' ELSE 'dispatch_failed' END,last_error='Recovered stale dispatch after 45 minutes without callback.',updated_at=CURRENT_TIMESTAMP WHERE status='dispatching' AND dispatch_started_at IS NOT NULL AND dispatch_started_at<datetime('now','-45 minutes')").run();
  await env.DB.prepare("UPDATE shorts_drafts SET status='render_failed',updated_at=CURRENT_TIMESTAMP WHERE source_id IN (SELECT source_id FROM jobs WHERE status='dispatch_failed' AND last_error='Recovered stale dispatch after 45 minutes without callback.')").run();
  let dispatched=0,dispatchErrors=0;
  if(env.GITHUB_TOKEN){
