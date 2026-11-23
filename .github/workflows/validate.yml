@@ -37,12 +37,12 @@ jobs:
           RENDER_TEST_MODE: "1"
         run: |
           ffmpeg -nostdin -hide_banner -loglevel error -y -f lavfi -i testsrc2=size=320x180:rate=10 -f lavfi -i sine=frequency=440:duration=1 -t 1 -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac fixture.mp4
-          python renderer/render.py --source-url https://clips.twitch.tv/CIOnlyFixture --test-local-source fixture.mp4 --title "GTA 6 CI Render Test" --narration "Synthetic voiceover render test." --rights-approved true --output ci-short.mp4
+          python renderer/render.py --source-url https://clips.twitch.tv/CIOnlyFixture --test-local-source fixture.mp4 --title "GTA 6 CI Render Test" --narration "Synthetic voiceover render test." --output ci-short.mp4
           ffprobe -v error -select_streams v:0 -show_entries stream=width,height,codec_name -of csv=p=0 ci-short.mp4
           test -s render-analysis.json
           python -c "import json; a=json.load(open('render-analysis.json')); assert a['audio']['present'] is True and a['usable_for_shorts'] is True"
           ffmpeg -nostdin -hide_banner -loglevel error -y -f lavfi -i testsrc2=size=320x180:rate=10 -t 1 -c:v libx264 -preset ultrafast -pix_fmt yuv420p silent-fixture.mp4
-          python renderer/render.py --source-url https://clips.twitch.tv/CIOnlyFixture --test-local-source silent-fixture.mp4 --title "GTA 6 Silent Source Test" --narration "Synthetic voiceover fallback render test." --rights-approved true --output ci-short-noaudio.mp4
+          python renderer/render.py --source-url https://clips.twitch.tv/CIOnlyFixture --test-local-source silent-fixture.mp4 --title "GTA 6 Silent Source Test" --narration "Synthetic voiceover fallback render test." --output ci-short-noaudio.mp4
           ffprobe -v error -select_streams v:0 -show_entries stream=width,height,codec_name -of csv=p=0 ci-short-noaudio.mp4
           ffprobe -v error -select_streams a:0 -show_entries stream=codec_name -of csv=p=0 ci-short-noaudio.mp4 | grep -qx aac
       - name: Check required deployment files
