@@ -12,6 +12,7 @@ const HTML = String.raw`<!doctype html>
 <section class="panel"><h2>Bulut bağlantıları</h2><div id="systemStatus" class="notice">Bağlantılar kontrol ediliyor...</div><p class="muted">Gizli anahtarların değerleri gösterilmez; yalnızca yapılandırılmış olup olmadıkları kontrol edilir.</p></section>
 <section class="panel"><h2>Twitch bağlantısı</h2><div id="twitchStatus" class="notice">Kontrol ediliyor...</div><button id="twitchConnect">Twitch'e bağlan</button><button id="twitchCheck" class="secondary">Bağlantıyı kontrol et</button><button id="twitchDisconnect" class="secondary">Bağlantıyı kaldır</button><div class="mini">Gerekli izinler: editor:manage:clips veya channel:manage:clips. Teknik indirme erişimi, ticari kullanım izni anlamına gelmez.</div></section>
 <section class="panel"><h2>Twitch klip erişim kontrolü</h2><p class="muted">Klip bilgileri çözülür. Yetkisiz yayıncılar kaydedilir ve sonraki kontrollerde tekrar denenmez. Geçici indirme bağlantıları yalnızca Twitch erişim verirse gösterilir.</p><button id="resolveDownloads">20 kayıt kontrol et</button><button id="downloadStatus" class="secondary">Durumu yenile</button><div id="downloadReport" class="notice hidden"></div><div class="wrap"><table><thead><tr><th>Klip</th><th>Yayıncı</th><th>Clip ID</th><th>Erişim</th><th>MP4</th></tr></thead><tbody id="downloadRows"></tbody></table></div></section>
+<section class="panel" id="quickClipPanel"><h2>Kendi Twitch klibini tek tıkla üret</h2><p class="muted">Kendi Twitch klibinin bağlantısını ekle. GTA VI kategorisi doğrulanırsa MP4 render kuyruğuna gönderilir.</p><input id="quickClipUrl" value="https://www.twitch.tv/postmassive/clip/TenaciousFunnyKoalaEleGiggle" placeholder="Twitch klip bağlantısı"><button id="quickClipProduce">KLİBİ EKLE VE MP4 ÜRET</button><div id="quickClipResult" class="notice hidden"></div></section>
 <section class="panel"><h2>Manuel kaynak ekle</h2><input id="url" placeholder="Klip URL"><input id="creator" placeholder="Yayıncı adı"><input id="title" placeholder="Klip başlığı"><button id="add">Kaynak ekle</button></section>
 <section class="panel"><h2>Kaynaklar</h2><div class="wrap"><table><thead><tr><th>Yayıncı / Klip</th><th>Puan</th><th>Medya analizi</th><th>Hak durumu</th><th>Kaynak</th></tr></thead><tbody id="sourceRows"></tbody></table></div></section>
 <section class="panel"><h2>Shorts üretim paketleri</h2><p class="muted">Başlığa özel başlık, hook, özgün anlatım, altyazı ve 9:16 kurgu yönergesi.</p><div class="wrap"><table><thead><tr><th>Kaynak</th><th>Başlık</th><th>Durum</th><th>İşlem</th></tr></thead><tbody id="draftRows"></tbody></table></div></section>
@@ -45,6 +46,7 @@ $("downloadStatus").onclick=async()=>{try{await refreshDownloads();showMsg("Eri�
 $("resolveDownloads").onclick=async()=>{showMsg("Twitch klipleri kontrol ediliyor...");try{const r=await api("/api/twitch/downloads/check",{limit:20});renderDownloads(r.items||[]);$("downloadReport").textContent="İşlenen: "+r.processed+"\nÇözülen clip ID: "+r.resolved+"\nİndirilebilir: "+r.downloadable+"\nYetkisiz: "+r.unauthorized+"\nHata: "+r.errors+"\nKalan çözülmemiş: "+r.remaining+"\nAtlanan yetkisiz yayıncı: "+(r.skipped_broadcasters||0);$("downloadReport").classList.remove("hidden");showMsg("Twitch klip kontrolü tamamlandı.");await refresh()}catch(e){showMsg(e.message)}};
 $("discover").onclick=async()=>{showMsg("GTA VI Twitch keşfi çalışıyor...");try{const r=await api("/api/discover",{});showMsg("GTA VI keşfi tamamlandı"+"\nYayıncı: "+r.creators+"\nAlınan klip: "+r.clips+"\nYeni kaynak: "+r.saved+"\nTekrar kayıt: "+r.duplicates+"\nAlakasız klip atlandı: "+r.filtered+"\nOyun kategorisi: "+(r.game_id?"Doğrulandı":"Başlık filtresi kullanıldı"));await refresh()}catch(e){showMsg(e.message)}};
 $("prepare").onclick=async()=>{showMsg("Paketler oluşturuluyor ve mevcut paketler güncelleniyor...");try{const r=await api("/api/prepare",{});showMsg("ÜRETİM HAZIRLIĞI TAMAMLANDI"+"\nKontrol edilen: "+r.checked+"\nYeni paket: "+r.created+"\nGüncellenen paket: "+r.updated+"\nÖnceden mevcut: "+r.existing+"\nAlakasız kaynak atlandı: "+r.skipped_irrelevant+"\nKuyruktaki toplam: "+r.total);await refresh()}catch(e){showMsg(e.message)}};
+$("quickClipProduce").onclick=async()=>{const b=$("quickClipProduce"),out=$("quickClipResult"),url=$("quickClipUrl").value.trim();if(!url){out.textContent="Önce Twitch klip bağlantısını yapıştır.";out.classList.remove("hidden");return;}b.disabled=true;b.textContent="Klip doğrulanıyor ve render başlatılıyor...";out.textContent="Klip kontrol ediliyor...";out.classList.remove("hidden");try{const r=await api("/api/source/quick",{url,authorization_confirmation:true});out.textContent="Klip eklendi. MP4 render kuyruğuna gönderildi. İş: "+r.job_id+" · Durum: "+r.status;showMsg("MP4 üretimi başlatıldı.");await refresh()}catch(e){out.textContent=e.message;showMsg(e.message)}finally{b.disabled=false;b.textContent="KLİBİ EKLE VE MP4 ÜRET"}};
 $("add").onclick=async()=>{try{await api("/api/source/manual",{url:$("url").value,creator:$("creator").value,title:$("title").value});$("url").value="";$("creator").value="";$("title").value="";showMsg("Kaynak eklendi.");await refresh()}catch(e){showMsg(e.message)}};
 loginCheck();
 </script></body></html>`;
@@ -71,17 +73,7 @@ async function ensureSchema(db){
  await ensureColumn(db,"jobs","render_attempts","INTEGER NOT NULL DEFAULT 0");
  await ensureColumn(db,"jobs","last_error","TEXT");
  await ensureColumn(db,"jobs","dispatch_started_at","TEXT");
- // Remove the abandoned one-click PostMassive clip and its dependent panel records.
- const legacy=await db.prepare("SELECT id FROM sources WHERE source_url=?").bind("https://www.twitch.tv/postmassive/clip/TenaciousFunnyKoalaEleGiggle").first();
- if(legacy){
-  const sid=legacy.id;
-  await db.prepare("DELETE FROM permission_requests WHERE source_id=?").bind(sid).run();
-  await db.prepare("DELETE FROM jobs WHERE source_id=?").bind(sid).run();
-  await db.prepare("DELETE FROM shorts_drafts WHERE source_id=?").bind(sid).run();
-  await db.prepare("DELETE FROM clip_analysis WHERE source_id=?").bind(sid).run();
-  await db.prepare("DELETE FROM twitch_clip_access WHERE source_id=?").bind(sid).run();
-  await db.prepare("DELETE FROM sources WHERE id=?").bind(sid).run();
- }
+
 }
 function cookieValue(request){const list=(request.headers.get("Cookie")||"").split(";"),found=list.find(x=>x.trim().startsWith("gta6_session="));return found?found.trim().slice(13):"";}
 function b64url(bytes){let s="";for(const b of bytes)s+=String.fromCharCode(b);return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"");}
