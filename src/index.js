@@ -146,8 +146,6 @@ async function dispatchRender(db,env,draftId,evidenceReference,authorizationConf
  if(!row.job_id)return {error:"Bu paket için üretim işi kaydı bulunamadı. Önce paketleri güncelle."};
  if(["processing","processing","ready"].includes(row.job_status))return {error:"Bu paket zaten render kuyruğunda veya tamamlanmış."};
  if(Number(row.render_attempts||0)>=3)return {error:"Bu iş için üç render denemesi tamamlandı. Otomatik tekrar durduruldu."};
- const narration=extractNarration(row.script);
- if(narration.length<20)return {error:"Üretim metninden voiceover çıkarılamadı; render başlatılmadı."};
  // User-triggered render; no evidence URL prompt and no automatic rights-record mutation.
 
  const title=String(row.draft_title||row.source_title||"GTA 6 Short").slice(0,90);
@@ -156,7 +154,7 @@ async function dispatchRender(db,env,draftId,evidenceReference,authorizationConf
  await db.prepare("UPDATE jobs SET status='processing',render_attempts=COALESCE(render_attempts,0)+1,last_error=NULL,dispatch_started_at=CURRENT_TIMESTAMP,editorial_note='Authorized render dispatched to GitHub Actions.',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.job_id).run();
  await db.prepare("UPDATE shorts_drafts SET status='processing',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.draft_id).run();
  let response;
- try{response=await fetch("https://api.github.com/repos/alperengkhn-sys/gta6-shorts-factory/actions/workflows/render-short.yml/dispatches",{method:"POST",headers:{"Authorization":"Bearer "+env.GITHUB_TOKEN,"Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28","Content-Type":"application/json","User-Agent":"GTA6-Shorts-Factory"},body:JSON.stringify({ref:"main",inputs:{source_url:row.source_url,title,description,narration,job_id:row.job_id,render_attempt:String(Number(row.render_attempts||0)+1)}})});}
+ try{response=await fetch("https://api.github.com/repos/alperengkhn-sys/gta6-shorts-factory/actions/workflows/render-short.yml/dispatches",{method:"POST",headers:{"Authorization":"Bearer "+env.GITHUB_TOKEN,"Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28","Content-Type":"application/json","User-Agent":"GTA6-Shorts-Factory"},body:JSON.stringify({ref:"main",inputs:{source_url:row.source_url,title,description,job_id:row.job_id,render_attempt:String(Number(row.render_attempts||0)+1)}})});}
  catch(error){const detail=String(error&&error.message||error).slice(0,1000);await db.prepare("UPDATE jobs SET status='failed',editorial_note=?,last_error=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind("GitHub dispatch network error: "+detail,detail,row.job_id).run();await db.prepare("UPDATE shorts_drafts SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.draft_id).run();return {error:"GitHub Actions bağlantı hatası: "+detail};}
  if(response.status!==204){const detail=(await response.text()).slice(0,1200);await db.prepare("UPDATE jobs SET status='failed',editorial_note=?,last_error=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind("GitHub dispatch failed: HTTP "+response.status+" "+detail,detail,row.job_id).run();await db.prepare("UPDATE shorts_drafts SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.draft_id).run();return {error:"GitHub Actions işi başlatılamadı (HTTP "+response.status+"). "+detail};}
  return {ok:true,job_id:row.job_id,status:"processing"};
