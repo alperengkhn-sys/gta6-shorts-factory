@@ -189,15 +189,12 @@ def main():
         assets=branding_assets()
         vf, overlay_inputs=video_filter(duration,assets)
         render_cmd=["ffmpeg","-nostdin","-hide_banner","-loglevel","info","-stats_period","1",
-             "-filter_threads","1","-threads","2","-y","-i",str(media),*overlay_inputs]
+             "-filter_threads","1","-threads","2","-y","-i",str(media)]
         if assets:
-            render_cmd += ["-filter_complex",vf]
+            render_cmd += overlay_inputs[:-2]
+            render_cmd += ["-filter_complex",vf,*overlay_inputs[-2:]]
         else:
             render_cmd += ["-vf",vf,"-map","0:v:0"]
-        if assets:
-            render_cmd += ["-map",f"[{len(assets)}:v]"] if False else []
-            # The final filtered video map is appended by video_filter.
-            render_cmd += overlay_inputs[-2:]
         render_cmd += ["-map","0:a:0","-t",str(duration),"-r","30",
              "-c:v","libx264","-preset","ultrafast","-crf","23",
              "-pix_fmt","yuv420p","-c:a","aac","-b:a","160k","-movflags","+faststart",str(out)]
