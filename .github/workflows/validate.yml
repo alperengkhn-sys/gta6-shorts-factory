@@ -40,11 +40,14 @@ jobs:
           python renderer/render.py --source-url https://clips.twitch.tv/CIOnlyFixture --test-local-source fixture.mp4 --title "GTA 6 CI Render Test" --output ci-short.mp4
           test "$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height,codec_name -of csv=p=0 ci-short.mp4)" = "1080,1920,h264"
           test -s render-analysis.json
+          test -s short-cover.jpg
           python -c "import json; a=json.load(open('render-analysis.json')); assert a['audio']['present'] is True and a['usable_for_shorts'] is True"
           ffmpeg -nostdin -hide_banner -loglevel error -y -f lavfi -i testsrc2=size=320x180:rate=10 -t 26 -map 0:v:0 -an -c:v libx264 -preset ultrafast -pix_fmt yuv420p silent-fixture.mp4
           test "$(ffprobe -v error -show_entries stream=codec_type -of csv=p=0 silent-fixture.mp4)" = "video"
           if python renderer/render.py --source-url https://clips.twitch.tv/CIOnlyFixture --test-local-source silent-fixture.mp4 --title "GTA 6 Silent Source Test" --output ci-short-noaudio.mp4 > silent-render.log 2>&1; then echo "Silent source must be rejected"; cat silent-render.log; exit 1; fi
-          test ! -e ci-short-noaudio.mp4
+          cat silent-render.log
+          grep -q "Original Twitch clip has no audio stream" silent-render.log
+          test ! -s ci-short-noaudio.mp4
       - name: Check required deployment files
         run: |
           test -s wrangler.toml
