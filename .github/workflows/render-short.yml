@@ -34,7 +34,7 @@ jobs:
       - name: Install media tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg
+          sudo apt-get install -y ffmpeg fonts-dejavu-core
           python -m pip install --upgrade pip
           pip install yt-dlp
       - name: Render vertical MP4
@@ -55,6 +55,7 @@ jobs:
           path: |
             short.mp4
             render-analysis.json
+            short-cover.jpg
           if-no-files-found: error
           retention-days: 7
       - name: Upload MP4 to YouTube privately (optional)
@@ -79,6 +80,7 @@ jobs:
           YOUTUBE_STATUS: ${{ steps.youtube.outputs.upload_status }}
           YOUTUBE_URL: ${{ steps.youtube.outputs.video_url }}
           YOUTUBE_ERROR: ${{ steps.youtube.outputs.error }}
+          THUMBNAIL_STATUS: ${{ steps.youtube.outputs.thumbnail_status }}
           ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
@@ -94,6 +96,7 @@ jobs:
             "render_conclusion": os.environ.get("RENDER_CONCLUSION", ""),
             "youtube_status": os.environ.get("YOUTUBE_STATUS", "") or "not_configured",
             "youtube_url": os.environ.get("YOUTUBE_URL", ""),
+            "thumbnail_status": os.environ.get("THUMBNAIL_STATUS", "") or "not_available",
             "error": os.environ.get("YOUTUBE_ERROR", "") or ("" if os.environ["RENDER_CONCLUSION"] == "success" else "GitHub Actions render failed; inspect the workflow run."),
             "artifact_url": os.environ.get("ARTIFACT_URL", ""),
             "run_url": os.environ.get("RUN_URL", "")
