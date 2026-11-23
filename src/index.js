@@ -9,6 +9,7 @@ const HTML = String.raw`<!doctype html>
 <section id="login" class="panel hidden"><h2>Panel girişi</h2><input id="password" type="password" placeholder="APP_PASSWORD"><button id="loginBtn">Giriş yap</button><div id="loginMsg" class="notice hidden"></div></section>
 <div id="app" class="hidden">
 <section class="panel" id="quickClipPanel" style="border:2px solid #8b5cf6;background:#191426;padding:22px"><h2 style="margin-top:0">KENDİ TWITCH KLİBİNİ ÜRET</h2><p class="muted">Twitch klip bağlantını buraya yapıştır. Klip GTA VI olarak doğrulanırsa MP4 üretimi başlatılır.</p><input id="quickClipUrl" type="url" placeholder="https://www.twitch.tv/.../clip/..."><button id="quickClipProduce" style="width:100%;padding:15px;font-size:15px">KLİBİ EKLE VE MP4 ÜRET</button><div id="quickClipResult" class="notice hidden"></div></section>
+
 <section class="panel"><div class="stats"><div class="stat">Kaynaklar<strong id="sources">0</strong></div><div class="stat">Üretim kuyruğu<strong id="queued">0</strong></div><div class="stat">Hazırlanan paket<strong id="drafts">0</strong></div><div class="stat">İzin bekleyen<strong id="pending">0</strong></div><div class="stat">İndirilebilir<strong id="downloadable">0</strong></div></div><p class="muted">Üretim hazırlığı ile indirme ve yayınlama izinleri ayrı değerlendirilir.</p><button id="refresh" class="secondary">Paneli yenile</button><button id="discover">GTA VI Twitch keşfini başlat</button><button id="prepare">PAKETLERİ OLUŞTUR / GÜNCELLE</button><button id="logout" class="secondary">Çıkış</button><div id="msg" class="notice hidden"></div></section>
 <section class="panel"><h2>Bulut bağlantıları</h2><div id="systemStatus" class="notice">Bağlantılar kontrol ediliyor...</div><p class="muted">Gizli anahtarların değerleri gösterilmez; yalnızca yapılandırılmış olup olmadıkları kontrol edilir.</p></section>
 <section class="panel"><h2>Twitch bağlantısı</h2><div id="twitchStatus" class="notice">Kontrol ediliyor...</div><button id="twitchConnect">Twitch'e bağlan</button><button id="twitchCheck" class="secondary">Bağlantıyı kontrol et</button><button id="twitchDisconnect" class="secondary">Bağlantıyı kaldır</button><div class="mini">Gerekli izinler: editor:manage:clips veya channel:manage:clips. Teknik indirme erişimi, ticari kullanım izni anlamına gelmez.</div></section>
@@ -233,21 +234,23 @@ if(path==="/api/prepare"&&method==="POST"){const clipValidation=await resolveTwi
 if(path==="/api/render/dispatch"&&method==="POST"){const data=await readBody(request);const result=await dispatchRender(env.DB,env,String(data.draft_id||""),data.evidence_reference,data.authorization_confirmation);return result.error?json({error:result.error},400):json(result);}
 if(path==="/api/source/quick"&&method==="POST"){
 if(!await authorized(request,env))return json({error:"Giriş gerekli."},401);
-const data=await readBody(request),clipUrl=String(data.url||"").trim().replace(/\/$/,""),expected="https://www.twitch.tv/postmassive/clip/TenaciousFunnyKoalaEleGiggle";
-if(data.authorization_confirmation!==true||clipUrl.toLowerCase()!==expected.toLowerCase())return json({error:"Bu işlem yalnızca onayladığın PostMassive klibi için kullanılabilir."},400);
-let source=await env.DB.prepare("SELECT id FROM sources WHERE source_url=? LIMIT 1").bind(expected).first(),sourceId;
-if(source){sourceId=source.id;await env.DB.prepare("UPDATE sources SET platform='twitch',creator_name='PostMassive',rights_status='approved' WHERE id=?").bind(sourceId).run();}
-else{sourceId=uid();await env.DB.prepare("INSERT INTO sources(id,platform,source_url,creator_name,title,rights_status,relevance_status) VALUES(?,'twitch',?,'PostMassive','GTA VI clip TenaciousFunnyKoalaEleGiggle','approved','unknown')").bind(sourceId,expected).run();await analyzeSource(env.DB,{id:sourceId,title:"GTA VI clip TenaciousFunnyKoalaEleGiggle"});}
-const appToken=await twitchToken(env),clipRows=await twitchGet("https://api.twitch.tv/helix/clips?id=TenaciousFunnyKoalaEleGiggle",env,appToken),clip=clipRows[0];
-if(!clip)return json({error:"Twitch API bu klibi bulamadı."},404);
-const gameId=await getGta6GameId(env,appToken);
-const clipGameRows=clip.game_id?await twitchGet("https://api.twitch.tv/helix/games?id="+encodeURIComponent(clip.game_id),env,appToken):[];
- const clipGameName=String(clipGameRows[0]?.name||"").trim().toLowerCase();
- const categoryConfirmed=(!!gameId&&String(clip.game_id||"")===String(gameId))||clipGameName==="grand theft auto vi"||clipGameName==="gta vi";
- if(!categoryConfirmed){await env.DB.prepare("UPDATE sources SET relevance_status='unknown',twitch_clip_id=?,twitch_broadcaster_id=?,twitch_game_id=? WHERE id=?").bind(clip.id,clip.broadcaster_id,clip.game_id||null,sourceId).run();return json({error:"Twitch klibinin kategorisi GTA VI olarak doğrulanamadı. Twitch kategori adı: "+(clipGameRows[0]?.name||"boş")+". Render başlatılmadı."},400);}
-await env.DB.prepare("UPDATE sources SET twitch_clip_id=?,twitch_broadcaster_id=?,twitch_game_id=?,relevance_status='relevant' WHERE id=?").bind(clip.id,clip.broadcaster_id,clip.game_id,sourceId).run();
+const data=await readBody(request),clipUrl=String(data.url||"").trim();
+let clipSlug=null;
+try{const u=new URL(clipUrl),host=u.hostname.toLowerCase().replace(/^www\\./,"");if(host==="clips.twitch.tv")clipSlug=u.pathname.split("/").filter(Boolean)[0]||null;else if(host==="twitch.tv"){const p=u.pathname.split("/").filter(Boolean),i=p.findIndex(x=>x.toLowerCase()==="clip");if(i>=0&&p[i+1]&&!p[i+2])clipSlug=p[i+1];}}catch{}
+if(!clipSlug)return json({error:"Geçerli bir Twitch klip bağlantısı yapıştır. Örnek: twitch.tv/yayıncı/clip/KlipKodu"},400);
+if(data.authorization_confirmation!==true)return json({error:"Bu klibin sahibi olduğunu veya MP4 üretimi için izin aldığını onaylamalısın."},400);
+const appToken=await twitchToken(env),clipRows=await twitchGet("https://api.twitch.tv/helix/clips?id="+encodeURIComponent(clipSlug),env,appToken),clip=clipRows[0];
+if(!clip)return json({error:"Twitch bu klibi bulamadı veya klip artık erişilebilir değil."},404);
+const gameId=await getGta6GameId(env,appToken),clipGameRows=clip.game_id?await twitchGet("https://api.twitch.tv/helix/games?id="+encodeURIComponent(clip.game_id),env,appToken):[],clipGameName=String(clipGameRows[0]?.name||"").trim().toLowerCase();
+const categoryConfirmed=(!!gameId&&String(clip.game_id||"")===String(gameId))||clipGameName==="grand theft auto vi"||clipGameName==="gta vi";
+if(!categoryConfirmed)return json({error:"Bu klibin Twitch kategorisi GTA VI olarak doğrulanamadı ("+(clipGameRows[0]?.name||"kategori boş")+"). MP4 üretimi başlatılmadı."},400);
+const canonicalUrl="https://www.twitch.tv/"+String(clip.broadcaster_name||"channel").toLowerCase()+"/clip/"+clip.id;
+let source=await env.DB.prepare("SELECT id FROM sources WHERE twitch_clip_id=? OR source_url=? LIMIT 1").bind(clip.id,canonicalUrl).first(),sourceId;
+if(source){sourceId=source.id;await env.DB.prepare("UPDATE sources SET platform='twitch',source_url=?,creator_name=?,title=?,rights_status='approved',twitch_clip_id=?,twitch_broadcaster_id=?,twitch_game_id=?,relevance_status='relevant' WHERE id=?").bind(canonicalUrl,clip.broadcaster_name||"Twitch",clip.title||"GTA VI clip",clip.id,clip.broadcaster_id,clip.game_id||null,sourceId).run();}
+else{sourceId=uid();await env.DB.prepare("INSERT INTO sources(id,platform,source_url,creator_name,title,rights_status,twitch_clip_id,twitch_broadcaster_id,twitch_game_id,relevance_status) VALUES(?,'twitch',?,?,?,'approved',?,?,?,'relevant')").bind(sourceId,canonicalUrl,clip.broadcaster_name||"Twitch",clip.title||"GTA VI clip",clip.id,clip.broadcaster_id,clip.game_id||null).run();}
+await analyzeSource(env.DB,{id:sourceId,title:clip.title||"GTA VI clip"},clip.view_count||0,clip.duration||30);
 const prepared=await prepareAll(env.DB),draft=await env.DB.prepare("SELECT id FROM shorts_drafts WHERE source_id=? LIMIT 1").bind(sourceId).first();
-if(!draft)return json({error:"Üretim paketi oluşturulamadı.",prepared},400);
+if(!draft)return json({error:"Klip doğrulandı ancak üretim paketi oluşturulamadı.",prepared},400);
 const result=await dispatchRender(env.DB,env,draft.id,"","owner-confirmed");
 return result.error?json({error:result.error},400):json({ok:true,job_id:result.job_id,status:result.status,prepared});
 }
