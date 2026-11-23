@@ -113,6 +113,11 @@ jobs:
                   if not path.is_file():
                       raise SystemExit(f"Missing delivery file: {path}")
                   archive.write(path, path.name)
+              branding = Path("branding")
+              if branding.is_dir():
+                  for path in sorted(branding.rglob("*")):
+                      if path.is_file() and path.name.lower() != "readme.md":
+                          archive.write(path, str(Path("branding") / path.relative_to(branding)))
           PY
       - name: Publish direct MP4 and package ZIP
         id: release
