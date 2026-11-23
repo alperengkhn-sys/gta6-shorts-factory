@@ -236,7 +236,7 @@ if(path==="/api/source/quick"&&method==="POST"){
 if(!await authorized(request,env))return json({error:"Giriş gerekli."},401);
 const data=await readBody(request),clipUrl=String(data.url||"").trim();
 let clipSlug=null;
-try{const u=new URL(clipUrl),host=u.hostname.toLowerCase().replace(/^www\\./,"");if(host==="clips.twitch.tv")clipSlug=u.pathname.split("/").filter(Boolean)[0]||null;else if(host==="twitch.tv"){const p=u.pathname.split("/").filter(Boolean),i=p.findIndex(x=>x.toLowerCase()==="clip");if(i>=0&&p[i+1]&&!p[i+2])clipSlug=p[i+1];}}catch{}
+try{const u=new URL(clipUrl),host=u.hostname.toLowerCase().replace(/^www\./,"");if(host==="clips.twitch.tv")clipSlug=u.pathname.split("/").filter(Boolean)[0]||null;else if(host==="twitch.tv"){const p=u.pathname.split("/").filter(Boolean),i=p.findIndex(x=>x.toLowerCase()==="clip");if(i>=0&&p[i+1]&&!p[i+2])clipSlug=p[i+1];}}catch{}
 if(!clipSlug)return json({error:"Geçerli bir Twitch klip bağlantısı yapıştır. Örnek: twitch.tv/yayıncı/clip/KlipKodu"},400);
 if(data.authorization_confirmation!==true)return json({error:"Bu klibin sahibi olduğunu veya MP4 üretimi için izin aldığını onaylamalısın."},400);
 const appToken=await twitchToken(env),clipRows=await twitchGet("https://api.twitch.tv/helix/clips?id="+encodeURIComponent(clipSlug),env,appToken),clip=clipRows[0];
