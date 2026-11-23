@@ -1,5 +1,5 @@
 name: Render GTA6 Short
-"on":
+on:
   push:
     paths:
       - "render-queue/*.json"
