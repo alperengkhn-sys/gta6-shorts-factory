@@ -35,7 +35,7 @@ name: Render GTA6 Short
         required: false
         type: string
 permissions:
-  contents: read
+  contents: write
   actions: read
 jobs:
   render:
@@ -99,6 +99,38 @@ jobs:
           Path(f"GTA6-Short-{number}.mp4").write_bytes(Path("short.mp4").read_bytes())
           Path(f"GTA6-Short-{number}-cover.jpg").write_bytes(Path("short-cover.jpg").read_bytes())
           PY
+      - name: Build combined ZIP package
+        env:
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          python - <<'PY'
+          import os, zipfile
+          from pathlib import Path
+          number = os.environ["RUN_NUMBER"]
+          files = [Path(f"GTA6-Short-{number}.mp4"), Path(f"GTA6-Short-{number}.txt"), Path(f"GTA6-Short-{number}-cover.jpg")]
+          with zipfile.ZipFile(f"GTA6-Short-{number}-PACKAGE.zip", "w", zipfile.ZIP_DEFLATED) as archive:
+              for path in files:
+                  if not path.is_file():
+                      raise SystemExit(f"Missing delivery file: {path}")
+                  archive.write(path, path.name)
+          PY
+      - name: Publish direct MP4 and package ZIP
+        id: release
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_NUMBER: ${{ github.run_number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          TAG="gta6-short-${RUN_NUMBER}"
+          MP4="GTA6-Short-${RUN_NUMBER}.mp4"
+          TXT="GTA6-Short-${RUN_NUMBER}.txt"
+          COVER="GTA6-Short-${RUN_NUMBER}-cover.jpg"
+          ZIP="GTA6-Short-${RUN_NUMBER}-PACKAGE.zip"
+          gh release create "$TAG" "$MP4" "$TXT" "$COVER" "$ZIP" --title "GTA6 Short #${RUN_NUMBER}" --notes "Rendered GTA VI Short delivery: MP4, editorial TXT, cover JPG and combined ZIP package." || gh release upload "$TAG" "$MP4" "$TXT" "$COVER" "$ZIP" --clobber
+          BASE="https://github.com/${REPOSITORY}/releases/download/${TAG}"
+          echo "mp4_url=${BASE}/${MP4}" >> "$GITHUB_OUTPUT"
+          echo "package_url=${BASE}/${ZIP}" >> "$GITHUB_OUTPUT"
       - name: Upload rendered MP4 and media analysis
         id: upload
         uses: actions/upload-artifact@v4
@@ -134,7 +166,9 @@ jobs:
           YOUTUBE_URL: ${{ steps.youtube.outputs.video_url }}
           YOUTUBE_ERROR: ${{ steps.youtube.outputs.error }}
           THUMBNAIL_STATUS: ${{ steps.youtube.outputs.thumbnail_status }}
-          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
+          ARTIFACT_URL: ${{ steps.release.outputs.mp4_url }}
+          PACKAGE_URL: ${{ steps.release.outputs.package_url }}
+          FALLBACK_ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           if [ -z "$JOB_ID" ]; then echo "No originating Worker job; callback skipped."; exit 0; fi
@@ -151,7 +185,8 @@ jobs:
             "youtube_url": os.environ.get("YOUTUBE_URL", ""),
             "thumbnail_status": os.environ.get("THUMBNAIL_STATUS", "") or "not_available",
             "error": os.environ.get("YOUTUBE_ERROR", "") or ("" if os.environ["RENDER_CONCLUSION"] == "success" else "GitHub Actions render failed; inspect the workflow run."),
-            "artifact_url": os.environ.get("ARTIFACT_URL", ""),
+            "artifact_url": os.environ.get("ARTIFACT_URL", "") or os.environ.get("FALLBACK_ARTIFACT_URL", ""),
+            "package_url": os.environ.get("PACKAGE_URL", ""),
             "run_url": os.environ.get("RUN_URL", "")
           }
           analysis_path = Path("render-analysis.json")
