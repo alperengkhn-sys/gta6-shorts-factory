@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Vertical Shorts renderer. Preserves original Twitch video and audio; no TTS or added overlays."""
-import argparse, json, os, shutil, subprocess, sys, tempfile
+import argparse, json, os, shutil, subprocess, sys, tempfile, urllib.request
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -148,6 +148,68 @@ def make_cover(video, title, duration, destination):
          "-i", str(video), "-frames:v", "1", "-vf", vf, "-q:v", "2", str(destination)])
 
 
+
+def auto_trim_silence(media, workdir):
+    log=run(["ffmpeg","-nostdin","-hide_banner","-i",str(media),"-af","silencedetect=noise=-35dB:d=0.8","-f","null","-"])
+    meta=json.loads(run(["ffprobe","-v","error","-show_entries","format=duration","-of","json",str(media)]))
+    duration=float(meta.get("format",{}).get("duration") or 0)
+    starts=[]; gaps=[]
+    for line in log.splitlines():
+        if "silence_start:" in line:
+            try: starts.append(float(line.split("silence_start:",1)[1].strip().split()[0]))
+            except ValueError: pass
+        if "silence_end:" in line and "silence_duration:" in line and starts:
+            try:
+                end=float(line.split("silence_end:",1)[1].split("|",1)[0].strip())
+                length=float(line.split("silence_duration:",1)[1].strip().split()[0])
+                gaps.append((starts.pop(0),end,length))
+            except ValueError: pass
+    if starts: gaps.append((starts[0],duration,duration-starts[0]))
+    cuts=[(a,b) for a,b,d in gaps if d>=1.25 and a>0.2 and b<duration-0.2]
+    if not cuts: return media,duration,0
+    keep=[]; cursor=0.0
+    for a,b in cuts:
+        left=max(cursor,a-0.12); right=min(duration,b+0.12)
+        if left-cursor>0.25: keep.append((cursor,left))
+        cursor=max(cursor,right)
+    if duration-cursor>0.25: keep.append((cursor,duration))
+    kept=sum(b-a for a,b in keep)
+    if len(keep)<2 or kept<15 or duration-kept<1.5: return media,duration,0
+    parts=[]
+    for i,(a,b) in enumerate(keep):
+        part=workdir/f"trim-{i:02d}.mp4"
+        run(["ffmpeg","-nostdin","-hide_banner","-loglevel","error","-y","-ss",str(a),"-to",str(b),"-i",str(media),"-map","0:v:0","-map","0:a:0","-c:v","libx264","-preset","ultrafast","-crf","23","-pix_fmt","yuv420p","-c:a","aac","-b:a","160k",str(part)])
+        parts.append(part)
+    listing=workdir/"concat.txt"
+    listing.write_text("".join("file '"+p.as_posix()+"'\\n" for p in parts),encoding="utf-8")
+    output=workdir/"trimmed.mp4"
+    run(["ffmpeg","-nostdin","-hide_banner","-loglevel","error","-y","-f","concat","-safe","0","-i",str(listing),"-c","copy",str(output)])
+    return output,kept,round(duration-kept,2)
+
+
+def make_ai_voiceover(script,destination):
+    key=os.environ.get("OPENAI_API_KEY","").strip()
+    marker="ORIGINAL VOICEOVER DRAFT:"
+    narration=""
+    if marker in script:
+        narration=script.split(marker,1)[1].split("CAPTION TEXT DRAFT:",1)[0].strip()
+    if not key or len(narration)<12: return None
+    payload=json.dumps({"model":"gpt-4o-mini-tts","voice":"alloy","input":narration[:3500],"instructions":"Natural concise gaming commentary. Do not invent facts beyond the supplied script."}).encode()
+    request=urllib.request.Request("https://api.openai.com/v1/audio/speech",data=payload,headers={"Authorization":"Bearer "+key,"Content-Type":"application/json"},method="POST")
+    try:
+        with urllib.request.urlopen(request,timeout=90) as response: destination.write_bytes(response.read())
+        return destination if destination.stat().st_size>1000 else None
+    except Exception as error:
+        print("VOICEOVER_SKIPPED: "+str(error)[:250],flush=True)
+        return None
+
+
+def mix_voiceover(video,voiceover,workdir):
+    mixed=workdir/"commentary-mix.mp4"
+    run(["ffmpeg","-nostdin","-hide_banner","-loglevel","error","-y","-i",str(video),"-i",str(voiceover),"-filter_complex","[0:a]volume=0.55[original];[1:a]volume=1.15[voice];[original][voice]amix=inputs=2:duration=first:dropout_transition=2[aout]","-map","0:v:0","-map","[aout]","-c:v","copy","-c:a","aac","-b:a","192k",str(mixed)])
+    shutil.move(str(mixed),str(video))
+
+
 def main():
     ap=argparse.ArgumentParser()
     ap.add_argument("--source-url",required=True)
@@ -183,13 +245,16 @@ def main():
         if not has_source_audio:
             raise RuntimeError("Original Twitch clip has no audio stream; refusing to add synthetic audio.")
         analysis=media_analysis(media)
+        media_for_render,edited_duration,removed_silence=auto_trim_silence(media,w)
+        analysis["silence_removed_seconds"]=removed_silence
+        analysis["automatic_dead_air_trim"]=removed_silence>0
         analysis_path=out.parent/"render-analysis.json"
         analysis_path.write_text(json.dumps(analysis,indent=2),encoding="utf-8")
-        duration=min(60.0,source_duration)
+        duration=min(60.0,edited_duration)
         assets=branding_assets()
         vf, overlay_inputs=video_filter(duration,assets)
         render_cmd=["ffmpeg","-nostdin","-hide_banner","-loglevel","info","-stats_period","1",
-             "-filter_threads","1","-threads","2","-y","-i",str(media)]
+             "-filter_threads","1","-threads","2","-y","-i",str(media_for_render)]
         if assets:
             render_cmd += overlay_inputs[:-2]
             render_cmd += ["-filter_complex",vf,*overlay_inputs[-2:]]
@@ -201,6 +266,12 @@ def main():
         print(f"RENDER_STAGE: encoding original Twitch video and audio with {len(assets)} branding overlays",flush=True)
         run(render_cmd)
         print("RENDER_STAGE: final encode completed",flush=True)
+        voiceover=make_ai_voiceover(os.environ.get("PACKAGE_TEXT",""),w/"ai-commentary.mp3")
+        analysis["ai_voiceover_added"]=bool(voiceover)
+        if voiceover:
+            mix_voiceover(out,voiceover,w)
+            print("RENDER_STAGE: AI commentary mixed with original audio",flush=True)
+        analysis_path.write_text(json.dumps(analysis,indent=2),encoding="utf-8")
         cover_path=out.parent/"short-cover.jpg"
         make_cover(out,title,duration,cover_path)
         print(f"RENDER_STAGE: generated cover {cover_path}",flush=True)
