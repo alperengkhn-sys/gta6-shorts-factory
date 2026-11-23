@@ -50,7 +50,19 @@ jobs:
         id: task
         if: github.event_name == 'push'
         run: |
-          FILE="$(git show --pretty="" --name-only HEAD | grep '^render-queue/.*\.json      - name: Install media tools
+          FILE="$(git show --pretty="" --name-only HEAD | awk 'index($0,"render-queue/")==1 && substr($0,length($0)-4)==".json" {print; exit}')"
+          if [ -z "$FILE" ]; then echo "::error::No render task found in queue commit."; exit 1; fi
+          python - "$FILE" >> "$GITHUB_OUTPUT" <<'PY'
+          import json, sys
+          from pathlib import Path
+          task = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          for key in ("source_url", "title", "description", "job_id", "render_attempt", "creator_name", "source_title"):
+              print(f"{key}={str(task.get(key, '')).replace(chr(10), ' ')}")
+          print("package_text<<GTA6_TASK_EOF")
+          print(str(task.get("package_text", "")))
+          print("GTA6_TASK_EOF")
+          PY
+      - name: Install media tools
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg fonts-dejavu-core
@@ -68,7 +80,7 @@ jobs:
             --output short.mp4
       - name: Build numbered delivery package
         env:
-          SOURCE_URL: ${{ inputs.source_url || steps.task.outputs.source_url }}
+          SOURCE_URL: ${{ inputs.source_url }}
           CREATOR_NAME: ${{ inputs.creator_name || steps.task.outputs.creator_name }}
           ORIGINAL_TITLE: ${{ inputs.source_title || steps.task.outputs.source_title }}
           PACKAGE_TEXT: ${{ inputs.package_text || steps.task.outputs.package_text }}
@@ -172,182 +184,6 @@ jobs:
           WEBHOOK_SECRET: ${{ secrets.RENDER_WEBHOOK_SECRET }}
           JOB_ID: ${{ inputs.job_id || steps.task.outputs.job_id }}
           RENDER_ATTEMPT: ${{ inputs.render_attempt || steps.task.outputs.render_attempt }}
-          CONCLUSION: ${{ job.status }}
-          RENDER_CONCLUSION: ${{ steps.render.outcome }}
-          YOUTUBE_STATUS: ${{ steps.youtube.outputs.upload_status }}
-          YOUTUBE_URL: ${{ steps.youtube.outputs.video_url }}
-          YOUTUBE_ERROR: ${{ steps.youtube.outputs.error }}
-          THUMBNAIL_STATUS: ${{ steps.youtube.outputs.thumbnail_status }}
-          ARTIFACT_URL: ${{ steps.release.outputs.mp4_url }}
-          PACKAGE_URL: ${{ steps.release.outputs.package_url }}
-          FALLBACK_ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          if [ -z "$JOB_ID" ]; then echo "No originating Worker job; callback skipped."; exit 0; fi
-          if [ -z "$WEBHOOK_SECRET" ]; then echo "::warning::RENDER_WEBHOOK_SECRET is not configured; Worker status will not update."; exit 0; fi
-          python - <<'PY' > callback.json
-          import json, os
-          from pathlib import Path
-          payload = {
-            "job_id": os.environ["JOB_ID"],
-            "render_attempt": int(os.environ["RENDER_ATTEMPT"]) if os.environ.get("RENDER_ATTEMPT", "").isdigit() else None,
-            "conclusion": os.environ["CONCLUSION"],
-            "render_conclusion": os.environ.get("RENDER_CONCLUSION", ""),
-            "youtube_status": os.environ.get("YOUTUBE_STATUS", "") or "not_configured",
-            "youtube_url": os.environ.get("YOUTUBE_URL", ""),
-            "thumbnail_status": os.environ.get("THUMBNAIL_STATUS", "") or "not_available",
-            "error": os.environ.get("YOUTUBE_ERROR", "") or ("" if os.environ["RENDER_CONCLUSION"] == "success" else "GitHub Actions render failed; inspect the workflow run."),
-            "artifact_url": os.environ.get("ARTIFACT_URL", "") or os.environ.get("FALLBACK_ARTIFACT_URL", ""),
-            "package_url": os.environ.get("PACKAGE_URL", ""),
-            "run_url": os.environ.get("RUN_URL", "")
-          }
-          analysis_path = Path("render-analysis.json")
-          if analysis_path.is_file():
-            try:
-              payload["media_analysis"] = json.loads(analysis_path.read_text(encoding="utf-8"))
-            except (OSError, json.JSONDecodeError):
-              payload["media_analysis_error"] = "Analysis file could not be parsed."
-          print(json.dumps(payload))
-          PY
-          curl --fail-with-body --silent --show-error -X POST \
-            "https://gta6-shorts-engine.alperen-gkhn.workers.dev/api/render/callback" \
-            -H "Content-Type: application/json" \
-            -H "X-Render-Secret: $WEBHOOK_SECRET" \
-            --data-binary @callback.json
- | head -n 1)"
-          if [ -z "$FILE" ]; then echo "::error::No render task found in queue commit."; exit 1; fi
-          python - "$FILE" >> "$GITHUB_OUTPUT" <<'PY'
-          import json, sys
-          from pathlib import Path
-          task = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-          for key in ("source_url", "title", "description", "job_id", "render_attempt", "creator_name", "source_title"):
-              print(f"{key}={str(task.get(key, '')).replace(chr(10), ' ')}")
-          print("package_text<<GTA6_TASK_EOF")
-          print(str(task.get("package_text", "")))
-          print("GTA6_TASK_EOF")
-          PY
-      - name: Install media tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg fonts-dejavu-core
-          python -m pip install --upgrade pip
-          pip install yt-dlp
-      - name: Render vertical MP4
-        id: render
-        env:
-          SOURCE_URL: ${{ inputs.source_url }}
-          SHORT_TITLE: ${{ inputs.title }}
-        run: |
-          python renderer/render.py \
-            --source-url "$SOURCE_URL" \
-            --title "$SHORT_TITLE" \
-            --output short.mp4
-      - name: Build numbered delivery package
-        env:
-          SOURCE_URL: ${{ inputs.source_url }}
-          CREATOR_NAME: ${{ inputs.creator_name }}
-          ORIGINAL_TITLE: ${{ inputs.source_title }}
-          PACKAGE_TEXT: ${{ inputs.package_text }}
-          YOUTUBE_DESCRIPTION: ${{ inputs.description }}
-          RUN_NUMBER: ${{ github.run_number }}
-        run: |
-          python - <<'PY'
-          import os, re
-          from pathlib import Path
-          number = os.environ["RUN_NUMBER"]
-          script = os.environ.get("PACKAGE_TEXT", "").strip()
-          description = os.environ.get("YOUTUBE_DESCRIPTION", "").strip()
-          def section(name):
-              pattern = r"(?m)^" + re.escape(name) + r":\s*\n([\s\S]*?)(?=\n[A-Z][A-Z /_-]+:|\Z)"
-              match = re.search(pattern, script)
-              return match.group(1).strip() if match else "Review the full editorial package below."
-          tags = "GTA 6, GTA VI, Grand Theft Auto VI, GTA 6 gameplay, GTA 6 clips, GTA 6 moments, GTA 6 shorts, gaming shorts, Vice City, Leonida, Rockstar Games"
-          lines = [
-              f"GTA VI SHORTS — DELIVERY PACKAGE #{number}", "",
-              f"SOURCE CLIP: {os.environ.get('SOURCE_URL','')}",
-              f"STREAMER: {os.environ.get('CREATOR_NAME','Unknown')}",
-              f"ORIGINAL CLIP TITLE: {os.environ.get('ORIGINAL_TITLE','')}", "",
-              "SUGGESTED SHORTS TITLE:", section("PROPOSED TITLE"), "",
-              "HOOK / OPENING:", section("HOOK / OPENING"), "",
-              "VOICEOVER DRAFT:", section("ORIGINAL VOICEOVER DRAFT"), "",
-              "CAPTION DRAFT:", section("CAPTION TEXT DRAFT"), "",
-              "9:16 EDIT PLAN:", section("9:16 EDITING PLAN"), "",
-              "YOUTUBE DESCRIPTION:", description, "",
-              "YOUTUBE TAGS:", tags, "",
-              "HASHTAGS:", "#GTA6 #GTAVI #GTAVIGameplay #GamingShorts #Shorts", "",
-              "FULL EDITORIAL PACKAGE:", script, "",
-              "NOTE: Verify editorial claims against the actual footage before publishing. Use only content you are authorized to reuse."
-          ]
-          Path(f"GTA6-Short-{number}.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
-          Path(f"GTA6-Short-{number}.mp4").write_bytes(Path("short.mp4").read_bytes())
-          Path(f"GTA6-Short-{number}-cover.jpg").write_bytes(Path("short-cover.jpg").read_bytes())
-          PY
-      - name: Build combined ZIP package
-        env:
-          RUN_NUMBER: ${{ github.run_number }}
-        run: |
-          python - <<'PY'
-          import os, zipfile
-          from pathlib import Path
-          number = os.environ["RUN_NUMBER"]
-          files = [Path(f"GTA6-Short-{number}.mp4"), Path(f"GTA6-Short-{number}.txt"), Path(f"GTA6-Short-{number}-cover.jpg")]
-          with zipfile.ZipFile(f"GTA6-Short-{number}-PACKAGE.zip", "w", zipfile.ZIP_DEFLATED) as archive:
-              for path in files:
-                  if not path.is_file():
-                      raise SystemExit(f"Missing delivery file: {path}")
-                  archive.write(path, path.name)
-              branding = Path("branding")
-              if branding.is_dir():
-                  for path in sorted(branding.rglob("*")):
-                      if path.is_file() and path.name.lower() != "readme.md":
-                          archive.write(path, str(Path("branding") / path.relative_to(branding)))
-          PY
-      - name: Publish direct MP4 and package ZIP
-        id: release
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RUN_NUMBER: ${{ github.run_number }}
-          REPOSITORY: ${{ github.repository }}
-        run: |
-          TAG="gta6-short-${RUN_NUMBER}"
-          MP4="GTA6-Short-${RUN_NUMBER}.mp4"
-          TXT="GTA6-Short-${RUN_NUMBER}.txt"
-          COVER="GTA6-Short-${RUN_NUMBER}-cover.jpg"
-          ZIP="GTA6-Short-${RUN_NUMBER}-PACKAGE.zip"
-          gh release create "$TAG" "$MP4" "$TXT" "$COVER" "$ZIP" --title "GTA6 Short #${RUN_NUMBER}" --notes "Rendered GTA VI Short delivery: MP4, editorial TXT, cover JPG and combined ZIP package." || gh release upload "$TAG" "$MP4" "$TXT" "$COVER" "$ZIP" --clobber
-          BASE="https://github.com/${REPOSITORY}/releases/download/${TAG}"
-          echo "mp4_url=${BASE}/${MP4}" >> "$GITHUB_OUTPUT"
-          echo "package_url=${BASE}/${ZIP}" >> "$GITHUB_OUTPUT"
-      - name: Upload rendered MP4 and media analysis
-        id: upload
-        uses: actions/upload-artifact@v4
-        with:
-          name: gta6-short-${{ github.run_number }}
-          path: |
-            GTA6-Short-*.mp4
-            GTA6-Short-*.txt
-            GTA6-Short-*-cover.jpg
-            render-analysis.json
-          if-no-files-found: error
-          retention-days: 7
-      - name: Upload MP4 to YouTube privately (optional)
-        id: youtube
-        if: success()
-        continue-on-error: true
-        env:
-          SHORT_TITLE: ${{ inputs.title }}
-          SHORT_DESCRIPTION: ${{ inputs.description }}
-          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
-          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
-          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
-        run: python renderer/youtube_upload.py
-      - name: Report render result to Cloudflare Worker
-        if: always()
-        env:
-          WEBHOOK_SECRET: ${{ secrets.RENDER_WEBHOOK_SECRET }}
-          JOB_ID: ${{ inputs.job_id }}
-          RENDER_ATTEMPT: ${{ inputs.render_attempt }}
           CONCLUSION: ${{ job.status }}
           RENDER_CONCLUSION: ${{ steps.render.outcome }}
           YOUTUBE_STATUS: ${{ steps.youtube.outputs.upload_status }}
