@@ -14,8 +14,6 @@ name: Render GTA6 Short
         description: YouTube description and credit
         required: false
         type: string
-      narration:
-        description: Original English narration script
         required: false
         type: string
       job_id:
@@ -50,7 +48,6 @@ jobs:
           python renderer/render.py \
             --source-url "$SOURCE_URL" \
             --title "$SHORT_TITLE" \
-            --narration "$NARRATION" \
             --output short.mp4
       - name: Upload rendered MP4 and media analysis
         id: upload
