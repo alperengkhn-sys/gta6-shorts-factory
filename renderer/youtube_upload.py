@@ -32,6 +32,7 @@ def main():
     if not (client_id and client_secret and refresh_token):
         output("upload_status", "not_configured")
         output("video_url", "")
+        output("thumbnail_status", "not_configured")
         print("YouTube upload skipped: OAuth secrets are not configured.")
         return 0
 
@@ -121,9 +122,25 @@ def main():
     if not video_id:
         raise RuntimeError("YouTube upload response did not contain a video ID.")
     video_url = "https://www.youtube.com/watch?v=" + video_id
+    thumbnail_status = "not_available"
+    cover = Path("short-cover.jpg")
+    if cover.is_file() and cover.stat().st_size:
+        try:
+            thumb_status, _, _ = request(
+                "https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId=" + urllib.parse.quote(video_id),
+                cover.read_bytes(),
+                {"Authorization": "Bearer " + access_token, "Content-Type": "image/jpeg"},
+                "POST",
+            )
+            thumbnail_status = "uploaded" if thumb_status in (200, 201) else "failed"
+        except Exception as exc:
+            thumbnail_status = "failed"
+            print("YouTube thumbnail upload failed: " + str(exc)[:500], file=sys.stderr)
     output("upload_status", "uploaded")
     output("video_url", video_url)
-    print(json.dumps({"ok": True, "privacy": "private", "video_url": video_url}))
+    output("thumbnail_status", thumbnail_status)
+    print(json.dumps({"ok": True, "privacy": "private", "video_url": video_url,
+                      "thumbnail_status": thumbnail_status}))
     return 0
 
 if __name__ == "__main__":
@@ -132,6 +149,7 @@ if __name__ == "__main__":
     except Exception as exc:
         output("upload_status", "failed")
         output("video_url", "")
+        output("thumbnail_status", "failed")
         output("error", str(exc)[:1000])
         print("YOUTUBE_UPLOAD_FAILED: " + str(exc), file=sys.stderr)
         sys.exit(1)
