@@ -8,7 +8,6 @@ const HTML = String.raw`<!doctype html>
 <h1>GTA6 SHORTS FACTORY</h1><div class="muted">GTA6-FACTORY-3.9 · GTA VI Discovery · Twitch Access · Personalized Editorial Packages · Cloud Render · Shorts Queue</div>
 <section id="login" class="panel hidden"><h2>Panel girişi</h2><input id="password" type="password" placeholder="APP_PASSWORD"><button id="loginBtn">Giriş yap</button><div id="loginMsg" class="notice hidden"></div></section>
 <div id="app" class="hidden">
-<section class="panel"><h2>Kendi Twitch klibini tek tıkla üret</h2><p class="muted">PostMassive kanalındaki izin verdiğin klip doğrulanır ve uygunsa MP4 render kuyruğuna gönderilir.</p><input id="quickClipUrl" value="https://www.twitch.tv/postmassive/clip/TenaciousFunnyKoalaEleGiggle" readonly><button id="quickClip">KLİBİ EKLE VE MP4 ÜRET</button><div id="quickClipResult" class="notice hidden"></div></section>
 <section class="panel"><div class="stats"><div class="stat">Kaynaklar<strong id="sources">0</strong></div><div class="stat">Üretim kuyruğu<strong id="queued">0</strong></div><div class="stat">Hazırlanan paket<strong id="drafts">0</strong></div><div class="stat">İzin bekleyen<strong id="pending">0</strong></div><div class="stat">İndirilebilir<strong id="downloadable">0</strong></div></div><p class="muted">Üretim hazırlığı ile indirme ve yayınlama izinleri ayrı değerlendirilir.</p><button id="refresh" class="secondary">Paneli yenile</button><button id="discover">GTA VI Twitch keşfini başlat</button><button id="prepare">PAKETLERİ OLUŞTUR / GÜNCELLE</button><button id="logout" class="secondary">Çıkış</button><div id="msg" class="notice hidden"></div></section>
 <section class="panel"><h2>Bulut bağlantıları</h2><div id="systemStatus" class="notice">Bağlantılar kontrol ediliyor...</div><p class="muted">Gizli anahtarların değerleri gösterilmez; yalnızca yapılandırılmış olup olmadıkları kontrol edilir.</p></section>
 <section class="panel"><h2>Twitch bağlantısı</h2><div id="twitchStatus" class="notice">Kontrol ediliyor...</div><button id="twitchConnect">Twitch'e bağlan</button><button id="twitchCheck" class="secondary">Bağlantıyı kontrol et</button><button id="twitchDisconnect" class="secondary">Bağlantıyı kaldır</button><div class="mini">Gerekli izinler: editor:manage:clips veya channel:manage:clips. Teknik indirme erişimi, ticari kullanım izni anlamına gelmez.</div></section>
@@ -47,7 +46,6 @@ $("resolveDownloads").onclick=async()=>{showMsg("Twitch klipleri kontrol ediliyo
 $("discover").onclick=async()=>{showMsg("GTA VI Twitch keşfi çalışıyor...");try{const r=await api("/api/discover",{});showMsg("GTA VI keşfi tamamlandı"+"\nYayıncı: "+r.creators+"\nAlınan klip: "+r.clips+"\nYeni kaynak: "+r.saved+"\nTekrar kayıt: "+r.duplicates+"\nAlakasız klip atlandı: "+r.filtered+"\nOyun kategorisi: "+(r.game_id?"Doğrulandı":"Başlık filtresi kullanıldı"));await refresh()}catch(e){showMsg(e.message)}};
 $("prepare").onclick=async()=>{showMsg("Paketler oluşturuluyor ve mevcut paketler güncelleniyor...");try{const r=await api("/api/prepare",{});showMsg("ÜRETİM HAZIRLIĞI TAMAMLANDI"+"\nKontrol edilen: "+r.checked+"\nYeni paket: "+r.created+"\nGüncellenen paket: "+r.updated+"\nÖnceden mevcut: "+r.existing+"\nAlakasız kaynak atlandı: "+r.skipped_irrelevant+"\nKuyruktaki toplam: "+r.total);await refresh()}catch(e){showMsg(e.message)}};
 $("add").onclick=async()=>{try{await api("/api/source/manual",{url:$("url").value,creator:$("creator").value,title:$("title").value});$("url").value="";$("creator").value="";$("title").value="";showMsg("Kaynak eklendi.");await refresh()}catch(e){showMsg(e.message)}};
-$("quickClip").onclick=async()=>{const b=$("quickClip"),out=$("quickClipResult");b.disabled=true;b.textContent="DOĞRULANIYOR...";out.classList.remove("hidden");out.textContent="Twitch klip kategorisi kontrol ediliyor...";try{const r=await api("/api/source/quick",{url:$("quickClipUrl").value,authorization_confirmation:true});out.textContent="Render kuyruğa alındı. İş: "+r.job_id+" · Durum: "+r.status;showMsg("Klip doğrulandı ve MP4 render kuyruğuna gönderildi.");await refresh()}catch(e){out.textContent=e.message;showMsg(e.message)}finally{b.disabled=false;b.textContent="KLİBİ EKLE VE MP4 ÜRET"}};
 loginCheck();
 </script></body></html>`;
 
@@ -73,6 +71,17 @@ async function ensureSchema(db){
  await ensureColumn(db,"jobs","render_attempts","INTEGER NOT NULL DEFAULT 0");
  await ensureColumn(db,"jobs","last_error","TEXT");
  await ensureColumn(db,"jobs","dispatch_started_at","TEXT");
+ // Remove the abandoned one-click PostMassive clip and its dependent panel records.
+ const legacy=await db.prepare("SELECT id FROM sources WHERE source_url=?").bind("https://www.twitch.tv/postmassive/clip/TenaciousFunnyKoalaEleGiggle").first();
+ if(legacy){
+  const sid=legacy.id;
+  await db.prepare("DELETE FROM permission_requests WHERE source_id=?").bind(sid).run();
+  await db.prepare("DELETE FROM jobs WHERE source_id=?").bind(sid).run();
+  await db.prepare("DELETE FROM shorts_drafts WHERE source_id=?").bind(sid).run();
+  await db.prepare("DELETE FROM clip_analysis WHERE source_id=?").bind(sid).run();
+  await db.prepare("DELETE FROM twitch_clip_access WHERE source_id=?").bind(sid).run();
+  await db.prepare("DELETE FROM sources WHERE id=?").bind(sid).run();
+ }
 }
 function cookieValue(request){const list=(request.headers.get("Cookie")||"").split(";"),found=list.find(x=>x.trim().startsWith("gta6_session="));return found?found.trim().slice(13):"";}
 function b64url(bytes){let s="";for(const b of bytes)s+=String.fromCharCode(b);return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"");}
