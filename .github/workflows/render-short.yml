@@ -80,7 +80,7 @@ jobs:
             --output short.mp4
       - name: Build numbered delivery package
         env:
-          SOURCE_URL: ${{ inputs.source_url }}
+          SOURCE_URL: ${{ inputs.source_url || steps.task.outputs.source_url }}
           CREATOR_NAME: ${{ inputs.creator_name || steps.task.outputs.creator_name }}
           ORIGINAL_TITLE: ${{ inputs.source_title || steps.task.outputs.source_title }}
           PACKAGE_TEXT: ${{ inputs.package_text || steps.task.outputs.package_text }}
@@ -172,7 +172,7 @@ jobs:
         if: success()
         continue-on-error: true
         env:
-          SHORT_TITLE: ${{ inputs.title }}
+          SHORT_TITLE: ${{ inputs.title || steps.task.outputs.title }}
           SHORT_DESCRIPTION: ${{ inputs.description || steps.task.outputs.description }}
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
