@@ -130,8 +130,8 @@ def main():
         source_duration=float(source_info.get("format",{}).get("duration") or 0)
         streams=source_info.get("streams",[])
         has_source_audio=any(stream.get("codec_type")=="audio" for stream in streams)
-        if source_duration < 55:
-            raise RuntimeError(f"Source clip is only {source_duration:.1f} seconds. A 60-second Short requires a source clip of at least 55 seconds; the source will not be looped or padded.")
+        if source_duration < 25:
+            raise RuntimeError(f"Source clip is only {source_duration:.1f} seconds. A Short requires a source clip of at least 25 seconds; the source will not be looped or padded.")
         if not has_source_audio:
             raise RuntimeError("Original Twitch clip has no audio stream; refusing to add synthetic audio.")
         analysis=media_analysis(media)
