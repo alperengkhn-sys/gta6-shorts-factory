@@ -174,6 +174,7 @@ async function dispatchRender(db,env,draftId,evidenceReference,authorizationConf
  if(!env.GITHUB_TOKEN)return {error:"Cloudflare Worker'da GITHUB_TOKEN secret eksik. GitHub Actions workflow_dispatch yetkili token eklenmeli."};
  const row=await db.prepare(`SELECT d.id AS draft_id,d.source_id,d.title AS draft_title,d.script,d.status AS draft_status,s.source_url,s.title AS source_title,s.creator_name,s.rights_status,j.id AS job_id,j.status AS job_status,j.output_key,j.last_error,j.render_attempts FROM shorts_drafts d JOIN sources s ON s.id=d.source_id LEFT JOIN jobs j ON j.source_id=s.id WHERE d.id=? ORDER BY j.created_at DESC LIMIT 1`).bind(draftId).first();
  if(!row)return {error:"Üretim paketi bulunamadı."};
+ if(row.rights_status!=="approved")return {error:"Telif/izin kontrolü: Bu kaynak için kullanım izni onaylanmamış. İzin durumu onaylanmadan render başlatılamaz."};
  if(!row.job_id)return {error:"Bu paket için üretim işi kaydı bulunamadı. Önce paketleri güncelle."};
  if(["processing","ready"].includes(row.job_status))return {ok:true,already_exists:true,job_id:row.job_id,status:row.job_status,output_key:row.output_key||null,last_error:row.last_error||null,message:row.job_status==="ready"?"Bu klibin MP4 üretimi tamamlanmış. İndirme bağlantısı hazır.":"Bu klip zaten render kuyruğunda. İşlem tamamlanınca indirme bağlantısı görünecek."};
  if(Number(row.render_attempts||0)>=3)return {error:"Bu iş için üç render denemesi tamamlandı. Otomatik tekrar durduruldu."};
