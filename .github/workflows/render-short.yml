@@ -75,7 +75,7 @@ jobs:
           script = os.environ.get("PACKAGE_TEXT", "").strip()
           description = os.environ.get("YOUTUBE_DESCRIPTION", "").strip()
           def section(name):
-              match = re.search(r"(?m)^" + re.escape(name) + r":\\s*\\n([\\s\\S]*?)(?=\\n[A-Z][A-Z /_-]+:|\\Z)", script)
+              match = re.search(r"(?m)^" + re.escape(name) + r":\s*\n([\s\S]*?)(?=\n[A-Z][A-Z /_-]+:|\Z)", script)
               return match.group(1).strip() if match else "Review the full editorial package below."
           tags = "GTA 6, GTA VI, Grand Theft Auto VI, GTA 6 gameplay, GTA 6 clips, GTA 6 moments, GTA 6 shorts, gaming shorts, Vice City, Leonida, Rockstar Games"
           package = f"""GTA VI SHORTS — DELIVERY PACKAGE #{number}
