@@ -178,7 +178,7 @@ def auto_trim_silence(media, workdir):
     parts=[]
     for i,(a,b) in enumerate(keep):
         part=workdir/f"trim-{i:02d}.mp4"
-        run(["ffmpeg","-nostdin","-hide_banner","-loglevel","error","-y","-ss",str(a),"-to",str(b),"-i",str(media),"-map","0:v:0","-map","0:a:0","-c:v","libx264","-preset","ultrafast","-crf","23","-pix_fmt","yuv420p","-c:a","aac","-b:a","160k",str(part)])
+        run(["ffmpeg","-nostdin","-hide_banner","-loglevel","error","-y","-ss",str(a),"-i",str(media),"-t",str(b-a),"-map","0:v:0","-map","0:a:0","-c:v","libx264","-preset","ultrafast","-crf","23","-pix_fmt","yuv420p","-c:a","aac","-b:a","160k",str(part)])
         parts.append(part)
     listing=workdir/"concat.txt"
     listing.write_text("".join("file '"+p.as_posix()+"'\\n" for p in parts),encoding="utf-8")
