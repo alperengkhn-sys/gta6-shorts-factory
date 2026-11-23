@@ -14,8 +14,6 @@ name: Render GTA6 Short
         description: YouTube description and credit
         required: false
         type: string
-        required: false
-        type: string
       job_id:
         description: Optional originating Worker job ID
         required: false
