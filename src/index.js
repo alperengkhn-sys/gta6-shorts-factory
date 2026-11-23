@@ -241,7 +241,10 @@ else{sourceId=uid();await env.DB.prepare("INSERT INTO sources(id,platform,source
 const appToken=await twitchToken(env),clipRows=await twitchGet("https://api.twitch.tv/helix/clips?id=TenaciousFunnyKoalaEleGiggle",env,appToken),clip=clipRows[0];
 if(!clip)return json({error:"Twitch API bu klibi bulamadı."},404);
 const gameId=await getGta6GameId(env,appToken);
-if(!gameId||String(clip.game_id||"")!==String(gameId)){await env.DB.prepare("UPDATE sources SET relevance_status='irrelevant',twitch_clip_id=?,twitch_broadcaster_id=?,twitch_game_id=? WHERE id=?").bind(clip.id,clip.broadcaster_id,clip.game_id||null,sourceId).run();return json({error:"Klip Twitch tarafından GTA VI kategorisinde doğrulanmadı; render başlatılmadı."},400);}
+const clipGameRows=clip.game_id?await twitchGet("https://api.twitch.tv/helix/games?id="+encodeURIComponent(clip.game_id),env,appToken):[];
+ const clipGameName=String(clipGameRows[0]?.name||"").trim().toLowerCase();
+ const categoryConfirmed=(!!gameId&&String(clip.game_id||"")===String(gameId))||clipGameName==="grand theft auto vi"||clipGameName==="gta vi";
+ if(!categoryConfirmed){await env.DB.prepare("UPDATE sources SET relevance_status='unknown',twitch_clip_id=?,twitch_broadcaster_id=?,twitch_game_id=? WHERE id=?").bind(clip.id,clip.broadcaster_id,clip.game_id||null,sourceId).run();return json({error:"Twitch klibinin kategorisi GTA VI olarak doğrulanamadı. Twitch kategori adı: "+(clipGameRows[0]?.name||"boş")+". Render başlatılmadı."},400);}
 await env.DB.prepare("UPDATE sources SET twitch_clip_id=?,twitch_broadcaster_id=?,twitch_game_id=?,relevance_status='relevant' WHERE id=?").bind(clip.id,clip.broadcaster_id,clip.game_id,sourceId).run();
 const prepared=await prepareAll(env.DB),draft=await env.DB.prepare("SELECT id FROM shorts_drafts WHERE source_id=? LIMIT 1").bind(sourceId).first();
 if(!draft)return json({error:"Üretim paketi oluşturulamadı.",prepared},400);
