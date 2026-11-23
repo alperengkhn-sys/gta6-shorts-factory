@@ -22,6 +22,18 @@ name: Render GTA6 Short
         description: Worker render attempt number for stale-callback protection
         required: false
         type: string
+      creator_name:
+        description: Original Twitch creator
+        required: false
+        type: string
+      source_title:
+        description: Original Twitch clip title
+        required: false
+        type: string
+      package_text:
+        description: Full editorial TXT package
+        required: false
+        type: string
 permissions:
   contents: read
   actions: read
@@ -47,15 +59,74 @@ jobs:
             --source-url "$SOURCE_URL" \
             --title "$SHORT_TITLE" \
             --output short.mp4
+      - name: Build numbered delivery package
+        env:
+          SOURCE_URL: ${{ inputs.source_url }}
+          CREATOR_NAME: ${{ inputs.creator_name }}
+          ORIGINAL_TITLE: ${{ inputs.source_title }}
+          PACKAGE_TEXT: ${{ inputs.package_text }}
+          YOUTUBE_DESCRIPTION: ${{ inputs.description }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          python - <<'PY'
+          import os, re
+          from pathlib import Path
+          number = os.environ["RUN_NUMBER"]
+          script = os.environ.get("PACKAGE_TEXT", "").strip()
+          description = os.environ.get("YOUTUBE_DESCRIPTION", "").strip()
+          def section(name):
+              match = re.search(r"(?m)^" + re.escape(name) + r":\\s*\\n([\\s\\S]*?)(?=\\n[A-Z][A-Z /_-]+:|\\Z)", script)
+              return match.group(1).strip() if match else "Review the full editorial package below."
+          tags = "GTA 6, GTA VI, Grand Theft Auto VI, GTA 6 gameplay, GTA 6 clips, GTA 6 moments, GTA 6 shorts, gaming shorts, Vice City, Leonida, Rockstar Games"
+          package = f"""GTA VI SHORTS — DELIVERY PACKAGE #{number}
+
+SOURCE CLIP: {os.environ.get('SOURCE_URL','')}
+STREAMER: {os.environ.get('CREATOR_NAME','Unknown')}
+ORIGINAL CLIP TITLE: {os.environ.get('ORIGINAL_TITLE','')}
+
+SUGGESTED SHORTS TITLE:
+{section('PROPOSED TITLE')}
+
+HOOK / OPENING:
+{section('HOOK / OPENING')}
+
+VOICEOVER DRAFT:
+{section('ORIGINAL VOICEOVER DRAFT')}
+
+CAPTION DRAFT:
+{section('CAPTION TEXT DRAFT')}
+
+9:16 EDIT PLAN:
+{section('9:16 EDITING PLAN')}
+
+YOUTUBE DESCRIPTION:
+{description}
+
+YOUTUBE TAGS:
+{tags}
+
+HASHTAGS:
+#GTA6 #GTAVI #GTAVIGameplay #GamingShorts #Shorts
+
+FULL EDITORIAL PACKAGE:
+{script}
+
+NOTE: Verify editorial claims against the actual footage before publishing. Use only content you are authorized to reuse.
+"""
+          Path(f"GTA6-Short-{number}.txt").write_text(package, encoding="utf-8")
+          Path(f"GTA6-Short-{number}.mp4").write_bytes(Path("short.mp4").read_bytes())
+          Path(f"GTA6-Short-{number}-cover.jpg").write_bytes(Path("short-cover.jpg").read_bytes())
+          PY
       - name: Upload rendered MP4 and media analysis
         id: upload
         uses: actions/upload-artifact@v4
         with:
           name: gta6-short-${{ github.run_number }}
           path: |
-            short.mp4
+            GTA6-Short-*.mp4
+            GTA6-Short-*.txt
+            GTA6-Short-*-cover.jpg
             render-analysis.json
-            short-cover.jpg
           if-no-files-found: error
           retention-days: 7
       - name: Upload MP4 to YouTube privately (optional)
