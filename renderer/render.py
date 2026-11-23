@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Vertical Shorts renderer. Requires ffmpeg, ffprobe, yt-dlp and espeak-ng."""
+"""Vertical Shorts renderer. Preserves original Twitch video and audio; no TTS or added overlays."""
 import argparse, json, os, shutil, subprocess, sys, tempfile
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -104,7 +104,6 @@ def main():
     ap=argparse.ArgumentParser()
     ap.add_argument("--source-url",required=True)
     ap.add_argument("--title",required=True)
-    ap.add_argument("--narration",required=True)
     ap.add_argument("--output",default="short.mp4")
     ap.add_argument("--test-local-source", help=argparse.SUPPRESS)
     a=ap.parse_args()
@@ -115,11 +114,10 @@ def main():
             raise SystemExit("Test source file does not exist.")
     elif not validate_source_url(a.source_url):
         raise SystemExit("Invalid source URL: use an HTTPS Twitch clip URL only.")
-    title=clean(a.title)[:90]; narration=clean(a.narration)
-    if len(narration)<20: raise SystemExit("Narration is too short.")
+    title=clean(a.title)[:90]
     out=Path(a.output).resolve(); out.parent.mkdir(parents=True,exist_ok=True)
     with tempfile.TemporaryDirectory() as td:
-        w=Path(td); media=w/"source.mp4"; voice=w/"voice.wav"; srt=w/"captions.srt"; titlefile=w/"title.txt"
+        w=Path(td); media=w/"source.mp4"
         if a.test_local_source:
             shutil.copyfile(a.test_local_source, media)
         else:
@@ -128,57 +126,25 @@ def main():
                 found=list(w.glob("source.*"))
                 if not found: raise RuntimeError("Source download produced no media file.")
                 media=found[0]
-        tts=tts_executable()
-        if not tts: raise RuntimeError("No offline TTS engine found; install espeak-ng or espeak.")
-        run([tts,"-v","en-us","-s","165","-w",str(voice),narration])
-        voice_info=json.loads(run(["ffprobe","-v","error","-show_entries","format=duration","-of","json",str(voice)]))
-        voice_duration=float(voice_info["format"]["duration"])
-        if voice_duration > 59.9:
-            raise RuntimeError("Narration exceeds the 59.9-second Shorts limit; shorten the voiceover.")
         source_info=json.loads(run(["ffprobe","-v","error","-show_entries","format=duration:stream=codec_type","-of","json",str(media)]))
-        source_duration=float(source_info["format"].get("duration") or 0)
+        source_duration=float(source_info.get("format",{}).get("duration") or 0)
+        streams=source_info.get("streams",[])
+        has_source_audio=any(stream.get("codec_type")=="audio" for stream in streams)
+        if source_duration < 55:
+            raise RuntimeError(f"Source clip is only {source_duration:.1f} seconds. A 60-second Short requires a source clip of at least 55 seconds; the source will not be looped or padded.")
+        if not has_source_audio:
+            raise RuntimeError("Original Twitch clip has no audio stream; refusing to add synthetic audio.")
         analysis=media_analysis(media)
         analysis_path=out.parent/"render-analysis.json"
         analysis_path.write_text(json.dumps(analysis,indent=2),encoding="utf-8")
-        if source_duration<=0: raise RuntimeError("Could not determine source clip duration.")
-        duration=min(59.9,max(source_duration,voice_duration))
-        has_source_audio=any(stream.get("codec_type")=="audio" for stream in source_info.get("streams",[]))
-        chunks=split_caption(narration)
-        with srt.open("w",encoding="utf-8") as f:
-            for i,chunk in enumerate(chunks):
-                f.write(f"{i+1}\n{stamp(voice_duration*i/len(chunks))} --> {stamp(voice_duration*(i+1)/len(chunks))}\n{chunk}\n\n")
-        titlefile.write_text(title,encoding="utf-8")
-        caption_files=[]
-        for i,chunk in enumerate(chunks):
-            cf=w/f"caption_{i}.txt"
-            cf.write_text(chunk,encoding="utf-8")
-            caption_files.append(cf)
-        video_pad=max(0.0,duration-source_duration)
-        vf=("scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,"
-            + (f"tpad=stop_mode=clone:stop_duration={video_pad}," if video_pad > 0 else "")
-            + "drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:"
-            "textfile="+str(titlefile)+":fontcolor=white:fontsize=58:borderw=4:bordercolor=black:"
-            "x=(w-text_w)/2:y=120")
-        for i,cf in enumerate(caption_files):
-            start=voice_duration*i/len(chunks); end=voice_duration*(i+1)/len(chunks)
-            vf += (",drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:"
-                   "textfile="+str(cf)+":fontcolor=white:fontsize=64:borderw=4:bordercolor=black:"
-                   "line_spacing=12:x=(w-text_w)/2:y=h-430:"
-                   f"enable='between(t,{start:.3f},{end:.3f})'")
-        if has_source_audio:
-            audio_filter=(f"[0:a:0]atrim=duration={duration},asetpts=PTS-STARTPTS,volume=0.22[bg];"
-                          f"[1:a:0]atrim=duration={duration},asetpts=PTS-STARTPTS,apad=whole_dur={duration}[vo];"
-                          "[bg][vo]amix=inputs=2:duration=longest:dropout_transition=2,"
-                          f"atrim=duration={duration}[aout]")
-        else:
-            audio_filter=f"[1:a:0]apad=whole_dur={duration},atrim=duration={duration}[aout]"
+        duration=min(60.0,source_duration)
+        vf="scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1"
         render_cmd=["ffmpeg","-nostdin","-hide_banner","-loglevel","info","-stats_period","1",
-             "-filter_threads","1","-filter_complex_threads","1","-threads","2","-y",
-             "-i",str(media),"-i",str(voice),"-vf",vf,"-filter_complex",audio_filter,
-             "-map","0:v:0","-map","[aout]","-t",str(duration),"-r","30",
+             "-filter_threads","1","-threads","2","-y","-i",str(media),"-vf",vf,
+             "-map","0:v:0","-map","0:a:0","-t",str(duration),"-r","30",
              "-c:v","libx264","-preset","ultrafast","-crf","23",
              "-pix_fmt","yuv420p","-c:a","aac","-b:a","160k","-movflags","+faststart",str(out)]
-        print("RENDER_STAGE: starting final encode",flush=True)
+        print("RENDER_STAGE: encoding original Twitch video and audio only",flush=True)
         run(render_cmd)
         print("RENDER_STAGE: final encode completed",flush=True)
     check=json.loads(run(["ffprobe","-v","error","-show_entries","stream=codec_type,codec_name,width,height",
@@ -190,7 +156,7 @@ def main():
         raise RuntimeError("Output validation failed: AAC audio missing.")
     print(json.dumps({"ok":True,"output":str(out),"duration":check["format"]["duration"],
                       "width":1080,"height":1920,"video":"h264","audio":"aac",
-                      "source_audio_mixed":has_source_audio,"voiceover_duration":round(voice_duration,2),
+                      "original_audio_preserved":has_source_audio,
                       "analysis":analysis}))
 
 if __name__=="__main__":
