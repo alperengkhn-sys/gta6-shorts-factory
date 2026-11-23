@@ -22,6 +22,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - name: Lint GitHub Actions workflows
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y golang-go
+          go install github.com/rhysd/actionlint/cmd/actionlint@latest
+          "$(go env GOPATH)/bin/actionlint" -color
       - name: Check Worker JavaScript syntax
         run: node --input-type=module --check < src/index.js
       - name: Compile renderer scripts
