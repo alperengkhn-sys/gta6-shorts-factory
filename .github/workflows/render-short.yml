@@ -61,12 +61,12 @@ jobs:
             --output short.mp4
       - name: Build numbered delivery package
         env:
-          SOURCE_URL: ${{ inputs.source_url }}
-          CREATOR_NAME: ${{ inputs.creator_name }}
-          ORIGINAL_TITLE: ${{ inputs.source_title }}
-          PACKAGE_TEXT: ${{ inputs.package_text }}
-          YOUTUBE_DESCRIPTION: ${{ inputs.description }}
-          RUN_NUMBER: ${{ github.run_number }}
+          SOURCE_URL: \${{ inputs.source_url }}
+          CREATOR_NAME: \${{ inputs.creator_name }}
+          ORIGINAL_TITLE: \${{ inputs.source_title }}
+          PACKAGE_TEXT: \${{ inputs.package_text }}
+          YOUTUBE_DESCRIPTION: \${{ inputs.description }}
+          RUN_NUMBER: \${{ github.run_number }}
         run: |
           python - <<'PY'
           import os, re
@@ -75,45 +75,27 @@ jobs:
           script = os.environ.get("PACKAGE_TEXT", "").strip()
           description = os.environ.get("YOUTUBE_DESCRIPTION", "").strip()
           def section(name):
-              match = re.search(r"(?m)^" + re.escape(name) + r":\s*\n([\s\S]*?)(?=\n[A-Z][A-Z /_-]+:|\Z)", script)
+              pattern = r"(?m)^" + re.escape(name) + r":\s*\n([\s\S]*?)(?=\n[A-Z][A-Z /_-]+:|\Z)"
+              match = re.search(pattern, script)
               return match.group(1).strip() if match else "Review the full editorial package below."
           tags = "GTA 6, GTA VI, Grand Theft Auto VI, GTA 6 gameplay, GTA 6 clips, GTA 6 moments, GTA 6 shorts, gaming shorts, Vice City, Leonida, Rockstar Games"
-          package = f"""GTA VI SHORTS — DELIVERY PACKAGE #{number}
-
-SOURCE CLIP: {os.environ.get('SOURCE_URL','')}
-STREAMER: {os.environ.get('CREATOR_NAME','Unknown')}
-ORIGINAL CLIP TITLE: {os.environ.get('ORIGINAL_TITLE','')}
-
-SUGGESTED SHORTS TITLE:
-{section('PROPOSED TITLE')}
-
-HOOK / OPENING:
-{section('HOOK / OPENING')}
-
-VOICEOVER DRAFT:
-{section('ORIGINAL VOICEOVER DRAFT')}
-
-CAPTION DRAFT:
-{section('CAPTION TEXT DRAFT')}
-
-9:16 EDIT PLAN:
-{section('9:16 EDITING PLAN')}
-
-YOUTUBE DESCRIPTION:
-{description}
-
-YOUTUBE TAGS:
-{tags}
-
-HASHTAGS:
-#GTA6 #GTAVI #GTAVIGameplay #GamingShorts #Shorts
-
-FULL EDITORIAL PACKAGE:
-{script}
-
-NOTE: Verify editorial claims against the actual footage before publishing. Use only content you are authorized to reuse.
-"""
-          Path(f"GTA6-Short-{number}.txt").write_text(package, encoding="utf-8")
+          lines = [
+              f"GTA VI SHORTS — DELIVERY PACKAGE #{number}", "",
+              f"SOURCE CLIP: {os.environ.get('SOURCE_URL','')}",
+              f"STREAMER: {os.environ.get('CREATOR_NAME','Unknown')}",
+              f"ORIGINAL CLIP TITLE: {os.environ.get('ORIGINAL_TITLE','')}", "",
+              "SUGGESTED SHORTS TITLE:", section("PROPOSED TITLE"), "",
+              "HOOK / OPENING:", section("HOOK / OPENING"), "",
+              "VOICEOVER DRAFT:", section("ORIGINAL VOICEOVER DRAFT"), "",
+              "CAPTION DRAFT:", section("CAPTION TEXT DRAFT"), "",
+              "9:16 EDIT PLAN:", section("9:16 EDITING PLAN"), "",
+              "YOUTUBE DESCRIPTION:", description, "",
+              "YOUTUBE TAGS:", tags, "",
+              "HASHTAGS:", "#GTA6 #GTAVI #GTAVIGameplay #GamingShorts #Shorts", "",
+              "FULL EDITORIAL PACKAGE:", script, "",
+              "NOTE: Verify editorial claims against the actual footage before publishing. Use only content you are authorized to reuse."
+          ]
+          Path(f"GTA6-Short-{number}.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
           Path(f"GTA6-Short-{number}.mp4").write_bytes(Path("short.mp4").read_bytes())
           Path(f"GTA6-Short-{number}-cover.jpg").write_bytes(Path("short-cover.jpg").read_bytes())
           PY
