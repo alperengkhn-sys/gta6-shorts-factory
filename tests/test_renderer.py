@@ -29,6 +29,8 @@ class RendererHelpersTest(unittest.TestCase):
     def test_accepts_https_twitch_clip_urls(self):
         self.assertTrue(validate_source_url("https://clips.twitch.tv/SomeClip"))
         self.assertTrue(validate_source_url("https://www.twitch.tv/creator/clip/SomeClip"))
+        self.assertFalse(validate_source_url("https://www.twitch.tv/creator"))
+        self.assertFalse(validate_source_url("https://www.twitch.tv/creator/videos/12345"))
 
     def test_rejects_non_twitch_and_unsafe_urls(self):
         for url in (
