@@ -32,9 +32,9 @@ The baseline creates editorial text packages only. It does not render MP4 files,
 
 ## Deployment
 
-The repository contains the GTA6-FACTORY-4.1 Worker, Wrangler configuration, and a GitHub Actions cloud renderer with optional channel overlays and per-video cover generation. A six-hour Cloudflare Cron discovers new clips and prepares packages; it dispatches at most two already-approved jobs per run. The Worker can dispatch approved draft jobs to GitHub Actions and receive completion callbacks. Configure these secrets before using the render button:
+The repository contains the GTA6-FACTORY-4.1 Worker, Wrangler configuration, and a GitHub Actions cloud renderer with optional channel overlays and per-video cover generation. A six-hour Cloudflare Cron discovers new clips and prepares packages; it dispatches at most two already-approved jobs per run. The Worker can dispatch approved draft jobs to GitHub Actions and receive completion callbacks. If workflow-dispatch permission is unavailable, it falls back to a repository-backed render queue (Contents: write), which triggers the same renderer without requiring Actions: write. Completed jobs publish a direct MP4 link and a combined ZIP containing the MP4, editorial TXT, cover, and available channel branding assets; a seven-day workflow artifact remains as backup. Configure these secrets before using the render button:
 
-- Cloudflare Worker secrets: existing `APP_PASSWORD`, `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`, plus `GITHUB_TOKEN` (a GitHub token with Actions: write access to this repository) and `RENDER_WEBHOOK_SECRET` (a long random value).
+- Cloudflare Worker secrets: existing `APP_PASSWORD`, `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`, plus `GITHUB_TOKEN` (a GitHub token with Actions: write access, or Contents: write for the automatic queue fallback) and `RENDER_WEBHOOK_SECRET` (a long random value).
 - GitHub repository Actions secrets: `RENDER_WEBHOOK_SECRET` (same value as Cloudflare) and, if private YouTube upload is wanted, `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, `YOUTUBE_REFRESH_TOKEN` (OAuth scope `youtube.upload`).
 
 A push to `main` starts the connected Cloudflare Workers Build (`npx wrangler deploy`). Keep the existing D1 binding and all existing records; migrations are additive. Do not paste secrets into chat or commit them to the repository.
