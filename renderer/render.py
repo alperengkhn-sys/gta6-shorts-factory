@@ -193,12 +193,18 @@ def make_ai_voiceover(script,destination):
     narration=""
     if marker in script:
         narration=script.split(marker,1)[1].split("CAPTION TEXT DRAFT:",1)[0].strip()
-    if not key or len(narration)<12: return None
-    payload=json.dumps({"model":"gpt-4o-mini-tts","voice":"alloy","input":narration[:3500],"instructions":"Natural concise gaming commentary. Do not invent facts beyond the supplied script."}).encode()
-    request=urllib.request.Request("https://api.openai.com/v1/audio/speech",data=payload,headers={"Authorization":"Bearer "+key,"Content-Type":"application/json"},method="POST")
+    if len(narration)<12: return None
     try:
-        with urllib.request.urlopen(request,timeout=90) as response: destination.write_bytes(response.read())
-        return destination if destination.stat().st_size>1000 else None
+        if key:
+            payload=json.dumps({"model":"gpt-4o-mini-tts","voice":"alloy","input":narration[:3500],"instructions":"Natural concise gaming commentary. Do not invent facts beyond the supplied script."}).encode()
+            request=urllib.request.Request("https://api.openai.com/v1/audio/speech",data=payload,headers={"Authorization":"Bearer "+key,"Content-Type":"application/json"},method="POST")
+            with urllib.request.urlopen(request,timeout=90) as response: destination.write_bytes(response.read())
+        elif shutil.which("edge-tts"):
+            result=subprocess.run(["edge-tts","--voice","en-US-GuyNeural","--text",narration[:3500],"--write-media",str(destination)],text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=90)
+            if result.returncode: raise RuntimeError(result.stdout[-500:])
+        else:
+            return None
+        return destination if destination.is_file() and destination.stat().st_size>1000 else None
     except Exception as error:
         print("VOICEOVER_SKIPPED: "+str(error)[:250],flush=True)
         return None
