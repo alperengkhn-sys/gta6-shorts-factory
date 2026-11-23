@@ -1,4 +1,4 @@
-const VERSION = "GTA6-FACTORY-3.9";
+const VERSION = "GTA6-FACTORY-4.0";
 
 const HTML = String.raw`<!doctype html>
 <html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GTA6 Shorts Factory 3.9</title>
@@ -108,8 +108,8 @@ try{const data=await twitchGet("https://api.twitch.tv/helix/clips?id="+encodeURI
 const gameRows=(!gta6GameId&&clip.game_id)?await twitchGet("https://api.twitch.tv/helix/games?id="+encodeURIComponent(clip.game_id),env,appToken):[],gameName=String(gameRows[0]?.name||"").toLowerCase(),isGta6=!!gta6GameId?String(clip.game_id||"")===String(gta6GameId):(gameName==="grand theft auto vi"||gameName==="gta vi");
 if(!isGta6){
  await db.prepare("UPDATE sources SET twitch_clip_id=?,twitch_broadcaster_id=?,twitch_game_id=?,relevance_status='irrelevant',twitch_resolved_at=CURRENT_TIMESTAMP WHERE id=?").bind(clip.id,clip.broadcaster_id,clip.game_id||null,source.id).run();
- await db.prepare("UPDATE shorts_drafts SET status='rejected_irrelevant',updated_at=CURRENT_TIMESTAMP WHERE source_id=? AND status NOT IN ('rendering','rendered')").bind(source.id).run();
- await db.prepare("UPDATE jobs SET status='rejected_irrelevant',editorial_note='Rejected: Twitch clip game category is not GTA VI.',updated_at=CURRENT_TIMESTAMP WHERE source_id=? AND status NOT IN ('dispatching','rendering','rendered')").bind(source.id).run();
+ await db.prepare("UPDATE shorts_drafts SET status='blocked',updated_at=CURRENT_TIMESTAMP WHERE source_id=? AND status NOT IN ('processing','ready')").bind(source.id).run();
+ await db.prepare("UPDATE jobs SET status='blocked',editorial_note='Rejected: Twitch clip game category is not GTA VI.',updated_at=CURRENT_TIMESTAMP WHERE source_id=? AND status NOT IN ('processing','processing','ready')").bind(source.id).run();
  await db.prepare("INSERT INTO twitch_clip_access(source_id,clip_id,broadcaster_id,broadcaster_name,access_status,reason) VALUES(?,?,?,?,?,?) ON CONFLICT(source_id) DO UPDATE SET clip_id=excluded.clip_id,broadcaster_id=excluded.broadcaster_id,broadcaster_name=excluded.broadcaster_name,access_status=excluded.access_status,reason=excluded.reason,checked_at=CURRENT_TIMESTAMP").bind(source.id,clip.id,clip.broadcaster_id,clip.broadcaster_name||source.creator_name||"Unknown","not_available","Klipin Twitch oyun kategorisi GTA VI değil: "+(gameName||clip.game_id||"bilinmiyor")).run();
  resolved++;continue;
 }
@@ -144,7 +144,7 @@ async function dispatchRender(db,env,draftId,evidenceReference,authorizationConf
  const row=await db.prepare(`SELECT d.id AS draft_id,d.source_id,d.title AS draft_title,d.script,d.status AS draft_status,s.source_url,s.title AS source_title,s.creator_name,s.rights_status,j.id AS job_id,j.status AS job_status,j.render_attempts FROM shorts_drafts d JOIN sources s ON s.id=d.source_id LEFT JOIN jobs j ON j.source_id=s.id WHERE d.id=? ORDER BY j.created_at DESC LIMIT 1`).bind(draftId).first();
  if(!row)return {error:"Üretim paketi bulunamadı."};
  if(!row.job_id)return {error:"Bu paket için üretim işi kaydı bulunamadı. Önce paketleri güncelle."};
- if(["dispatching","rendering","rendered"].includes(row.job_status))return {error:"Bu paket zaten render kuyruğunda veya tamamlanmış."};
+ if(["processing","processing","ready"].includes(row.job_status))return {error:"Bu paket zaten render kuyruğunda veya tamamlanmış."};
  if(Number(row.render_attempts||0)>=3)return {error:"Bu iş için üç render denemesi tamamlandı. Otomatik tekrar durduruldu."};
  const narration=extractNarration(row.script);
  if(narration.length<20)return {error:"Üretim metninden voiceover çıkarılamadı; render başlatılmadı."};
@@ -153,13 +153,13 @@ async function dispatchRender(db,env,draftId,evidenceReference,authorizationConf
  const title=String(row.draft_title||row.source_title||"GTA 6 Short").slice(0,90);
  const questionMatch=String(row.script||"").match(/ENDING QUESTION:\s*([^\n]+)/);
  const description=["GTA 6 clip featuring "+String(row.source_title||title).slice(0,180)+".","Clip creator: "+String(row.creator_name||"Unknown").slice(0,100)+".",questionMatch?questionMatch[1].trim():"What stood out to you?","#GTA6 #GTAVI #Shorts"].join("\n\n").slice(0,5000);
- await db.prepare("UPDATE jobs SET status='dispatching',render_attempts=COALESCE(render_attempts,0)+1,last_error=NULL,dispatch_started_at=CURRENT_TIMESTAMP,editorial_note='Authorized render dispatched to GitHub Actions.',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.job_id).run();
- await db.prepare("UPDATE shorts_drafts SET status='rendering',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.draft_id).run();
+ await db.prepare("UPDATE jobs SET status='processing',render_attempts=COALESCE(render_attempts,0)+1,last_error=NULL,dispatch_started_at=CURRENT_TIMESTAMP,editorial_note='Authorized render dispatched to GitHub Actions.',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.job_id).run();
+ await db.prepare("UPDATE shorts_drafts SET status='processing',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.draft_id).run();
  let response;
  try{response=await fetch("https://api.github.com/repos/alperengkhn-sys/gta6-shorts-factory/actions/workflows/render-short.yml/dispatches",{method:"POST",headers:{"Authorization":"Bearer "+env.GITHUB_TOKEN,"Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28","Content-Type":"application/json","User-Agent":"GTA6-Shorts-Factory"},body:JSON.stringify({ref:"main",inputs:{source_url:row.source_url,title,description,narration,job_id:row.job_id,render_attempt:String(Number(row.render_attempts||0)+1)}})});}
- catch(error){const detail=String(error&&error.message||error).slice(0,1000);await db.prepare("UPDATE jobs SET status='dispatch_failed',editorial_note=?,last_error=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind("GitHub dispatch network error: "+detail,detail,row.job_id).run();await db.prepare("UPDATE shorts_drafts SET status='render_failed',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.draft_id).run();return {error:"GitHub Actions bağlantı hatası: "+detail};}
- if(response.status!==204){const detail=(await response.text()).slice(0,1200);await db.prepare("UPDATE jobs SET status='dispatch_failed',editorial_note=?,last_error=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind("GitHub dispatch failed: HTTP "+response.status+" "+detail,detail,row.job_id).run();await db.prepare("UPDATE shorts_drafts SET status='render_failed',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.draft_id).run();return {error:"GitHub Actions işi başlatılamadı (HTTP "+response.status+"). "+detail};}
- return {ok:true,job_id:row.job_id,status:"rendering"};
+ catch(error){const detail=String(error&&error.message||error).slice(0,1000);await db.prepare("UPDATE jobs SET status='failed',editorial_note=?,last_error=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind("GitHub dispatch network error: "+detail,detail,row.job_id).run();await db.prepare("UPDATE shorts_drafts SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.draft_id).run();return {error:"GitHub Actions bağlantı hatası: "+detail};}
+ if(response.status!==204){const detail=(await response.text()).slice(0,1200);await db.prepare("UPDATE jobs SET status='failed',editorial_note=?,last_error=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind("GitHub dispatch failed: HTTP "+response.status+" "+detail,detail,row.job_id).run();await db.prepare("UPDATE shorts_drafts SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.draft_id).run();return {error:"GitHub Actions işi başlatılamadı (HTTP "+response.status+"). "+detail};}
+ return {ok:true,job_id:row.job_id,status:"processing"};
 }
 async function renderCallback(request,env,db){
  if(!env.RENDER_WEBHOOK_SECRET||request.headers.get("X-Render-Secret")!==env.RENDER_WEBHOOK_SECRET)return json({error:"Webhook authentication failed."},401);
@@ -168,9 +168,9 @@ async function renderCallback(request,env,db){
  const job=await db.prepare("SELECT id,source_id,status,render_attempts FROM jobs WHERE id=?").bind(jobId).first();
  if(!job)return json({error:"Job not found."},404);
  if(data.render_attempt!==undefined&&data.render_attempt!==null&&data.render_attempt!==""&&Number(data.render_attempt)!==Number(job.render_attempts))return json({error:"Stale render callback rejected."},409);
- if(job.status==="rendered")return json({ok:true,status:"rendered",duplicate:true});
- if(!["dispatching","rendering","dispatch_failed","render_failed"].includes(job.status))return json({error:"Callback rejected for job state: "+job.status},409);
- const ok=(data.render_conclusion||data.conclusion)==="success",status=ok?"rendered":"render_failed",output=String(data.artifact_url||data.run_url||"").slice(0,2000),youtubeStatus=String(data.youtube_status||"not_run").slice(0,40),youtubeUrl=String(data.youtube_url||"").slice(0,1000);
+ if(job.status==="ready")return json({ok:true,status:"ready",duplicate:true});
+ if(!["processing","processing","failed","failed"].includes(job.status))return json({error:"Callback rejected for job state: "+job.status},409);
+ const ok=(data.render_conclusion||data.conclusion)==="success",status=ok?"ready":"failed",output=String(data.artifact_url||data.run_url||"").slice(0,2000),youtubeStatus=String(data.youtube_status||"not_run").slice(0,40),youtubeUrl=String(data.youtube_url||"").slice(0,1000);
  const note=[ok?"Render completed.":"Render failed.", "YouTube: "+youtubeStatus, data.error||""].filter(Boolean).join(" ").slice(0,1500);
  let mediaSaved=false;
  const m=data.media_analysis&&typeof data.media_analysis==="object"?data.media_analysis:null;
@@ -199,11 +199,11 @@ async function runScheduled(env){
  let discovery;
  try{discovery=await discover(env.DB,env);}catch(error){discovery={error:String(error&&error.message||error).slice(0,500)};}
  const prepared=await prepareAll(env.DB);
- await env.DB.prepare("UPDATE jobs SET status=CASE WHEN COALESCE(render_attempts,0)>=3 THEN 'render_failed' ELSE 'dispatch_failed' END,last_error='Recovered stale dispatch after 45 minutes without callback.',updated_at=CURRENT_TIMESTAMP WHERE status='dispatching' AND dispatch_started_at IS NOT NULL AND dispatch_started_at<datetime('now','-45 minutes')").run();
- await env.DB.prepare("UPDATE shorts_drafts SET status='render_failed',updated_at=CURRENT_TIMESTAMP WHERE source_id IN (SELECT source_id FROM jobs WHERE status IN ('dispatch_failed','render_failed') AND last_error='Recovered stale dispatch after 45 minutes without callback.')").run();
+ await env.DB.prepare("UPDATE jobs SET status=CASE WHEN COALESCE(render_attempts,0)>=3 THEN 'failed' ELSE 'failed' END,last_error='Recovered stale dispatch after 45 minutes without callback.',updated_at=CURRENT_TIMESTAMP WHERE status='processing' AND dispatch_started_at IS NOT NULL AND dispatch_started_at<datetime('now','-45 minutes')").run();
+ await env.DB.prepare("UPDATE shorts_drafts SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE source_id IN (SELECT source_id FROM jobs WHERE status IN ('failed','failed') AND last_error='Recovered stale dispatch after 45 minutes without callback.')").run();
  let dispatched=0,dispatchErrors=0;
  if(env.GITHUB_TOKEN){
-  const candidates=await env.DB.prepare(`SELECT d.id AS draft_id FROM shorts_drafts d JOIN sources s ON s.id=d.source_id JOIN jobs j ON j.source_id=s.id WHERE s.rights_status='approved' AND j.status IN ('queued_review','dispatch_failed') AND COALESCE(j.render_attempts,0)<3 ORDER BY j.created_at ASC LIMIT 2`).all();
+  const candidates=await env.DB.prepare(`SELECT d.id AS draft_id FROM shorts_drafts d JOIN sources s ON s.id=d.source_id JOIN jobs j ON j.source_id=s.id WHERE s.rights_status='approved' AND j.status IN ('queued_review','failed') AND COALESCE(j.render_attempts,0)<3 ORDER BY j.created_at ASC LIMIT 2`).all();
   for(const row of candidates.results||[]){
    const result=await dispatchRender(env.DB,env,row.draft_id,"");
    if(result.ok)dispatched++;else if(result.error){dispatchErrors++;console.error("Scheduled render dispatch:",result.error);}
