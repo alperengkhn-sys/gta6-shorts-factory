@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Rights-gated vertical Shorts renderer. Requires ffmpeg, ffprobe, yt-dlp and espeak-ng."""
+"""Vertical Shorts renderer. Requires ffmpeg, ffprobe, yt-dlp and espeak-ng."""
 import argparse, json, os, shutil, subprocess, sys, tempfile
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -24,12 +24,18 @@ def validate_source_url(value):
     try:
         parsed = urlsplit(value)
         host = (parsed.hostname or "").lower().rstrip(".")
+        parts = [part for part in parsed.path.split("/") if part]
+        is_clip = (
+            (host in ("twitch.tv", "www.twitch.tv")
+             and len(parts) == 2 and parts[0].lower() == "clip")
+            or (host == "clips.twitch.tv" and len(parts) == 1)
+        )
         return (
             parsed.scheme == "https"
             and parsed.username is None
             and parsed.password is None
             and parsed.port in (None, 443)
-            and (host == "twitch.tv" or host.endswith(".twitch.tv"))
+            and is_clip
         )
     except ValueError:
         return False
