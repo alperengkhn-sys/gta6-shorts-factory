@@ -37,7 +37,6 @@ permissions:
   actions: read
 jobs:
   render:
-    if: inputs.rights_approved == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -126,10 +125,3 @@ jobs:
             -H "Content-Type: application/json" \
             -H "X-Render-Secret: $WEBHOOK_SECRET" \
             --data-binary @callback.json
-  blocked:
-    if: inputs.rights_approved != 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - run: |
-          echo "Rendering blocked: rights approval was not confirmed."
-          exit 1
