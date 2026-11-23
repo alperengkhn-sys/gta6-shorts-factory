@@ -36,6 +36,7 @@ jobs:
         env:
           RENDER_TEST_MODE: "1"
         run: |
+          set -euxo pipefail
           mkdir -p branding
           ffmpeg -nostdin -hide_banner -loglevel error -y -f lavfi -i "color=c=blue@0.35:s=1080x160:d=1,format=rgba" -frames:v 1 branding/banner.png
           ffmpeg -nostdin -hide_banner -loglevel error -y -f lavfi -i "color=c=yellow@0.65:s=200x200:d=1,format=rgba" -frames:v 1 branding/logo.png
@@ -49,11 +50,26 @@ jobs:
           test -s short-cover.jpg
           python -c "import json; a=json.load(open('render-analysis.json')); assert a['audio']['present'] is True and a['usable_for_shorts'] is True"
           ffmpeg -nostdin -hide_banner -loglevel error -y -f lavfi -i testsrc2=size=320x180:rate=10 -t 26 -map 0:v:0 -an -c:v libx264 -preset ultrafast -pix_fmt yuv420p silent-fixture.mp4
-          test "$(ffprobe -v error -show_entries stream=codec_type -of csv=p=0 silent-fixture.mp4)" = "video"
-          if python renderer/render.py --source-url https://clips.twitch.tv/CIOnlyFixture --test-local-source silent-fixture.mp4 --title "GTA 6 Silent Source Test" --output ci-short-noaudio.mp4 > silent-render.log 2>&1; then echo "Silent source must be rejected"; cat silent-render.log; exit 1; fi
-          cat silent-render.log
-          grep -q "Original Twitch clip has no audio stream" silent-render.log
-          test ! -s ci-short-noaudio.mp4
+          python - <<'PY'
+          import os, subprocess, sys
+          from pathlib import Path
+          output = Path("silent-rejected.mp4")
+          output.unlink(missing_ok=True)
+          result = subprocess.run(
+              [sys.executable, "renderer/render.py",
+               "--source-url", "https://clips.twitch.tv/CIOnlyFixture",
+               "--test-local-source", "silent-fixture.mp4",
+               "--title", "GTA 6 Silent Source Test",
+               "--output", str(output)],
+              text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+              env=os.environ.copy(), timeout=120
+          )
+          print(result.stdout)
+          assert result.returncode != 0, "Silent source was incorrectly accepted"
+          assert "Original Twitch clip has no audio stream" in result.stdout, "Renderer failed for an unexpected reason"
+          assert not output.exists() or output.stat().st_size == 0, "A silent MP4 was incorrectly produced"
+          print("PASS: silent source rejected without producing an MP4")
+          PY
       - name: Check required deployment files
         run: |
           test -s wrangler.toml
