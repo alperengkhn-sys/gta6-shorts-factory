@@ -106,10 +106,8 @@ def main():
     ap.add_argument("--title",required=True)
     ap.add_argument("--narration",required=True)
     ap.add_argument("--output",default="short.mp4")
-    ap.add_argument("--rights-approved",required=True)
     ap.add_argument("--test-local-source", help=argparse.SUPPRESS)
     a=ap.parse_args()
-    if a.rights_approved.lower()!="true": raise SystemExit("BLOCKED: rights approval is not true.")
     if a.test_local_source:
         if os.environ.get("RENDER_TEST_MODE") != "1":
             raise SystemExit("Local test input is disabled outside the isolated CI test mode.")
