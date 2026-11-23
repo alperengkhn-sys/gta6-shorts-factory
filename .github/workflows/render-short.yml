@@ -18,12 +18,6 @@ name: Render GTA6 Short
         description: Original English narration script
         required: true
         type: string
-      rights_approved:
-        description: Confirm documented rights/permission
-        required: true
-        type: choice
-        options: ["false", "true"]
-        default: "false"
       job_id:
         description: Optional originating Worker job ID
         required: false
@@ -53,13 +47,11 @@ jobs:
           SOURCE_URL: ${{ inputs.source_url }}
           SHORT_TITLE: ${{ inputs.title }}
           NARRATION: ${{ inputs.narration }}
-          RIGHTS_APPROVED: ${{ inputs.rights_approved }}
         run: |
           python renderer/render.py \
             --source-url "$SOURCE_URL" \
             --title "$SHORT_TITLE" \
             --narration "$NARRATION" \
-            --rights-approved "$RIGHTS_APPROVED" \
             --output short.mp4
       - name: Upload rendered MP4 and media analysis
         id: upload
