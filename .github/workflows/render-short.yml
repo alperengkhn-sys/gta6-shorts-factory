@@ -56,6 +56,7 @@ jobs:
           import json, sys
           from pathlib import Path
           task = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          print("noop=" + ("true" if task.get("noop") else "false"))
           for key in ("source_url", "title", "description", "job_id", "render_attempt", "creator_name", "source_title"):
               print(f"{key}={str(task.get(key, '')).replace(chr(10), ' ')}")
           print("package_text<<GTA6_TASK_EOF")
@@ -63,12 +64,14 @@ jobs:
           print("GTA6_TASK_EOF")
           PY
       - name: Install media tools
+        if: steps.task.outputs.noop != 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg fonts-dejavu-core
           python -m pip install --upgrade pip
           pip install yt-dlp edge-tts
       - name: Render vertical MP4
+        if: steps.task.outputs.noop != 'true'
         id: render
         env:
           SOURCE_URL: ${{ inputs.source_url || steps.task.outputs.source_url }}
@@ -81,6 +84,7 @@ jobs:
             --title "$SHORT_TITLE" \
             --output short.mp4
       - name: Build numbered delivery package
+        if: steps.task.outputs.noop != 'true'
         env:
           SOURCE_URL: ${{ inputs.source_url || steps.task.outputs.source_url }}
           CREATOR_NAME: ${{ inputs.creator_name || steps.task.outputs.creator_name }}
@@ -121,6 +125,7 @@ jobs:
           Path(f"GTA6-Short-{number}-cover.jpg").write_bytes(Path("short-cover.jpg").read_bytes())
           PY
       - name: Build combined ZIP package
+        if: steps.task.outputs.noop != 'true'
         env:
           RUN_NUMBER: ${{ github.run_number }}
         run: |
@@ -141,6 +146,7 @@ jobs:
                           archive.write(path, str(Path("branding") / path.relative_to(branding)))
           PY
       - name: Publish direct MP4 and package ZIP
+        if: steps.task.outputs.noop != 'true'
         id: release
         continue-on-error: true
         env:
@@ -158,6 +164,7 @@ jobs:
           echo "mp4_url=${BASE}/${MP4}" >> "$GITHUB_OUTPUT"
           echo "package_url=${BASE}/${ZIP}" >> "$GITHUB_OUTPUT"
       - name: Upload rendered MP4 and media analysis
+        if: steps.task.outputs.noop != 'true'
         id: upload
         uses: actions/upload-artifact@v4
         with:
@@ -169,7 +176,8 @@ jobs:
             render-analysis.json
           if-no-files-found: error
           retention-days: 7
-      - name: Upload MP4 to YouTube privately (optional)
+      - name: Upload MP4 to YouTube privately
+        if: steps.task.outputs.noop != 'true' (optional)
         id: youtube
         if: success()
         continue-on-error: true
@@ -180,7 +188,8 @@ jobs:
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
         run: python renderer/youtube_upload.py
-      - name: Report render result to Cloudflare Worker
+      - name: Report render result
+        if: steps.task.outputs.noop != 'true' to Cloudflare Worker
         if: always()
         env:
           WEBHOOK_SECRET: ${{ secrets.RENDER_WEBHOOK_SECRET }}
