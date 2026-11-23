@@ -176,10 +176,9 @@ jobs:
             render-analysis.json
           if-no-files-found: error
           retention-days: 7
-      - name: Upload MP4 to YouTube privately
-        if: steps.task.outputs.noop != 'true' (optional)
+      - name: Upload MP4 to YouTube privately (optional)
         id: youtube
-        if: success()
+        if: steps.task.outputs.noop != 'true' && success()
         continue-on-error: true
         env:
           SHORT_TITLE: ${{ inputs.title || steps.task.outputs.title }}
@@ -188,9 +187,8 @@ jobs:
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
         run: python renderer/youtube_upload.py
-      - name: Report render result
-        if: steps.task.outputs.noop != 'true' to Cloudflare Worker
-        if: always()
+      - name: Report render result to Cloudflare Worker
+        if: always() && steps.task.outputs.noop != 'true'
         env:
           WEBHOOK_SECRET: ${{ secrets.RENDER_WEBHOOK_SECRET }}
           JOB_ID: ${{ inputs.job_id || steps.task.outputs.job_id }}
