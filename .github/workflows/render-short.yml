@@ -61,12 +61,12 @@ jobs:
             --output short.mp4
       - name: Build numbered delivery package
         env:
-          SOURCE_URL: \${{ inputs.source_url }}
-          CREATOR_NAME: \${{ inputs.creator_name }}
-          ORIGINAL_TITLE: \${{ inputs.source_title }}
-          PACKAGE_TEXT: \${{ inputs.package_text }}
-          YOUTUBE_DESCRIPTION: \${{ inputs.description }}
-          RUN_NUMBER: \${{ github.run_number }}
+          SOURCE_URL: ${{ inputs.source_url }}
+          CREATOR_NAME: ${{ inputs.creator_name }}
+          ORIGINAL_TITLE: ${{ inputs.source_title }}
+          PACKAGE_TEXT: ${{ inputs.package_text }}
+          YOUTUBE_DESCRIPTION: ${{ inputs.description }}
+          RUN_NUMBER: ${{ github.run_number }}
         run: |
           python - <<'PY'
           import os, re
