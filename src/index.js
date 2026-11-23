@@ -227,7 +227,7 @@ if(path==="/api/system/status"&&method==="GET")return json({version:VERSION,data
 if(path==="/api/data"&&method==="GET")return json(await getData(env.DB));
 if(path==="/api/discover"&&method==="POST")return json(await discover(env.DB,env));
 
-if(path==="/api/prepare"&&method==="POST")return json(await prepareAll(env.DB));
+if(path==="/api/prepare"&&method==="POST"){const clipValidation=await resolveTwitchClips(env.DB,env,20);const prepared=await prepareAll(env.DB);return json({...prepared,clip_validation:clipValidation});}
 if(path==="/api/render/dispatch"&&method==="POST"){const data=await readBody(request);const result=await dispatchRender(env.DB,env,String(data.draft_id||""),data.evidence_reference,data.authorization_confirmation);return result.error?json({error:result.error},400):json(result);}
 if(path==="/api/source/manual"&&method==="POST"){const data=await readBody(request);if(!data.url||!/^https?:\/\//i.test(data.url))return json({error:"Geçerli bir kaynak URL gir."},400);const exists=await env.DB.prepare("SELECT id FROM sources WHERE source_url=? LIMIT 1").bind(data.url).first();if(exists)return json({error:"Bu kaynak zaten kayıtlı."},409);const id=uid(),title=data.title||"Untitled",isRelevant=isGta6Relevant(title);await env.DB.prepare(`INSERT INTO sources(id,platform,source_url,creator_name,title,rights_status,relevance_status) VALUES(?,?,?,?,?,'pending',?)`).bind(id,"manual",data.url,data.creator||"Unknown",title,isRelevant?"relevant":"unknown").run();await analyzeSource(env.DB,{id,title});return json({ok:true,id,relevance_status:isRelevant?"relevant":"unknown"});}
 return json({error:"Endpoint bulunamadı.",version:VERSION},404);
