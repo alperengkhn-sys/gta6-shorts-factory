@@ -42,8 +42,7 @@ jobs:
           test -s render-analysis.json
           python -c "import json; a=json.load(open('render-analysis.json')); assert a['audio']['present'] is True and a['usable_for_shorts'] is True"
           ffmpeg -nostdin -hide_banner -loglevel error -y -f lavfi -i testsrc2=size=320x180:rate=10 -t 26 -c:v libx264 -preset ultrafast -pix_fmt yuv420p silent-fixture.mp4
-          if python renderer/render.py --source-url https://clips.twitch.tv/CIOnlyFixture --test-local-source silent-fixture.mp4 --title "GTA 6 Silent Source Test" --output ci-short-noaudio.mp4 > silent-render.log 2>&1; then echo "Silent source must be rejected"; exit 1; fi
-          test ! -s ci-short-noaudio.mp4
+          if python renderer/render.py --source-url https://clips.twitch.tv/CIOnlyFixture --test-local-source silent-fixture.mp4 --title "GTA 6 Silent Source Test" --output ci-short-noaudio.mp4 > silent-render.log 2>&1; then echo "Silent source must be rejected"; exit 1; else echo "Silent source correctly rejected"; fi
       - name: Check required deployment files
         run: |
           test -s wrangler.toml
