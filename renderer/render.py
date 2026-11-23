@@ -100,6 +100,54 @@ def media_analysis(media):
     }
 
 
+
+def branding_assets():
+    root = Path("branding")
+    specs = [
+        ("banner.png", "1080:-1", "(W-w)/2", "0", "always"),
+        ("logo.png", "190:-1", "40", "40", "always"),
+        ("subscribe.png", "390:-1", "60", "H-h-115", "ending"),
+        ("notification.png", "125:-1", "W-w-60", "H-h-115", "ending"),
+        ("outro.png", "1080:1920", "0", "0", "outro"),
+    ]
+    return [(root / name, scale, x, y, timing) for name, scale, x, y, timing in specs if (root / name).is_file()]
+
+def video_filter(duration, assets):
+    base = "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1"
+    if not assets:
+        return base, []
+    parts = [f"[0:v]{base}[base]"]
+    inputs = []
+    current = "base"
+    for index, (_, scale, x, y, timing) in enumerate(assets, start=1):
+        label = f"ov{index}"
+        next_label = f"v{index}"
+        parts.append(f"[{index}:v]scale={scale}:force_original_aspect_ratio=decrease,format=rgba[{label}]")
+        if timing == "always":
+            enable = f"between(t,0,{duration:.3f})"
+        elif timing == "ending":
+            enable = f"between(t,{max(0,duration-5):.3f},{duration:.3f})"
+        else:
+            enable = f"between(t,{max(0,duration-3):.3f},{duration:.3f})"
+        parts.append(f"[{current}][{label}]overlay=x={x}:y={y}:eof_action=pass:enable='{enable}'[{next_label}]")
+        current = next_label
+        inputs.extend(["-loop", "1", "-i", str(assets[index-1][0])])
+    return ";".join(parts), inputs + ["-map", f"[{current}]"]
+
+def make_cover(video, title, duration, destination):
+    safe = (clean(title)[:52].replace("\\", "\\\\").replace(":", "\\:")
+            .replace("'", "\\'").replace("%", "\\%").replace("[", "\\[")
+            .replace("]", "\\]").replace(",", "\\,").replace(";", "\\;"))
+    font = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+    vf = ("scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,"
+          f"drawtext=fontfile={font}:text='{safe}':fontcolor=white:fontsize=66:"
+          "borderw=4:bordercolor=black:box=1:boxcolor=black@0.48:boxborderw=24:"
+          "x=(w-text_w)/2:y=h-text_h-180")
+    run(["ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error", "-y",
+         "-ss", str(min(max(duration * 0.35, 0.5), max(duration - 0.5, 0.5))),
+         "-i", str(video), "-frames:v", "1", "-vf", vf, "-q:v", "2", str(destination)])
+
+
 def main():
     ap=argparse.ArgumentParser()
     ap.add_argument("--source-url",required=True)
@@ -138,15 +186,27 @@ def main():
         analysis_path=out.parent/"render-analysis.json"
         analysis_path.write_text(json.dumps(analysis,indent=2),encoding="utf-8")
         duration=min(60.0,source_duration)
-        vf="scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1"
+        assets=branding_assets()
+        vf, overlay_inputs=video_filter(duration,assets)
         render_cmd=["ffmpeg","-nostdin","-hide_banner","-loglevel","info","-stats_period","1",
-             "-filter_threads","1","-threads","2","-y","-i",str(media),"-vf",vf,
-             "-map","0:v:0","-map","0:a:0","-t",str(duration),"-r","30",
+             "-filter_threads","1","-threads","2","-y","-i",str(media),*overlay_inputs]
+        if assets:
+            render_cmd += ["-filter_complex",vf]
+        else:
+            render_cmd += ["-vf",vf,"-map","0:v:0"]
+        if assets:
+            render_cmd += ["-map",f"[{len(assets)}:v]"] if False else []
+            # The final filtered video map is appended by video_filter.
+            render_cmd += overlay_inputs[-2:]
+        render_cmd += ["-map","0:a:0","-t",str(duration),"-r","30",
              "-c:v","libx264","-preset","ultrafast","-crf","23",
              "-pix_fmt","yuv420p","-c:a","aac","-b:a","160k","-movflags","+faststart",str(out)]
-        print("RENDER_STAGE: encoding original Twitch video and audio only",flush=True)
+        print(f"RENDER_STAGE: encoding original Twitch video and audio with {len(assets)} branding overlays",flush=True)
         run(render_cmd)
         print("RENDER_STAGE: final encode completed",flush=True)
+        cover_path=out.parent/"short-cover.jpg"
+        make_cover(out,title,duration,cover_path)
+        print(f"RENDER_STAGE: generated cover {cover_path}",flush=True)
     check=json.loads(run(["ffprobe","-v","error","-show_entries","stream=codec_type,codec_name,width,height",
                           "-show_entries","format=duration","-of","json",str(out)]))
     video=next((x for x in check["streams"] if x["codec_type"]=="video"),{})
@@ -157,7 +217,7 @@ def main():
     print(json.dumps({"ok":True,"output":str(out),"duration":check["format"]["duration"],
                       "width":1080,"height":1920,"video":"h264","audio":"aac",
                       "original_audio_preserved":has_source_audio,
-                      "analysis":analysis}))
+                      "analysis":analysis,"cover":str(cover_path),"branding_overlays":len(assets)}))
 
 if __name__=="__main__":
     try: main()
