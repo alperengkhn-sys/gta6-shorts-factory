@@ -27,7 +27,8 @@ def validate_source_url(value):
         parts = [part for part in parsed.path.split("/") if part]
         is_clip = (
             (host in ("twitch.tv", "www.twitch.tv")
-             and len(parts) == 2 and parts[0].lower() == "clip")
+             and ((len(parts) == 2 and parts[0].lower() == "clip")
+                  or (len(parts) == 3 and parts[1].lower() == "clip")))
             or (host == "clips.twitch.tv" and len(parts) == 1)
         )
         return (
