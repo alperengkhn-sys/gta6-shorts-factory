@@ -1,11 +1,12 @@
 # Channel branding assets
 
-Drop the supplied channel assets here when they are provided. The cloud renderer reads these optional filenames automatically:
+The following supplied assets are already committed in this folder:
 
-- `banner.png` — persistent top banner across the Short.
-- `logo.png` — persistent channel logo in the upper-left corner.
-- `subscribe.png` — subscribe call-to-action shown during the final five seconds.
-- `notification.png` — notification/bell call-to-action shown during the final five seconds.
-- `outro.png` — full-frame closing screen shown during the final three seconds.
+- `logo.png` — persistent channel logo; applied to the upper-left corner of every rendered Short.
+- `image_50843161.jpg` — wide VI RUSH / Leonida Loop channel artwork with subscribe call-to-action.
+- `image_2d2a6dba.jpg` — crocodile subscribe call-to-action graphic.
+- `image_c69a04ba.jpg` — notification/bell call-to-action graphic.
 
-Use transparent PNGs for overlays where possible. Missing assets are skipped; they do not block rendering. Each render also creates `short-cover.jpg` from a frame of that video's actual footage with its title, and includes it in the downloadable artifact. The cover is also submitted as the YouTube thumbnail when YouTube upload is configured and the channel has thumbnail-upload access.
+The three JPG images have a checkerboard pattern baked into their pixels rather than transparency. They are included in every delivery ZIP, but must be converted to transparent PNG overlays before being placed on top of footage; otherwise the checkerboard would be visible in the video.
+
+The renderer also generates a unique `short-cover.jpg` from a frame of each video's actual footage and includes it in the delivery package. When YouTube upload is configured, this cover is submitted as the thumbnail.
