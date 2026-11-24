@@ -7,7 +7,7 @@
 3. Open the dashboard. Either add a public HTTPS video/clip URL manually or enter a public channel, videos-tab, or playlist URL in the discovery panel. Discovery scans recent entries and keeps GTA VI-titled videos.
 4. Confirm the source or channel reuse-rights checkbox only when you own the content or have the necessary license / explicit permission for editing and commercial YouTube use. The checkbox is an operator attestation, not legal proof or a copyright clearance service.
 5. Create the editorial package and start MP4 rendering. For sources longer than 55 seconds, the renderer chooses a candidate 55-second window using non-silent audio and scene-change density, then trims long silent gaps. This heuristic cannot understand the story or guarantee that the selected segment is the best moment; review the result.
-6. The workflow renders 1080×1920 H.264/AAC, preserves source audio, applies the supplied channel logo, generates a title-stamped cover from the footage, and creates an MP4, editorial TXT, cover JPG, and combined ZIP. The three supplied JPG channel graphics are included in the ZIP but are not currently overlaid in the video.
+6. The workflow renders 1080×1920 H.264/AAC, preserves source audio, applies the supplied channel logo and the converted subscribe/notification overlays during the final five seconds, generates a title-stamped cover from the footage, and creates an MP4, editorial TXT, cover JPG, and combined ZIP. The wide VI RUSH artwork remains in the ZIP.
 7. GitHub Release links are used for direct MP4 and ZIP downloads when release publishing succeeds. The workflow also stores a seven-day Actions artifact and posts render status back to the Worker.
 
 ## Optional private YouTube upload
@@ -33,5 +33,6 @@ Create a Google Cloud project, enable **YouTube Data API v3**, and create OAuth 
 ## Channel branding and per-video cover
 
 - `branding/logo.png` is applied as a persistent logo overlay.
-- The supplied JPG graphics are included in the ZIP package but are not currently composited into the video. Their checkerboard backgrounds need cleanup and transparency treatment first.
+- `renderer/prepare_branding.py` removes the checkerboard backgrounds from the subscribe and notification JPGs and creates transparent PNG overlays for the final five seconds.
+- The wide VI RUSH artwork remains included in the ZIP; it is not currently used as an outro.
 - Every rendered Short receives a separate `short-cover.jpg` generated from a frame of the actual footage with the title. YouTube may reject custom thumbnail uploads depending on channel eligibility or image constraints.
