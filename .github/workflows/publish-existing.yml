@@ -23,11 +23,10 @@ jobs:
           PY
       - name: Download already-rendered MP4 and cover
         env:
-          VIDEO_URL: ${{ steps.task.outputs.video_url }}
-          COVER_URL: ${{ steps.task.outputs.cover_url }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          curl -fL "$VIDEO_URL" -o short.mp4
-          curl -fL "$COVER_URL" -o short-cover.jpg
+          curl -fL -H "Accept: application/octet-stream" -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/repos/alperengkhn-sys/gta6-shorts-factory/releases/assets/787905070 -o short.mp4
+          curl -fL -H "Accept: application/octet-stream" -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/repos/alperengkhn-sys/gta6-shorts-factory/releases/assets/787905071 -o short-cover.jpg
           test -s short.mp4
           test -s short-cover.jpg
       - name: Publish publicly to YouTube
