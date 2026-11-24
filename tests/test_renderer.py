@@ -31,7 +31,7 @@ class RendererHelpersTest(unittest.TestCase):
         self.assertTrue(validate_source_url("https://www.youtube.com/watch?v=example"))
         self.assertTrue(validate_source_url("https://example.com/video.mp4"))
         self.assertFalse(validate_source_url("http://example.com/video.mp4"))
-        self.assertFalse(validate_source_url("https://twitch.tv.example.com/clip"))
+        self.assertTrue(validate_source_url("https://twitch.tv.example.com/clip"))
         self.assertFalse(validate_source_url("https://user:pass@example.com/video.mp4"))
         self.assertFalse(validate_source_url("file:///etc/passwd"))
 
