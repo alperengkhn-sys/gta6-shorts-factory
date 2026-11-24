@@ -1,0 +1,58 @@
+name: Verify YouTube publishing connection
+on:
+  push:
+    paths:
+      - ".github/workflows/verify-youtube-auth.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify YouTube OAuth credentials and upload scope
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: |
+          python - <<'PY'
+          import json, os, sys, urllib.parse, urllib.request, urllib.error
+          required = ("YOUTUBE_CLIENT_ID", "YOUTUBE_CLIENT_SECRET", "YOUTUBE_REFRESH_TOKEN")
+          missing = [name for name in required if not os.environ.get(name, "").strip()]
+          if missing:
+              print("MISSING_GITHUB_SECRETS=" + ",".join(missing))
+              sys.exit(1)
+          body = urllib.parse.urlencode({
+              "client_id": os.environ["YOUTUBE_CLIENT_ID"],
+              "client_secret": os.environ["YOUTUBE_CLIENT_SECRET"],
+              "refresh_token": os.environ["YOUTUBE_REFRESH_TOKEN"],
+              "grant_type": "refresh_token",
+          }).encode()
+          req = urllib.request.Request(
+              "https://oauth2.googleapis.com/token",
+              data=body,
+              headers={"Content-Type": "application/x-www-form-urlencoded"},
+              method="POST",
+          )
+          try:
+              with urllib.request.urlopen(req, timeout=30) as response:
+                  token = json.loads(response.read())
+          except urllib.error.HTTPError as exc:
+              detail = exc.read().decode("utf-8", "replace")[:800]
+              print("YOUTUBE_OAUTH_REFRESH_FAILED=" + detail)
+              sys.exit(1)
+          access_token = token.get("access_token")
+          if not access_token:
+              print("YOUTUBE_OAUTH_REFRESH_FAILED=no_access_token")
+              sys.exit(1)
+          info_req = urllib.request.Request("https://oauth2.googleapis.com/tokeninfo?access_token=" + urllib.parse.quote(access_token))
+          with urllib.request.urlopen(info_req, timeout=30) as response:
+              info = json.loads(response.read())
+          scopes = set((info.get("scope") or "").split())
+          if "https://www.googleapis.com/auth/youtube.upload" not in scopes:
+              print("YOUTUBE_UPLOAD_SCOPE_MISSING")
+              sys.exit(1)
+          print("YOUTUBE_OAUTH_REFRESH=OK")
+          print("YOUTUBE_UPLOAD_SCOPE=OK")
+          PY
