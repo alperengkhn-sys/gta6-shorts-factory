@@ -7,9 +7,9 @@ Automated Twitch-to-YouTube Shorts factory for the **@VIRUSHGTA6** channel.
 1. Discover GTA VI clips on Twitch through the Twitch Helix API.
 2. Resolve clip metadata and verify the GTA VI game category.
 3. Download public Twitch clip media in the GitHub Actions renderer with yt-dlp. **No personal Twitch account OAuth or editor permission is required for public clips.**
-4. Render a vertical 1080x1920 H.264/AAC Short, trim dead air, preserve source audio, and apply the supplied branding assets.
-5. Generate an English title, description, tags, hashtags, cover, editorial TXT and ZIP package.
-6. Upload the Short to YouTube with `privacyStatus=public`, upload the cover, and report the public video URL to the dashboard.
+4. Render a vertical 1080x1920 H.264/AAC Short, select an active highlight, trim dead air, preserve source audio, add English AI narration when an editorial script is available, and apply the supplied branding assets.
+5. Run a vision review of sampled clip frames, reject explicit sexual content and low-interest footage, and classify non-explicit mature scenes for a tailored edit and age-review handling. Generate an English title, description, tags, hashtags, cover, editorial TXT and ZIP package.
+6. Upload standard clips publicly to YouTube and report the video URL to the dashboard. Clips flagged for an age gate are uploaded privately because the YouTube Data API does not expose a creator-set age-restriction control; they must not be made public without the appropriate platform age gate.
 
 The system does not broadcast livestreams, use PostMassive, or use YouTube as a source platform.
 
@@ -39,12 +39,12 @@ The YouTube OAuth refresh token must belong to the **@VIRUSHGTA6** channel and i
 
 ## Rendering and delivery
 
-The renderer selects a high-activity window from longer source media, trims long silent gaps, preserves original audio without added AI voice or music, creates a 1080x1920 MP4, generates a cover and packages the MP4, TXT, cover and branding into a ZIP. Releases and GitHub Actions artifacts provide download links.
+The renderer selects a high-activity window from longer source media, trims long silent gaps, preserves original audio, adds an English AI voiceover when a suitable editorial script is available, creates a 1080x1920 MP4, generates a cover and packages the MP4, TXT, cover, analysis and branding into a ZIP. Releases and GitHub Actions artifacts provide download links.
 
 The scheduled Worker runs every three hours, discovers clips, prepares packages and dispatches the next queued render. Completed jobs update the dashboard with render status, YouTube status and public video URL.
 
 ## Branding
 
-The supplied logo and channel artwork are stored in `branding/`. The logo is applied persistently; subscribe and notification overlays appear near the end of the Short.
+The supplied logo and channel artwork are stored in `branding/`. The logo is applied as a watermark during gameplay; the supplied VI RUSH artwork is used for opening and closing cards; subscribe and notification overlays appear near the end of the Short. Non-explicit mature scenes receive a `MATURE THEMES` notice when the visual review classifies them for mature treatment. The generated cover is included in the package; YouTube custom-thumbnail upload requires channel eligibility/verification and may fail until enabled.
 
 Never commit credentials, OAuth tokens, cookies or temporary media URLs.
