@@ -144,11 +144,18 @@ def vision_review(media, workdir):
     prompt=("Review these timestamp-ordered frames sampled from a GTA VI gameplay clip. Judge the actual visible content, not its title. "
       "Return ONLY JSON with keys: score (0-100), compelling (boolean), event (short factual description), "
       "category (action|comedy|police|vehicle|story|nightlife|mature_suggestive|exploration|mundane|other), "
-      "youtube_safe (boolean), reasons (array of short strings), confidence (0-1). "
+      "youtube_safe (boolean), age_restriction_recommended (boolean), editing_treatment "
+      "(standard|mature_non_explicit|reject), editorial_tone (short string), "
+      "reasons (array of short strings), confidence (0-1). "
       "Score story clarity, visible action, novelty, emotional/comedic payoff and visual readability. "
       "Strong action, funny incidents, chases, crashes, fights, surprising interactions and non-explicit adult nightlife/suggestive scenes can score highly. "
+      "Do NOT penalize a clip merely because it shows nightclubs, strip-club settings, adult jokes, flirting, suggestive dancing, romance, revealing outfits or mature atmosphere. "
+      "For non-explicit adult material that is otherwise suitable, set category=mature_suggestive, editing_treatment=mature_non_explicit, "
+      "and age_restriction_recommended=true when the visible material reasonably warrants an 18+ audience. "
+      "The edit should preserve the context and strongest moment, avoid sensational sexual framing, and use neutral factual English captions/narration. "
+      "For ordinary gameplay use editing_treatment=standard and age_restriction_recommended=false. "
       "Penalize uneventful walking, running, ordinary driving, static scenes and unclear clips. "
-      "Mature nightlife is allowed only when non-explicit and suitable for YouTube; mark youtube_safe false for nudity or explicit sexual activity. "
+      "Mark youtube_safe=false and editing_treatment=reject for explicit sexual activity or visible explicit nudity; do not recommend uploading those. "
       "Do not infer events that are not visible in these frames.")
     payload={"model":os.environ.get("VISION_MODEL","gpt-4o-mini"),"temperature":0,"max_tokens":350,
       "response_format":{"type":"json_object"},"messages":[{"role":"user","content":[{"type":"text","text":prompt},*frames]}]}
@@ -164,6 +171,14 @@ def vision_review(media, workdir):
     except Exception as exc:
         raise RuntimeError("Vision review returned an invalid response; refusing an unreviewed render.") from exc
     review["score"]=score
+    review["category"]=review.get("category","other")
+    review["age_restriction_recommended"]=bool(review.get("age_restriction_recommended",False))
+    review["editing_treatment"]=review.get("editing_treatment","standard")
+    if review["category"]=="mature_suggestive" and review.get("youtube_safe") is True:
+        review["editing_treatment"]="mature_non_explicit"
+        review["age_restriction_recommended"]=True
+    review["age_restriction_status"]=("platform_setting_unavailable_via_data_api"
+        if review["age_restriction_recommended"] else "not_recommended")
     review["status"]="passed" if score>=int(os.environ.get("VISION_MIN_SCORE","58")) and review.get("youtube_safe") is True else "rejected"
     review["provider"]="openai"
     review["model"]=payload["model"]
