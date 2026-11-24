@@ -59,8 +59,8 @@ def main():
         "SHORT_DESCRIPTION",
         "Grand Theft Auto VI gaming moment. #GTA6 #GTAVI #Shorts",
     ).strip()[:5000]
-    import datetime
-    publish_at = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=30)).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    # Safety default: upload privately only. Never schedule public release
+    # automatically; the channel owner must review rights, edits and metadata.
     metadata = {
         "snippet": {
             "title": title,
@@ -70,7 +70,6 @@ def main():
         },
         "status": {
             "privacyStatus": "private",
-            "publishAt": publish_at,
         },
     }
     init_url = "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status"
@@ -139,11 +138,10 @@ def main():
         except Exception as exc:
             thumbnail_status = "failed"
             print("YouTube thumbnail upload failed: " + str(exc)[:500], file=sys.stderr)
-    output("upload_status", "scheduled")
+    output("upload_status", "uploaded_private")
     output("video_url", video_url)
     output("thumbnail_status", thumbnail_status)
-    output("publish_at", publish_at)
-    print(json.dumps({"ok": True, "privacy": "private_until_publish", "publish_at": publish_at,
+     print(json.dumps({"ok": True, "privacy": "private",
                       "video_url": video_url, "thumbnail_status": thumbnail_status}))
     return 0
 
