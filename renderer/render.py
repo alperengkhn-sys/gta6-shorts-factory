@@ -73,15 +73,33 @@ def media_analysis(media):
     except subprocess.TimeoutExpired:
         log=""
     silence_total=0.0
+    silence_intervals=[]
+    open_silence=None
     for line in log.splitlines():
+        if "silence_start:" in line:
+            try: open_silence=float(line.split("silence_start:",1)[1].strip().split()[0])
+            except ValueError: pass
         if "silence_duration:" in line:
             try: silence_total+=float(line.rsplit("silence_duration:",1)[1].strip())
             except ValueError: pass
+        if "silence_end:" in line and open_silence is not None:
+            try:
+                silence_end=float(line.split("silence_end:",1)[1].split("|",1)[0].strip())
+                silence_intervals.append((open_silence,silence_end))
+                open_silence=None
+            except ValueError: pass
+    if open_silence is not None: silence_intervals.append((open_silence,duration))
     scene_cmd=["ffmpeg","-nostdin","-hide_banner","-loglevel","info","-i",str(media),"-vf","select='gt(scene,0.30)',metadata=print","-an","-f","null","-"]
     try:
         scene_log=subprocess.run(scene_cmd,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,stdin=subprocess.DEVNULL,timeout=120).stdout or ""
-        scene_changes=sum(1 for line in scene_log.splitlines() if "pts_time:" in line)
+        scene_times=[]
+        for line in scene_log.splitlines():
+            if "pts_time:" in line:
+                try: scene_times.append(float(line.split("pts_time:",1)[1].split()[0]))
+                except ValueError: pass
+        scene_changes=len(scene_times)
     except (subprocess.TimeoutExpired, OSError):
+        scene_times=[]
         scene_changes=None
     mean_volume_db=None
     if audio:
@@ -99,7 +117,9 @@ def media_analysis(media):
         "silence_ratio":round(min(1.0,silence_total/duration),3) if duration else 1.0,
         "scene_change_count":scene_changes,
         "mean_volume_db":mean_volume_db,
-        "usable_for_shorts":bool(video and duration>0 and duration<=59.9)
+        "usable_for_shorts":bool(video and duration>=25),
+        "_silence_intervals":silence_intervals,
+        "_scene_change_times":scene_times
     }
 
 
@@ -150,6 +170,34 @@ def make_cover(video, title, duration, destination):
          "-ss", str(min(max(duration * 0.35, 0.5), max(duration - 0.5, 0.5))),
          "-i", str(video), "-frames:v", "1", "-vf", vf, "-q:v", "2", str(destination)])
 
+
+
+def select_highlight_window(duration, silence_intervals, scene_times, window=55.0, stride=10.0):
+    """Choose an active window using non-silent audio and detected scene changes."""
+    duration=float(duration)
+    if duration<=window:
+        return 0.0,duration,0.0
+    window=min(float(window),duration)
+    stride=max(1.0,float(stride))
+    last=max(0.0,duration-window)
+    starts=[]
+    cursor=0.0
+    while cursor<last:
+        starts.append(cursor)
+        cursor+=stride
+    starts.append(last)
+    best=(0.0,-1.0)
+    for start in starts:
+        end=start+window
+        silent=0.0
+        for silence_start,silence_end in silence_intervals:
+            silent+=max(0.0,min(end,silence_end)-max(start,silence_start))
+        active=max(0.0,window-min(window,silent))
+        scenes=sum(1 for point in scene_times if start<=point<end)
+        score=active+1.5*scenes
+        if score>best[1]:
+            best=(start,score)
+    return round(best[0],2),round(window,2),round(best[1],2)
 
 
 def auto_trim_silence(media, workdir):
@@ -254,7 +302,15 @@ def main():
         if not has_source_audio:
             raise RuntimeError("Source clip has no audio stream; refusing to add synthetic audio.")
         analysis=media_analysis(media)
-        media_for_render,edited_duration,removed_silence=auto_trim_silence(media,w)
+        silence_intervals=analysis.pop("_silence_intervals",[])
+        scene_times=analysis.pop("_scene_change_times",[])
+        highlight_start,highlight_duration,highlight_score=select_highlight_window(source_duration,silence_intervals,scene_times)
+        selected_source=media
+        if source_duration>highlight_duration:
+            selected_source=w/"selected-highlight.mp4"
+            run(["ffmpeg","-nostdin","-hide_banner","-loglevel","error","-y","-ss",str(highlight_start),"-i",str(media),"-t",str(highlight_duration),"-map","0:v:0","-map","0:a:0","-c:v","libx264","-preset","ultrafast","-crf","23","-pix_fmt","yuv420p","-c:a","aac","-b:a","160k",str(selected_source)])
+        analysis["highlight_selection"]={"start_seconds":highlight_start,"duration_seconds":highlight_duration,"activity_score":highlight_score,"method":"non-silent audio + scene-change density"}
+        media_for_render,edited_duration,removed_silence=auto_trim_silence(selected_source,w)
         analysis["silence_removed_seconds"]=removed_silence
         analysis["automatic_dead_air_trim"]=removed_silence>0
         analysis_path=out.parent/"render-analysis.json"
