@@ -1,4 +1,4 @@
-const VERSION = "GTA6-FACTORY-5.5-RENDER-RECOVERY";
+const VERSION = "GTA6-FACTORY-5.6-CONTROLLED-QUEUE";
 
 const HTML = String.raw`<!doctype html>
 <html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GTA6 Shorts Factory 5.2</title>
@@ -301,7 +301,7 @@ async function runScheduled(env){
  const prepared=await prepareAll(env.DB);
  await env.DB.prepare("UPDATE jobs SET status=CASE WHEN COALESCE(render_attempts,0)>=3 THEN 'failed' ELSE 'failed' END,last_error='Recovered stale dispatch after 45 minutes without callback.',updated_at=CURRENT_TIMESTAMP WHERE status='processing' AND dispatch_started_at IS NOT NULL AND dispatch_started_at<datetime('now','-45 minutes')").run();
  await env.DB.prepare("UPDATE shorts_drafts SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE source_id IN (SELECT source_id FROM jobs WHERE status IN ('failed','failed') AND last_error='Recovered stale dispatch after 45 minutes without callback.')").run();
- const rendering=await dispatchQueuedRenders(env.DB,env,10);
+ const rendering=await dispatchQueuedRenders(env.DB,env,2);
  for(const error of rendering.errors||[])console.error("Scheduled render dispatch:",error);
  return {discovery,duration_validation:durationValidation,prepared,...rendering};
 }
@@ -325,7 +325,7 @@ if(path==="/api/system/status"&&method==="GET")return json({version:VERSION,data
 if(path==="/api/data"&&method==="GET")return json(await getData(env.DB));
 if(path==="/api/discover"&&method==="POST")return json(await discover(env.DB,env));
 
-if(path==="/api/prepare"&&method==="POST"){let discovery;try{discovery=await discover(env.DB,env);}catch(error){discovery={error:String(error&&error.message||error).slice(0,500)};}const clipValidation=await resolveTwitchClips(env.DB,env,500);const durationValidation=await validateResolvedClipDurations(env.DB,env,500);const prepared=await prepareAll(env.DB);const rendering=await dispatchQueuedRenders(env.DB,env,10);return json({...prepared,discovery,clip_validation:clipValidation,duration_validation:durationValidation,rendering});}
+if(path==="/api/prepare"&&method==="POST"){let discovery;try{discovery=await discover(env.DB,env);}catch(error){discovery={error:String(error&&error.message||error).slice(0,500)};}const clipValidation=await resolveTwitchClips(env.DB,env,500);const durationValidation=await validateResolvedClipDurations(env.DB,env,500);const prepared=await prepareAll(env.DB);const rendering=await dispatchQueuedRenders(env.DB,env,2);return json({...prepared,discovery,clip_validation:clipValidation,duration_validation:durationValidation,rendering});}
 if(path==="/api/render/dispatch"&&method==="POST"){const data=await readBody(request);const result=await dispatchRender(env.DB,env,String(data.draft_id||""),data.evidence_reference,data.authorization_confirmation);return result.error?json({error:result.error},400):json(result);}
 if(path==="/api/source/quick"&&method==="POST"){
 if(!await authorized(request,env))return json({error:"Giriş gerekli."},401);
