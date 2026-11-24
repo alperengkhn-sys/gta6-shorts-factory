@@ -166,7 +166,7 @@ jobs:
           BASE="https://github.com/${REPOSITORY}/releases/download/${TAG}"
           echo "mp4_url=${BASE}/${MP4}" >> "$GITHUB_OUTPUT"
           echo "package_url=${BASE}/${ZIP}" >> "$GITHUB_OUTPUT"
-      - name: Upload rendered MP4 and media analysis
+      - name: Upload MP4, ZIP, cover, and media analysis
         if: steps.task.outputs.noop != 'true'
         id: upload
         uses: actions/upload-artifact@v4
@@ -176,10 +176,11 @@ jobs:
             GTA6-Short-*.mp4
             GTA6-Short-*.txt
             GTA6-Short-*-cover.jpg
+            GTA6-Short-*-PACKAGE.zip
             render-analysis.json
           if-no-files-found: error
           retention-days: 7
-      - name: Upload and schedule YouTube Short (optional)
+      - name: Upload YouTube Short privately (optional)
         id: youtube
         if: steps.task.outputs.noop != 'true' && success()
         continue-on-error: true
