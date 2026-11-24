@@ -121,6 +121,57 @@ def media_analysis(media):
 
 
 
+
+def vision_review(media, workdir):
+    """Use sampled real frames for semantic highlight review when an API key is configured."""
+    api_key=os.environ.get("OPENAI_API_KEY","").strip()
+    if not api_key:
+        return {"status":"skipped_missing_api_key","provider":"openai","reason":"OPENAI_API_KEY is not configured"}
+    import base64, urllib.request, urllib.error
+    duration=float(json.loads(run(["ffprobe","-v","error","-show_entries","format=duration","-of","json",str(media)])).get("format",{}).get("duration") or 0)
+    if duration<=0:
+        raise RuntimeError("Vision review could not determine source duration.")
+    frames=[]
+    # Six evenly spaced frames let the reviewer judge what actually happens, not just the clip title.
+    for i in range(6):
+        at=max(0.1,min(duration-0.1,duration*(i+0.5)/6))
+        frame=workdir/f"vision-frame-{i}.jpg"
+        run(["ffmpeg","-nostdin","-hide_banner","-loglevel","error","-y","-ss",str(at),"-i",str(media),"-frames:v","1","-vf","scale=512:-2","-q:v","5",str(frame)])
+        if frame.is_file():
+            frames.append({"type":"image_url","image_url":{"url":"data:image/jpeg;base64,"+base64.b64encode(frame.read_bytes()).decode("ascii"),"detail":"low"}})
+    if len(frames)<4:
+        raise RuntimeError("Vision review failed: fewer than four frames could be sampled.")
+    prompt=("Review these timestamp-ordered frames sampled from a GTA VI gameplay clip. Judge the actual visible content, not its title. "
+      "Return ONLY JSON with keys: score (0-100), compelling (boolean), event (short factual description), "
+      "category (action|comedy|police|vehicle|story|nightlife|mature_suggestive|exploration|mundane|other), "
+      "youtube_safe (boolean), reasons (array of short strings), confidence (0-1). "
+      "Score story clarity, visible action, novelty, emotional/comedic payoff and visual readability. "
+      "Strong action, funny incidents, chases, crashes, fights, surprising interactions and non-explicit adult nightlife/suggestive scenes can score highly. "
+      "Penalize uneventful walking, running, ordinary driving, static scenes and unclear clips. "
+      "Mature nightlife is allowed only when non-explicit and suitable for YouTube; mark youtube_safe false for nudity or explicit sexual activity. "
+      "Do not infer events that are not visible in these frames.")
+    payload={"model":os.environ.get("VISION_MODEL","gpt-4o-mini"),"temperature":0,"max_tokens":350,
+      "response_format":{"type":"json_object"},"messages":[{"role":"user","content":[{"type":"text","text":prompt},*frames]}]}
+    req=urllib.request.Request("https://api.openai.com/v1/chat/completions",data=json.dumps(payload).encode("utf-8"),
+      headers={"Authorization":"Bearer "+api_key,"Content-Type":"application/json"},method="POST")
+    try:
+        with urllib.request.urlopen(req,timeout=90) as response: result=json.loads(response.read().decode("utf-8"))
+    except Exception as exc:
+        raise RuntimeError(f"Vision review API failed; refusing an unreviewed render: {exc}") from exc
+    try:
+        review=json.loads(result["choices"][0]["message"]["content"])
+        score=max(0,min(100,int(review.get("score",0))))
+    except Exception as exc:
+        raise RuntimeError("Vision review returned an invalid response; refusing an unreviewed render.") from exc
+    review["score"]=score
+    review["status"]="passed" if score>=int(os.environ.get("VISION_MIN_SCORE","58")) and review.get("youtube_safe") is True else "rejected"
+    review["provider"]="openai"
+    review["model"]=payload["model"]
+    review["frames_sampled"]=len(frames)
+    if review["status"]!="passed":
+        raise RuntimeError("Visual AI rejected this clip (score="+str(score)+", safe="+str(review.get("youtube_safe"))+"): "+clean("; ".join(review.get("reasons",[]))))
+    return review
+
 def branding_assets():
     root = Path("branding")
     specs = [
@@ -319,6 +370,7 @@ def main():
         if not has_source_audio:
             raise RuntimeError("Source clip has no audio stream; refusing to add synthetic audio.")
         analysis=media_analysis(media)
+        analysis["vision_review"]=vision_review(media,w)
         silence_intervals=analysis.pop("_silence_intervals",[])
         scene_times=analysis.pop("_scene_change_times",[])
         highlight_start,highlight_duration,highlight_score=select_highlight_window(source_duration,silence_intervals,scene_times)
