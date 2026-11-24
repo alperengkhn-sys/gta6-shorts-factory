@@ -40,9 +40,9 @@ def channel_uploads_playlist(channel_url, page_html=None):
     return "https://www.youtube.com/playlist?list=UU" + channel_id[2:]
 
 
-def channel_rss_entries(channel_url, feed_xml=None):
+def channel_rss_entries(channel_url, feed_xml=None, uploads_url=None):
     """Read public uploads from YouTube's Atom feed as a final tab-independent fallback."""
-    uploads_url = channel_uploads_playlist(channel_url)
+    uploads_url = uploads_url or channel_uploads_playlist(channel_url)
     match = re.search(r"[?&]list=UU([a-zA-Z0-9_-]{22})", uploads_url or "")
     if not match:
         return []
@@ -56,7 +56,8 @@ def channel_rss_entries(channel_url, feed_xml=None):
         try:
             with urllib.request.urlopen(request, timeout=30) as response:
                 feed_xml = response.read()
-        except (urllib.error.URLError, TimeoutError, OSError):
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            print("YouTube RSS request failed: " + str(exc), flush=True)
             return []
     try:
         root = ET.fromstring(feed_xml)
@@ -77,6 +78,7 @@ def channel_rss_entries(channel_url, feed_xml=None):
                 "channel": creator or "Unknown",
                 "extractor_key": "Youtube",
             })
+    print(f"YouTube RSS returned {len(entries)} public entries", flush=True)
     return entries
 
 
@@ -145,7 +147,7 @@ def main():
                     entries.append(item)
     if not entries:
         print("DISCOVERY_FALLBACK trying YouTube public RSS feed", flush=True)
-        entries = channel_rss_entries(channel_url)
+        entries = channel_rss_entries(channel_url, uploads_url=uploads_url)
     if not entries:
         detail = (result.stderr or result.stdout or "yt-dlp and YouTube RSS returned no public video entries.").strip()
         raise RuntimeError("No public video entries were returned by yt-dlp after channel-tab and uploads-playlist fallbacks: " + detail[-1800:])
