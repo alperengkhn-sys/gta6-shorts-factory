@@ -43,12 +43,13 @@ jobs:
           NODE
           node --check /tmp/dashboard.js
       - name: Compile renderer scripts
-        run: python -m py_compile renderer/render.py renderer/youtube_upload.py renderer/discover.py tests/test_renderer.py
+        run: python -m py_compile renderer/render.py renderer/youtube_upload.py renderer/discover.py renderer/prepare_branding.py tests/test_renderer.py
       - name: Run renderer unit tests
         run: python -m unittest discover -s tests -v
       - name: Install media tools for integration render
         run: |
           sudo apt-get install -y --no-install-recommends ffmpeg espeak-ng fonts-dejavu-core
+          python -m pip install pillow
       - name: Render synthetic clip end-to-end
         timeout-minutes: 6
         env:
@@ -56,6 +57,9 @@ jobs:
         run: |
           set -euxo pipefail
           mkdir -p branding
+          python renderer/prepare_branding.py
+          test -s branding/subscribe.png
+          test -s branding/notification.png
           ffmpeg -nostdin -hide_banner -loglevel error -y -f lavfi -i "color=c=blue@0.35:s=1080x160:d=1,format=rgba" -frames:v 1 branding/banner.png
           ffmpeg -nostdin -hide_banner -loglevel error -y -f lavfi -i "color=c=yellow@0.65:s=200x200:d=1,format=rgba" -frames:v 1 branding/logo.png
           ffmpeg -nostdin -hide_banner -loglevel error -y -f lavfi -i "color=c=green@0.65:s=390x120:d=1,format=rgba" -frames:v 1 branding/subscribe.png
@@ -104,6 +108,7 @@ jobs:
           test -s .github/workflows/render-short.yml
           test -s .github/workflows/discover-sources.yml
           test -s renderer/discover.py
+          test -s renderer/prepare_branding.py
           test -s renderer/render.py
           test -s renderer/youtube_upload.py
           test -s tests/test_renderer.py
