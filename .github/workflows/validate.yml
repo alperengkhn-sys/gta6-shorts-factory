@@ -106,6 +106,7 @@ jobs:
           assert "Source clip has no audio stream" in result.stdout, "Renderer failed for an unexpected reason"
           assert not output.exists() or output.stat().st_size == 0, "A silent MP4 was incorrectly produced"
           print("PASS: silent source rejected without producing an MP4")
+          PY
           ffmpeg -nostdin -hide_banner -loglevel error -y -f lavfi -i testsrc2=size=320x180:rate=10 -f lavfi -i sine=frequency=520:duration=8 -t 26 -map 0:v:0 -map 1:a:0 -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -b:a 160k cut-audio-fixture.mp4
           python - <<'PY'
           import os, subprocess, sys
@@ -125,7 +126,6 @@ jobs:
           assert result.returncode != 0, "Short with audio ending early was incorrectly accepted"
           assert "audio track ends early" in result.stdout or "audio is silent for the final" in result.stdout, "Renderer rejected cut audio for an unexpected reason"
           print("PASS: cut-off audio rejected before publish")
-          PY
           PY
       - name: Verify YouTube OAuth refresh token without uploading
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
