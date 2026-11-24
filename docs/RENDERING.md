@@ -25,7 +25,7 @@ Create a Google Cloud project, enable **YouTube Data API v3**, and create OAuth 
 
 - Rendering runs in GitHub Actions; it does not use the local PC for processing.
 - GitHub Actions usage is quota-limited; daily output volume is not guaranteed.
-- The built-in English voice is synthetic/basic. Captions are timed across narration, not word-level ASR.
+- The MP4 preserves the original source audio and adds no AI voice, music, or burned-in captions. Editorial notes and SEO text are delivered separately in TXT.
 - The editorial script is derived from source metadata and has not independently verified the events in the footage. Review every factual statement.
 - Public accessibility is not permission to reuse a video. The system cannot determine copyright ownership, fair use, or platform licensing. Do not publish content without the necessary rights.
 - Artifact retention is seven days. Release links are subject to repository release permissions.
