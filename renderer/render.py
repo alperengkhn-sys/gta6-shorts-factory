@@ -163,7 +163,7 @@ def video_filter(duration, assets, subtitles_path=None):
 
 def create_voiceover(package_text, workdir):
     import re
-    match = re.search(r"ORIGINAL VOICEOVER DRAFT:\\s*([\\s\\S]*?)(?=\\n\\n[A-Z][A-Z /_-]+:|\\Z)", package_text or "")
+    match = re.search(r"ORIGINAL VOICEOVER DRAFT:\s*([\s\S]*?)(?=\n\n[A-Z][A-Z /_-]+:|\Z)", package_text or "")
     narration = clean(match.group(1)) if match else ""
     if len(narration) < 35:
         return None, None
@@ -179,7 +179,7 @@ def create_voiceover(package_text, workdir):
     voice_duration = float(info.get("format", {}).get("duration") or 0)
     if voice_duration < 2:
         raise RuntimeError("Generated editorial voiceover is unexpectedly short.")
-    sentences = [clean(x) for x in re.split(r"(?<=[.!?])\\s+", narration) if clean(x)]
+    sentences = [clean(x) for x in re.split(r"(?<=[.!?])\s+", narration) if clean(x)]
     chunks = []
     for sentence in sentences:
         words = sentence.split()
@@ -198,9 +198,9 @@ def create_voiceover(package_text, workdir):
     for index, (chunk, weight) in enumerate(zip(chunks, weights), 1):
         start = cursor
         cursor += voice_duration * weight / total
-        srt.append(f"{index}\\n{stamp(start)} --> {stamp(cursor)}\\n{chunk}\\n")
+        srt.append(f"{index}\n{stamp(start)} --> {stamp(cursor)}\n{chunk}\n")
     subtitles = workdir / "editorial-captions.srt"
-    subtitles.write_text("\\n".join(srt), encoding="utf-8")
+    subtitles.write_text("\n".join(srt), encoding="utf-8")
     return audio, subtitles
 
 def make_cover(video, title, duration, destination):
