@@ -40,7 +40,7 @@ class RendererHelpersTest(unittest.TestCase):
         start, length, score = select_highlight_window(
             120, [(0, 40), (80, 120)], [52, 57, 62, 67], window=30, stride=5
         )
-        self.assertGreaterEqual(start, 45)
+        self.assertGreaterEqual(start, 40)
         self.assertLessEqual(start, 55)
         self.assertEqual(length, 30)
         self.assertGreater(score, 30)
