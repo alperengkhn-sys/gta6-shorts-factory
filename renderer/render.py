@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Vertical Shorts renderer with silence trimming, original audio, branding overlays and unique covers."""
-import argparse, json, os, shutil, subprocess, sys, tempfile
+import argparse, json, math, os, shutil, struct, subprocess, sys, tempfile, wave
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -255,6 +255,48 @@ def vision_review(media, workdir):
         raise RuntimeError("Visual AI rejected this clip (score="+str(score)+", safe="+str(review.get("youtube_safe"))+"): "+clean("; ".join(review.get("reasons",[]))))
     return review
 
+def create_brand_sting(workdir, duration=4.0):
+    """Create an original, non-sampled 4-second VI RUSH sonic logo."""
+    sample_rate = 44100
+    total = int(sample_rate * duration)
+    # Original rising electronic motif: D minor / F / A with a warm low pulse.
+    notes = [(146.83, 0.00, 0.85), (220.00, 0.34, 1.05),
+             (293.66, 0.78, 1.35), (440.00, 1.28, 2.05),
+             (587.33, 2.02, 3.10), (440.00, 2.55, 3.65)]
+    frames = bytearray()
+    for i in range(total):
+        t = i / sample_rate
+        value = 0.0
+        # Soft cinematic low pulse, fading before the source clip takes over.
+        bass_env = min(1.0, t / 0.08) * max(0.0, 1.0 - t / 3.8)
+        value += 0.19 * bass_env * math.sin(2 * math.pi * (55 + 8 * t) * t)
+        for freq, start, end in notes:
+            local = t - start
+            if 0 <= local <= 0.72:
+                attack = min(1.0, local / 0.025)
+                decay = math.exp(-3.0 * local)
+                env = attack * decay
+                phase = 2 * math.pi * freq * local
+                value += 0.105 * env * (math.sin(phase) + 0.22 * math.sin(2 * phase))
+        # Short airy upward sweep, entirely synthesized (no third-party samples).
+        if 0.05 <= t <= 2.4:
+            sweep = (t - 0.05) / 2.35
+            env = math.sin(math.pi * sweep) ** 1.5
+            freq = 520 + 1250 * sweep
+            value += 0.035 * env * math.sin(2 * math.pi * freq * t)
+        # Gentle stereo width without changing pitch or timing.
+        left = max(-1.0, min(1.0, value * 0.92))
+        right = max(-1.0, min(1.0, value * 0.86))
+        frames.extend(struct.pack("<hh", int(left * 32767), int(right * 32767)))
+    path = Path(workdir) / "vi-rush-original-sonic-logo.wav"
+    with wave.open(str(path), "wb") as audio:
+        audio.setnchannels(2)
+        audio.setsampwidth(2)
+        audio.setframerate(sample_rate)
+        audio.writeframes(frames)
+    return path
+
+
 def branding_assets():
     root = Path("branding")
     specs = [
@@ -502,6 +544,7 @@ def main():
         duration=min(60.0,edited_duration)
         assets=branding_assets()
         voiceover, subtitles = create_voiceover(os.environ.get("PACKAGE_TEXT", ""), w)
+        brand_sting = create_brand_sting(w, duration=4.0)
         mature_edit = analysis["vision_review"].get("editing_treatment") == "mature_non_explicit"
         vf, overlay_inputs=video_filter(duration,assets,subtitles,mature=mature_edit)
         analysis["mature_content_editing"] = {
@@ -518,20 +561,23 @@ def main():
         voice_index = 1 + len(assets)
         if voiceover:
             render_cmd += ["-i", str(voiceover)]
-        if assets or voiceover:
-            if not assets:
-                vf = f"[0:v]{vf}[vout]"
-                video_map = "[vout]"
-            else:
-                video_map = overlay_inputs[-1]
-                vf += ";" if vf else ""
-            if voiceover:
-                vf += (f"[0:a][{voice_index}:a]sidechaincompress=threshold=0.025:ratio=8:attack=20:release=450[duck];"
-                       f"[duck][{voice_index}:a]amix=inputs=2:duration=longest:dropout_transition=0[aout]")
-                audio_map = "[aout]"
-            else:
-                audio_map = "0:a:0"
-            render_cmd += ["-filter_complex",vf,"-map",video_map,"-map",audio_map]
+        sting_index = voice_index + (1 if voiceover else 0)
+        render_cmd += ["-i", str(brand_sting)]
+        if not assets:
+            vf = f"[0:v]{vf}[vout]"
+            video_map = "[vout]"
+        else:
+            video_map = overlay_inputs[-1]
+            vf += ";" if vf else ""
+        if voiceover:
+            vf += (f"[0:a][{voice_index}:a]sidechaincompress=threshold=0.025:ratio=8:attack=20:release=450[duck];"
+                   f"[duck][{voice_index}:a]amix=inputs=2:duration=longest:dropout_transition=0[aout];")
+        else:
+            vf += "[0:a:0]anull[aout];"
+        vf += (f"[aout][{sting_index}:a]amix=inputs=2:duration=first:"
+               "dropout_transition=0:weights='1 0.28'[finala]")
+        audio_map = "[finala]"
+        render_cmd += ["-filter_complex",vf,"-map",video_map,"-map",audio_map]
         else:
             render_cmd += ["-vf",vf,"-map","0:v:0","-map","0:a:0"]
         render_cmd += ["-t",str(duration),"-r","30",
