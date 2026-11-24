@@ -26,7 +26,7 @@ The baseline creates editorial text packages only. It does not render MP4 files,
 2. Use additive migrations only.
 3. Keep processing cloud-side.
 4. Do not depend on paid APIs or paid SaaS.
-5. Require recorded rights approval before rendering or upload.
+5. Never treat Twitch access or category verification as reuse rights; keep rights responsibility explicit and review content before publication.
 6. Default YouTube uploads to private until explicitly reviewed.
 7. Treat free compute quotas as hard limits; never claim unlimited free rendering.
 
@@ -48,5 +48,5 @@ See `docs/IMPLEMENTATION.md`.
 - The Worker does not ask for a per-clip permission URL or written approval. It only sends Twitch clips whose actual Twitch game category is verified as GTA VI to the renderer. Twitch API access is not copyright permission; the channel operator remains responsible for having reuse rights.
 - The renderer accepts HTTPS Twitch clip URLs only. Its local-file test mode is enabled only inside the isolated CI test environment.
 - Voiceovers longer than 59.9 seconds are rejected rather than silently cut off.
-- YouTube uploads are created as private videos with a future `publishAt` time so YouTube can auto-publish them; the upload requires working OAuth credentials and channel eligibility.
+- YouTube API uploads remain private; there is no automatic public scheduling. Review rights, edits and metadata before manually publishing.
 - CI includes helper tests and a synthetic end-to-end 1080x1920 MP4 render. This test does not verify a real Twitch clip, Cloudflare deployment, or YouTube OAuth credentials.
