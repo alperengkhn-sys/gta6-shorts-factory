@@ -16,7 +16,7 @@ Preserve existing D1 tables and records. Use additive migrations only. Never com
 
 ## Renderer
 
-The GitHub Actions renderer accepts public HTTPS video/clip URLs supported by yt-dlp, downloads the source, checks media streams, selects a 55-second high-activity window from longer videos using audio activity and scene changes, trims long silent gaps, creates a 1080x1920 H.264/AAC MP4, generates a frame-based cover, and packages the MP4, editorial TXT, cover, and branding assets into a ZIP. It also publishes a direct MP4/package release link when GitHub Releases permissions allow it.
+The GitHub Actions renderer accepts public HTTPS video/clip URLs supported by yt-dlp, downloads the source, checks media streams, selects a 55-second high-activity window from longer videos using audio activity and scene changes, trims long silent gaps, preserves the original source audio without added AI voice or music, creates a 1080x1920 H.264/AAC MP4 without burned-in captions, generates a separate frame-based cover, and packages the MP4, editorial TXT, cover, and branding assets into a ZIP. It also publishes a direct MP4/package release link when GitHub Releases permissions allow it.
 
 The renderer rejects localhost/private-network URLs and non-HTTPS sources. Only submit material for which you have the necessary copyright, license, and platform permissions. A URL being publicly accessible is not permission to reuse it. Automated checks cannot guarantee that a clip is copyright-safe; human rights review remains required.
 
