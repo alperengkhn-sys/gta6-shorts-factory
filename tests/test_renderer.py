@@ -14,9 +14,9 @@ class RendererHelpersTest(unittest.TestCase):
 
         error = HTTPError("https://api.openai.com", 429, "rate limited",
                           {"Retry-After": "1"}, None)
-        with patch("urllib.request.urlopen", side_effect=[error, Response()]) as request, \\
-             patch("time.sleep") as sleep:
-            result = request_vision_completion(object())
+        with patch("urllib.request.urlopen", side_effect=[error, Response()]) as request:
+            with patch("time.sleep") as sleep:
+                result = request_vision_completion(object())
         self.assertEqual(result, {"choices": []})
         self.assertEqual(request.call_count, 2)
         sleep.assert_called_once_with(1)
@@ -25,10 +25,10 @@ class RendererHelpersTest(unittest.TestCase):
         body = b'{"error":{"code":"insufficient_quota","message":"You exceeded your quota."}}'
         error = HTTPError("https://api.openai.com", 429, "quota", {}, None)
         error.read = lambda: body
-        with patch("urllib.request.urlopen", side_effect=error) as request, \\
-             patch("time.sleep") as sleep:
-            with self.assertRaisesRegex(RuntimeError, "quota/billing is exhausted"):
-                request_vision_completion(object())
+        with patch("urllib.request.urlopen", side_effect=error) as request:
+            with patch("time.sleep") as sleep:
+                with self.assertRaisesRegex(RuntimeError, "quota/billing is exhausted"):
+                    request_vision_completion(object())
         request.assert_called_once()
         sleep.assert_not_called()
 
