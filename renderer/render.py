@@ -126,7 +126,7 @@ def vision_review(media, workdir):
     """Use sampled real frames for semantic highlight review when an API key is configured."""
     api_key=os.environ.get("OPENAI_API_KEY","").strip()
     if not api_key:
-        return {"status":"skipped_missing_api_key","provider":"openai","reason":"OPENAI_API_KEY is not configured"}
+        raise RuntimeError("OPENAI_API_KEY is not configured; refusing to render without visual AI review.")
     import base64, urllib.request, urllib.error
     duration=float(json.loads(run(["ffprobe","-v","error","-show_entries","format=duration","-of","json",str(media)])).get("format",{}).get("duration") or 0)
     if duration<=0:
