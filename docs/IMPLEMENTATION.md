@@ -1,37 +1,44 @@
-# Production implementation plan
+# Production implementation status
 
-## Phase 1 — Preserve and harden 3.5
+## Active pipeline
 
-- Keep Twitch OAuth, encrypted token storage, and existing data.
-- Add request validation, bounded batches, audit events, and consistent errors.
-- Fix GTA VI discovery relevance checks so unrelated clips are not accepted.
-- Distinguish clip metadata resolution from actual downloadable media access.
+- Cloudflare Worker discovers public Twitch clips using Twitch Helix.
+- Only clips with Twitch's verified Grand Theft Auto VI game category are eligible.
+- The system does not request a permission URL or per-clip written approval. Twitch access/category verification is not a copyright license; the channel operator remains responsible for reuse rights.
+- Editorial packages are generated from clip title/metadata. They include a hook, original commentary draft, captions, editing notes, SEO description, tags and hashtags.
+- Cloudflare Cron runs every three hours and dispatches one render job per cycle (up to eight per day when eligible clips and compute quota are available).
+- GitHub Actions downloads the Twitch clip, analyzes media, trims long silent gaps, renders 1080x1920 H.264/AAC, applies available branding, creates a unique cover from the actual clip frame, and creates MP4/TXT/cover/branding ZIP delivery files.
+- AI narration is synthesized from the editorial script using OpenAI TTS when configured, otherwise edge-tts fallback; original audio is retained and mixed.
+- If YouTube OAuth secrets are configured, the uploader creates a private video with a future `publishAt` timestamp 30 minutes after upload. YouTube then auto-publishes it. The scheduler cadence spaces uploads at roughly three-hour intervals.
+- Render callbacks record MP4, package, YouTube and thumbnail status in D1.
 
-## Phase 2 — Rights workflow
+## Required external configuration
 
-A source is not renderable unless rights status is explicitly approved and evidence is recorded. Technical access, creator permission, and platform policy are separate states. Public availability is not consent.
+Cloudflare Worker secrets:
+- `APP_PASSWORD`
+- `TWITCH_CLIENT_ID`
+- `TWITCH_CLIENT_SECRET`
+- `GITHUB_TOKEN`
+- `RENDER_WEBHOOK_SECRET`
 
-## Phase 3 — Cloud media runner
+GitHub Actions secrets:
+- `RENDER_WEBHOOK_SECRET`
+- `YOUTUBE_CLIENT_ID`
+- `YOUTUBE_CLIENT_SECRET`
+- `YOUTUBE_REFRESH_TOKEN`
+- Optional `OPENAI_API_KEY` (edge-tts is the no-key narration fallback)
 
-Cloudflare Workers are not an FFmpeg runtime. Actual 1080x1920 H.264/AAC rendering needs a separate compute runner. A no-paid-service option is GitHub Actions with open-source FFmpeg, subject to finite free Actions quotas and runtime limits. 5–10 finished videos every day cannot be guaranteed for free.
+YouTube OAuth must include `youtube.upload`. Scheduled publishing also depends on the channel's YouTube feature eligibility and successful API authorization. Secret values are never read back or printed.
 
-The runner must accept only approved jobs, use authorized source media, create vertical MP4 with captions and original narration, validate output, store the result, and report job status to the Worker.
+## Branding assets currently in the repository
 
-## Phase 4 — YouTube
+- `branding/logo.png` is present and used as the persistent logo overlay.
+- `banner.png`, `subscribe.png`, `notification.png`, and `outro.png` are optional renderer inputs but are not currently present in the repository.
+- Three JPG image assets are present; their intended role must be confirmed before assigning them to overlay slots.
+- A unique per-video cover is generated from a frame of that video's own footage.
 
-Add YouTube OAuth with least-privilege scopes. Encrypt refresh tokens. Upload privately by default; public publishing requires explicit approval. Never put credentials in source code or logs.
+## Verification limits
 
-## Phase 5 — Real media analysis
+CI can verify syntax, unit tests, synthetic rendering, and package construction. It cannot prove that Twitch currently returns downloadable media, that the channel's OAuth credentials are valid, that YouTube accepts scheduled publication, or that every desired branding asset is present. A real end-to-end clip render and YouTube scheduled upload are required before calling the full production workflow verified.
 
-Title heuristics are not visual/audio analysis. Genuine analysis requires a model runtime. No paid inference API is assumed. Until a free runtime is configured and tested, label results metadata-only and do not fabricate observations about footage.
-
-## Acceptance checks
-
-- Existing D1 records survive deployment.
-- Twitch OAuth connects and refreshes.
-- Discovery excludes unrelated games.
-- Duplicate source URLs are rejected.
-- Rights-pending items cannot be rendered or uploaded.
-- Retries do not create duplicate uploads.
-- YouTube uploads remain private by default.
-- Rendered files pass codec, dimensions, duration, and size validation.
+Never reset D1 or delete existing source/draft records.
