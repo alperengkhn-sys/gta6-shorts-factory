@@ -79,9 +79,27 @@ jobs:
           python - <<'PY' >> "$GITHUB_OUTPUT"
           import hashlib, os
           from pathlib import Path
-          source = os.environ["SOURCE_URL"].strip().rstrip("/")
-          key = hashlib.sha256(source.encode("utf-8")).hexdigest()
+          from urllib.parse import urlsplit
+
+          raw = os.environ["SOURCE_URL"].strip()
+          parsed = urlsplit(raw)
+          host = (parsed.hostname or "").lower().rstrip(".")
+          path = parsed.path.rstrip("/")
+
+          # Canonicalize Twitch clip URLs so equivalent public forms cannot
+          # bypass the duplicate-upload marker.
+          parts = [part for part in path.split("/") if part]
+          if host == "clips.twitch.tv" and parts:
+              canonical = "twitch:clip:" + parts[-1]
+          elif host.endswith("twitch.tv") and "clip" in parts:
+              clip_index = next((i for i, part in enumerate(parts) if part.lower() == "clip"), None)
+              canonical = "twitch:clip:" + parts[clip_index + 1] if clip_index is not None and clip_index + 1 < len(parts) else raw
+          else:
+              canonical = (host + path).lower() if host else raw
+
+          key = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
           marker = Path(".github/published-clips") / (key + ".json")
+          print("canonical_source=" + canonical)
           print("key=" + key)
           print("already_published=" + ("true" if marker.is_file() else "false"))
           if marker.is_file():
