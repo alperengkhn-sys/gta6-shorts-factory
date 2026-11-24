@@ -4,7 +4,7 @@ Cloud-first video-to-YouTube-Shorts production workflow.
 
 ## Product direction
 
-This system prepares edited vertical Shorts from **video/clip sources that the operator is authorized to reuse**. It does not broadcast livestreams, and it must not depend on PostMassive or Twitch OAuth/category verification.
+This system prepares edited vertical Shorts from **video/clip sources that the operator is authorized to reuse**. It does not broadcast livestreams or require a streaming-platform account connection.
 
 ## Existing cloud resources
 
