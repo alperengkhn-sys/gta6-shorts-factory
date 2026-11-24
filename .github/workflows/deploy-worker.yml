@@ -10,6 +10,9 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: gta6-shorts-worker-deploy
+  cancel-in-progress: true
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -29,6 +32,7 @@ jobs:
           fi
           npx --yes wrangler@4.45.0 deploy
       - name: Start initial automatic production cycle
+        if: github.event_name == 'workflow_dispatch'
         env:
           RENDER_WEBHOOK_SECRET: ${{ secrets.RENDER_WEBHOOK_SECRET }}
         run: |
