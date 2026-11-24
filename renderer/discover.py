@@ -6,7 +6,7 @@ import re
 import subprocess
 import urllib.error
 import urllib.request
-
+GTA6 = re.compile(r"\b(gta\s*6|gta\s*vi|grand theft auto\s*(vi|6))\b", re.I)
 GTA6 = re.compile(r"\\b(gta\\s*6|gta\\s*vi|grand theft auto\\s*(vi|6))\\b", re.I)
 
 def main():
