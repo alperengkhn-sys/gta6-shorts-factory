@@ -175,9 +175,9 @@ def vision_review(media, workdir):
           "reasons":["isolated synthetic CI fixture"],"confidence":1.0,
           "status":"passed","provider":"test_fixture","model":"none","frames_sampled":0,
           "age_restriction_status":"not_recommended"}
-    api_key=(os.environ.get("OPERA_AI_API_KEY") or os.environ.get("OPENAI_API_KEY") or "").strip()
+    api_key=(os.environ.get("OPENAI_API_KEY") or "").strip()
     if not api_key:
-        raise RuntimeError("OPERA_AI_API_KEY is not configured; refusing to render without visual AI review.")
+        raise RuntimeError("OPENAI_API_KEY is not configured; refusing to render without visual AI review.")
     import base64, urllib.request, urllib.error
     duration=float(json.loads(run(["ffprobe","-v","error","-show_entries","format=duration","-of","json",str(media)])).get("format",{}).get("duration") or 0)
     if duration<=0:
