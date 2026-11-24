@@ -1,0 +1,42 @@
+name: Discover GTA6 Source Videos
+on:
+  workflow_dispatch:
+    inputs:
+      channel_url:
+        description: Public HTTPS channel, videos tab, or playlist URL
+        required: true
+        type: string
+      max_items:
+        description: Number of recent entries to inspect (1-30)
+        required: false
+        default: "10"
+        type: string
+      callback_url:
+        description: Authenticated Worker callback URL
+        required: true
+        type: string
+      rights_confirmation:
+        description: Operator confirmed reuse rights for this channel's content
+        required: true
+        type: boolean
+permissions:
+  contents: read
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install source discovery tool
+        run: python -m pip install --upgrade pip yt-dlp
+      - name: Discover recent GTA VI videos
+        env:
+          CHANNEL_URL: ${{ inputs.channel_url }}
+          MAX_ITEMS: ${{ inputs.max_items }}
+          CALLBACK_URL: ${{ inputs.callback_url }}
+          RIGHTS_CONFIRMATION: ${{ inputs.rights_confirmation }}
+          RENDER_WEBHOOK_SECRET: ${{ secrets.RENDER_WEBHOOK_SECRET }}
+        run: python renderer/discover.py
