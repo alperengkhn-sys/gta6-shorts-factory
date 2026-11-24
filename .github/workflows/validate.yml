@@ -31,7 +31,7 @@ jobs:
       - name: Check Worker JavaScript syntax
         run: node --input-type=module --check < src/index.js
       - name: Compile renderer scripts
-        run: python -m py_compile renderer/render.py renderer/youtube_upload.py tests/test_renderer.py
+        run: python -m py_compile renderer/render.py renderer/youtube_upload.py renderer/discover.py tests/test_renderer.py
       - name: Run renderer unit tests
         run: python -m unittest discover -s tests -v
       - name: Install media tools for integration render
