@@ -132,7 +132,7 @@ async function accessCounts(db){const r=await db.prepare("SELECT access_status,C
 async function getDownloadStatus(db){const r=await db.prepare(`SELECT a.source_id,a.clip_id,a.broadcaster_id,a.broadcaster_name,a.access_status,a.download_url,a.reason,a.checked_at,s.title,s.creator_name,s.source_url FROM twitch_clip_access a LEFT JOIN sources s ON s.id=a.source_id ORDER BY a.checked_at DESC LIMIT 500`).all();return{items:r.results||[]};}
 async function validateResolvedClipDurations(db,env,limit=500){
  const safe=Math.max(1,Math.min(500,Number(limit)||500));
- const rows=(await db.prepare("SELECT id,twitch_clip_id FROM sources WHERE platform='twitch' AND twitch_clip_id IS NOT NULL AND twitch_clip_duration IS NULL AND relevance_status='relevant' ORDER BY created_at ASC LIMIT ?").bind(safe).all()).results||[];
+ const rows=(await db.prepare("SELECT id,twitch_clip_id FROM sources WHERE platform='twitch' AND twitch_clip_id IS NOT NULL AND (twitch_clip_duration IS NULL OR twitch_clip_duration<25) AND relevance_status='relevant' ORDER BY created_at ASC LIMIT ?").bind(safe).all()).results||[];
  if(!rows.length)return{checked:0,short:0,missing:0};
  const token=await twitchToken(env);let checked=0,short=0,missing=0;
  for(let i=0;i<rows.length;i+=100){
