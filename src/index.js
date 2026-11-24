@@ -210,7 +210,7 @@ async function dispatchRender(db,env,draftId,evidenceReference,authorizationConf
   const detail=(await response.text()).slice(0,1200);
   if(response.status===403||response.status===404){
    try{
-    const task={source_url:row.source_url,title,description,creator_name:String(row.creator_name||"Unknown"),source_title:String(row.source_title||title),package_text:String(row.script||""),job_id:row.job_id,render_attempt:String(Number(row.render_attempts||0)+1)};
+    const task={source_url:row.source_url,download_url:row.twitch_download_url,title,description,creator_name:String(row.creator_name||"Unknown"),source_title:String(row.source_title||title),package_text:String(row.script||""),job_id:row.job_id,render_attempt:String(Number(row.render_attempts||0)+1)};
     const bytes=new TextEncoder().encode(JSON.stringify(task));let binary="";for(const byte of bytes)binary+=String.fromCharCode(byte);
     const path="render-queue/"+encodeURIComponent(String(row.job_id))+".json";
     const queued=await fetch("https://api.github.com/repos/alperengkhn-sys/gta6-shorts-factory/contents/"+path,{method:"PUT",headers:{"Authorization":"Bearer "+env.GITHUB_TOKEN,"Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28","Content-Type":"application/json","User-Agent":"GTA6-Shorts-Factory"},body:JSON.stringify({message:"Queue approved GTA6 render "+row.job_id,content:btoa(binary),branch:"main"})});
