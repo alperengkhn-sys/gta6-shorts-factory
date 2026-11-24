@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Vertical Shorts renderer. Preserves original Twitch video and audio; no TTS or added overlays."""
+"""Vertical Shorts renderer with silence trimming, branding overlays, unique covers and optional AI commentary."""
 import argparse, json, os, shutil, subprocess, sys, tempfile, urllib.request
 from pathlib import Path
 from urllib.parse import urlsplit
