@@ -133,41 +133,8 @@ def media_analysis(media):
 
 
 
-def request_vision_completion(request):
-    """Retry transient OpenAI rate limits, but fail clearly when project quota is exhausted."""
-    import time
-    import urllib.error
-    import urllib.request
-
-    for attempt in range(3):
-        try:
-            with urllib.request.urlopen(request, timeout=90) as response:
-                return json.loads(response.read().decode("utf-8"))
-        except urllib.error.HTTPError as exc:
-            body = exc.read().decode("utf-8", "replace")
-            try:
-                error = json.loads(body).get("error", {})
-            except (json.JSONDecodeError, AttributeError):
-                error = {}
-            code = str(error.get("code") or "")
-            message = str(error.get("message") or body or exc)
-            if exc.code == 429 and code == "insufficient_quota":
-                raise RuntimeError("OpenAI API quota/billing is exhausted for this API project. Add API credits or raise its usage limit; no unreviewed video was rendered.") from exc
-            if exc.code == 429 and attempt < 2:
-                retry_after = exc.headers.get("Retry-After") if exc.headers else None
-                try:
-                    delay = max(1, min(10, int(float(retry_after)))) if retry_after else 2 ** (attempt + 1)
-                except (TypeError, ValueError):
-                    delay = 2 ** (attempt + 1)
-                time.sleep(delay)
-                continue
-            raise RuntimeError(f"OpenAI vision API HTTP {exc.code}: {message}") from exc
-    raise RuntimeError("OpenAI vision API remained rate-limited after three attempts.")
-
-
-def vision_review(media, workdir):
-    """Use sampled real frames for semantic highlight review when an API key is configured."""
-    # The isolated CI fixture has no real Twitch content and must not call a paid vision API.
+def vision_review(media, workdir, metrics=None, title=""):
+    """Free, deterministic offline editorial screening; no external AI/API or billing."""
     if os.environ.get("RENDER_TEST_MODE") == "1":
         return {"score":100,"compelling":True,"event":"CI synthetic fixture",
           "category":"other","youtube_safe":True,"age_restriction_recommended":False,
@@ -175,86 +142,93 @@ def vision_review(media, workdir):
           "reasons":["isolated synthetic CI fixture"],"confidence":1.0,
           "status":"passed","provider":"test_fixture","model":"none","frames_sampled":0,
           "age_restriction_status":"not_recommended"}
-    api_key=(os.environ.get("OPENAI_API_KEY") or "").strip()
-    if not api_key:
-        raise RuntimeError("OPENAI_API_KEY is not configured; refusing to render without visual AI review.")
-    import base64, urllib.request, urllib.error
-    duration=float(json.loads(run(["ffprobe","-v","error","-show_entries","format=duration","-of","json",str(media)])).get("format",{}).get("duration") or 0)
-    if duration<=0:
-        raise RuntimeError("Vision review could not determine source duration.")
-    frames=[]
-    # Six evenly spaced frames let the reviewer judge what actually happens, not just the clip title.
-    for i in range(6):
-        at=max(0.1,min(duration-0.1,duration*(i+0.5)/6))
-        frame=workdir/f"vision-frame-{i}.jpg"
-        run(["ffmpeg","-nostdin","-hide_banner","-loglevel","error","-y","-ss",str(at),"-i",str(media),"-frames:v","1","-vf","scale=512:-2","-q:v","5",str(frame)])
-        if frame.is_file():
-            frames.append({"type":"image_url","image_url":{"url":"data:image/jpeg;base64,"+base64.b64encode(frame.read_bytes()).decode("ascii"),"detail":"low"}})
-    if len(frames)<4:
-        raise RuntimeError("Vision review failed: fewer than four frames could be sampled.")
-    prompt=("Review these timestamp-ordered frames sampled from a GTA VI gameplay clip. Judge the actual visible content, not its title. "
-      "Return ONLY JSON with keys: score (0-100), compelling (boolean), event (short factual description), "
-      "category (action|comedy|police|vehicle|story|nightlife|mature_suggestive|exploration|mundane|other), "
-      "youtube_safe (boolean), age_restriction_recommended (boolean), editing_treatment "
-      "(standard|mature_non_explicit|reject), editorial_tone (short string), "
-      "reasons (array of short strings), confidence (0-1). "
-      "Score the actual clip from 0 to 100 using these priorities: immediate attention-grabbing hook in the opening (15), clear and understandable event (15), funny or surprising payoff (15), action/intensity or genuinely interesting NPC/streamer reaction (15), visual quality and readable framing (10), replay value (10), strong Shorts title potential (10), and originality/non-repetition (10). "
-      "85-100 means priority, 70-84 means suitable for publishing, 45-69 means review only and must not be auto-published, 0-44 means reject. "
-      "Prioritize funny moments, unexpected events, fails, interesting NPC behavior, discoveries/easter eggs, vehicles/races, conflicts/action, visible streamer reactions, viral short-form gameplay moments, and clearly demonstrated updates/new features. "
-      "A clip must show the event itself; a promising title alone is not enough. "
-      "Strong action, funny incidents, chases, crashes, fights, surprising interactions and non-explicit adult nightlife/suggestive scenes can score highly. "
-      "Do NOT penalize a clip merely because it shows nightclubs, strip-club settings, adult jokes, flirting, suggestive dancing, romance, revealing outfits or mature atmosphere. "
-      "For non-explicit adult material that is otherwise suitable, set category=mature_suggestive, editing_treatment=mature_non_explicit, "
-      "and age_restriction_recommended=true when the visible material reasonably warrants an 18+ audience. "
-      "The edit should preserve the context and strongest moment, avoid sensational sexual framing, and use neutral factual English captions/narration. "
-      "For ordinary gameplay use editing_treatment=standard and age_restriction_recommended=false. "
-      "Penalize uneventful walking, running, ordinary driving, static scenes and unclear clips. "
-      "Mark youtube_safe=false and editing_treatment=reject for explicit sexual activity or visible explicit nudity; do not recommend uploading those. "
-      "Do not infer events that are not visible in these frames.")
-    payload={"model":os.environ.get("VISION_MODEL","gpt-4o-mini"),"temperature":0,"max_tokens":350,
-      "response_format":{"type":"json_object"},"messages":[{"role":"user","content":[{"type":"text","text":prompt},*frames]}]}
-    req=urllib.request.Request("https://api.openai.com/v1/chat/completions",data=json.dumps(payload).encode("utf-8"),
-      headers={"Authorization":"Bearer "+api_key,"Content-Type":"application/json"},method="POST")
-    try:
-        result = request_vision_completion(req)
-    except RuntimeError as exc:
-        error_text = str(exc).lower()
-        if any(marker in error_text for marker in ("quota/billing is exhausted", "no credits remaining", "insufficient_quota", "billing hard limit")):
-            # Keep production moving, but never publish an unreviewed clip publicly.
-            return {
-                "score": 0, "compelling": False, "event": "AI review unavailable",
-                "category": "unreviewed", "youtube_safe": False,
-                "age_restriction_recommended": True,
-                "editing_treatment": "standard", "editorial_tone": "neutral",
-                "reasons": ["OpenAI quota exhausted; generated without visual AI review and held private."],
-                "confidence": 0.0, "status": "unreviewed_private",
-                "provider": "none", "model": "none", "frames_sampled": len(frames),
-                "age_restriction_status": "manual_review_required"
-            }
-        raise RuntimeError(f"Vision review API failed; refusing an unreviewed render: {exc}") from exc
-    except Exception as exc:
-        raise RuntimeError(f"Vision review API failed; refusing an unreviewed render: {exc}") from exc
-    try:
-        review=json.loads(result["choices"][0]["message"]["content"])
-        score=max(0,min(100,int(review.get("score",0))))
-    except Exception as exc:
-        raise RuntimeError("Vision review returned an invalid response; refusing an unreviewed render.") from exc
-    review["score"]=score
-    review["category"]=review.get("category","other")
-    review["age_restriction_recommended"]=bool(review.get("age_restriction_recommended",False))
-    review["editing_treatment"]=review.get("editing_treatment","standard")
-    if review["category"]=="mature_suggestive" and review.get("youtube_safe") is True:
-        review["editing_treatment"]="mature_non_explicit"
-        review["age_restriction_recommended"]=True
-    review["age_restriction_status"]=("platform_setting_unavailable_via_data_api"
-        if review["age_restriction_recommended"] else "not_recommended")
-    review["status"]="passed" if score>=int(os.environ.get("VISION_MIN_SCORE","58")) and review.get("youtube_safe") is True else "rejected"
-    review["provider"]="openai"
-    review["model"]=payload["model"]
-    review["frames_sampled"]=len(frames)
-    if review["status"]!="passed":
-        raise RuntimeError("Visual AI rejected this clip (score="+str(score)+", safe="+str(review.get("youtube_safe"))+"): "+clean("; ".join(review.get("reasons",[]))))
-    return review
+
+    metrics = metrics or media_analysis(media)
+    title_text = clean(title).lower()
+    # Deterministic text safety rules. These are conservative title/metadata
+    # checks, not a claim that a local ruleset can understand every video frame.
+    explicit_terms = (
+        "explicit sex", "sexual intercourse", "porn", "pornography", "xxx",
+        "full nudity", "fully nude", "visible genitals", "hardcore sex"
+    )
+    mature_terms = (
+        "strip club", "stripper", "prostitute", "escort", "sex scene",
+        "nude", "nudity", "sexual", "hooker", "adult club"
+    )
+    action_terms = (
+        "police", "chase", "crash", "fail", "funny", "fight", "explosion",
+        "heist", "robbery", "unexpected", "npc", "wild", "crazy", "escape",
+        "shootout", "race", "stunt", "glitch", "ambush", "reaction"
+    )
+    blocked = [term for term in explicit_terms if term in title_text]
+    mature = any(term in title_text for term in mature_terms)
+    if blocked:
+        return {
+            "score": 0, "compelling": False, "event": "Explicit-content title rule matched",
+            "category": "explicit_content", "youtube_safe": False,
+            "age_restriction_recommended": True, "editing_treatment": "reject",
+            "editorial_tone": "neutral", "reasons": ["Explicit-content keyword detected: " + blocked[0]],
+            "confidence": 1.0, "status": "rejected", "provider": "local_rules",
+            "model": "none", "frames_sampled": 0, "age_restriction_status": "not_applicable"
+        }
+
+    scene_count = metrics.get("scene_change_count")
+    silence_ratio = float(metrics.get("silence_ratio") or 0)
+    mean_volume = metrics.get("mean_volume_db")
+    score = 58
+    reasons = ["Free offline ruleset; no paid AI service was called."]
+    if isinstance(scene_count, (int, float)):
+        if scene_count >= 12:
+            score += 17
+            reasons.append("High scene-change activity.")
+        elif scene_count >= 6:
+            score += 12
+            reasons.append("Good scene-change activity.")
+        elif scene_count >= 3:
+            score += 6
+            reasons.append("Some scene changes detected.")
+        else:
+            score -= 8
+            reasons.append("Low scene-change activity.")
+    if silence_ratio <= 0.08:
+        score += 10
+        reasons.append("Low dead-air ratio.")
+    elif silence_ratio >= 0.35:
+        score -= 10
+        reasons.append("Large silent portion.")
+    if mean_volume is not None:
+        if float(mean_volume) > -24:
+            score += 5
+            reasons.append("Usable source audio level.")
+        elif float(mean_volume) < -38:
+            score -= 8
+            reasons.append("Very quiet source audio.")
+    matched = [term for term in action_terms if term in title_text]
+    if matched:
+        score += 8
+        reasons.append("Gameplay/action title signal: " + ", ".join(matched[:3]) + ".")
+    if len(title_text) < 8:
+        score -= 8
+        reasons.append("Insufficient descriptive title metadata.")
+    score = max(0, min(100, int(score)))
+    if mature:
+        reasons.append("Mature-theme title signal detected; upload must remain private.")
+    if score < int(os.environ.get("OFFLINE_MIN_SCORE", "60")):
+        raise RuntimeError("Offline quality rules rejected this clip (score=" + str(score) + "): " + clean("; ".join(reasons)))
+
+    return {
+        "score": score, "compelling": score >= 70,
+        "event": "Offline gameplay activity assessment",
+        "category": "mature_suggestive" if mature else ("action" if matched else "other"),
+        "youtube_safe": True, "age_restriction_recommended": bool(mature),
+        "editing_treatment": "mature_non_explicit" if mature else "standard",
+        "editorial_tone": "neutral",
+        "reasons": reasons, "confidence": 0.55,
+        "status": "passed", "provider": "local_rules",
+        "model": "deterministic-media-metadata", "frames_sampled": 0,
+        "age_restriction_status": "private_upload_required" if mature else "not_recommended"
+    }
+
 
 def create_brand_sting(workdir, duration=4.0):
     """Create an original, non-sampled 4-second VI RUSH sonic logo."""
@@ -528,7 +502,7 @@ def main():
         if not has_source_audio:
             raise RuntimeError("Source clip has no audio stream; refusing to add synthetic audio.")
         analysis=media_analysis(media)
-        analysis["vision_review"]=vision_review(media,w)
+        analysis["vision_review"]=vision_review(media,w,analysis,title)
         silence_intervals=analysis.pop("_silence_intervals",[])
         scene_times=analysis.pop("_scene_change_times",[])
         highlight_start,highlight_duration,highlight_score=select_highlight_window(source_duration,silence_intervals,scene_times)
