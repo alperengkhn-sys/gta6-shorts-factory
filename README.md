@@ -32,7 +32,7 @@ The baseline creates editorial text packages only. It does not render MP4 files,
 
 ## Deployment
 
-The repository contains the GTA6-FACTORY-4.1 Worker, Wrangler configuration, and a GitHub Actions cloud renderer with optional channel overlays and per-video cover generation. A six-hour Cloudflare Cron discovers new clips and prepares packages; it dispatches at most two already-approved jobs per run. The Worker can dispatch approved draft jobs to GitHub Actions and receive completion callbacks. If workflow-dispatch permission is unavailable, it falls back to a repository-backed render queue (Contents: write), which triggers the same renderer without requiring Actions: write. Completed jobs publish a direct MP4 link and a combined ZIP containing the MP4, editorial TXT, cover, and available channel branding assets; a seven-day workflow artifact remains as backup. Configure these secrets before using the render button:
+The repository contains the GTA6-FACTORY-4.1 Worker, Wrangler configuration, and a GitHub Actions cloud renderer with optional channel overlays and per-video cover generation. A three-hour Cloudflare Cron discovers new Twitch clips, verifies the GTA VI game category, prepares editorial packages, and dispatches one render job per run (up to eight attempts per day when sources are available). The Worker can dispatch approved draft jobs to GitHub Actions and receive completion callbacks. If workflow-dispatch permission is unavailable, it falls back to a repository-backed render queue (Contents: write), which triggers the same renderer without requiring Actions: write. Completed jobs publish a direct MP4 link and a combined ZIP containing the MP4, editorial TXT, cover, and available channel branding assets; a seven-day workflow artifact remains as backup. Configure these secrets before using the render button:
 
 - Cloudflare Worker secrets: existing `APP_PASSWORD`, `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`, plus `GITHUB_TOKEN` (a GitHub token with Actions: write access, or Contents: write for the automatic queue fallback) and `RENDER_WEBHOOK_SECRET` (a long random value).
 - GitHub repository Actions secrets: `RENDER_WEBHOOK_SECRET` (same value as Cloudflare) and, if private YouTube upload is wanted, `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, `YOUTUBE_REFRESH_TOKEN` (OAuth scope `youtube.upload`).
@@ -45,8 +45,8 @@ See `docs/IMPLEMENTATION.md`.
 ## 3.7 safeguards and diagnostics
 
 - The dashboard's **Bulut bağlantıları** panel reports whether the required Cloudflare and GitHub secrets are configured. It never displays secret values.
-- Pending sources require an explicit rights confirmation and an evidence reference before the Worker records approval. A Twitch login or clip download permission is not copyright permission.
+- The Worker does not ask for a per-clip permission URL or written approval. It only sends Twitch clips whose actual Twitch game category is verified as GTA VI to the renderer. Twitch API access is not copyright permission; the channel operator remains responsible for having reuse rights.
 - The renderer accepts HTTPS Twitch clip URLs only. Its local-file test mode is enabled only inside the isolated CI test environment.
 - Voiceovers longer than 59.9 seconds are rejected rather than silently cut off.
-- The optional YouTube upload is private by default; an upload failure does not discard a successfully rendered MP4.
+- YouTube uploads are created as private videos with a future `publishAt` time so YouTube can auto-publish them; the upload requires working OAuth credentials and channel eligibility.
 - CI includes helper tests and a synthetic end-to-end 1080x1920 MP4 render. This test does not verify a real Twitch clip, Cloudflare deployment, or YouTube OAuth credentials.
