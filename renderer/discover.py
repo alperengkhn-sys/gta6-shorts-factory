@@ -6,6 +6,7 @@ import re
 import subprocess
 import urllib.error
 import urllib.request
+from urllib.parse import urlparse
 # Match GTA VI spellings in video titles using normal regex word boundaries.
 GTA6 = re.compile(r"\b(gta\s*6|gta\s*vi|grand theft auto\s*(vi|6))\b", re.I)
 
@@ -59,8 +60,22 @@ def main():
             if entries:
                 break
     if not entries:
+        uploads_url = channel_uploads_playlist(channel_url)
+        if uploads_url and uploads_url not in tried:
+            print("DISCOVERY_FALLBACK using canonical uploads playlist " + uploads_url, flush=True)
+            command[-1] = uploads_url
+            result = subprocess.run(command, text=True, stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE, timeout=600)
+            for line in result.stdout.splitlines():
+                try:
+                    item = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(item, dict):
+                    entries.append(item)
+    if not entries:
         detail = (result.stderr or result.stdout or "yt-dlp returned no video entries.").strip()
-        raise RuntimeError("No public video entries were returned by yt-dlp: " + detail[-1800:])
+        raise RuntimeError("No public video entries were returned by yt-dlp after channel-tab and uploads-playlist fallbacks: " + detail[-1800:])
     items = []
     seen = set()
     for entry in entries:
