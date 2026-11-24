@@ -376,6 +376,20 @@ def auto_trim_silence(media, workdir):
     return output,kept,round(duration-kept,2)
 
 
+def trailing_silence_seconds(log, duration):
+    """Return the final silent tail reported by FFmpeg, or zero if audio reaches the end."""
+    start = None
+    for line in log.splitlines():
+        if "silence_start:" in line:
+            try:
+                start = float(line.split("silence_start:", 1)[1].strip().split()[0])
+            except ValueError:
+                pass
+        if "silence_end:" in line:
+            start = None
+    return max(0.0, duration - start) if start is not None else 0.0
+
+
 def main():
     ap=argparse.ArgumentParser()
     ap.add_argument("--source-url",required=True)
@@ -479,6 +493,15 @@ def main():
         raise RuntimeError("Output validation failed: expected 1080x1920 H.264.")
     if not any(x.get("codec_type")=="audio" and x.get("codec_name")=="aac" for x in check["streams"]):
         raise RuntimeError("Output validation failed: AAC audio missing.")
+    output_duration=float(check.get("format",{}).get("duration") or 0)
+    audio_stream=next((x for x in check["streams"] if x.get("codec_type")=="audio"),{})
+    audio_duration=float(audio_stream.get("duration") or output_duration)
+    if audio_duration < output_duration - 0.5:
+        raise RuntimeError(f"Output validation failed: audio track ends early ({audio_duration:.1f}s of {output_duration:.1f}s).")
+    silence_log=run(["ffmpeg","-nostdin","-hide_banner","-i",str(out),"-vn","-af","silencedetect=noise=-45dB:d=3","-f","null","-"])
+    trailing_silence=trailing_silence_seconds(silence_log,output_duration)
+    if trailing_silence >= 3.0:
+        raise RuntimeError(f"Output validation failed: audio is silent for the final {trailing_silence:.1f}s; refusing to publish.")
     print(json.dumps({"ok":True,"output":str(out),"duration":check["format"]["duration"],
                       "width":1080,"height":1920,"video":"h264","audio":"aac",
                       "original_audio_preserved":has_source_audio,
