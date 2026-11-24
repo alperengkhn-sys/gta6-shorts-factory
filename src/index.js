@@ -273,15 +273,14 @@ async function getData(db){const sources=await db.prepare(`SELECT s.id,s.platfor
 async function runScheduled(env){
  if(!env.DB)return {error:"D1 binding missing"};
  await ensureSchema(env.DB);await ensureTwitchSchema(env.DB);
- let discovery,access;
+ let discovery;
  try{discovery=await discover(env.DB,env);}catch(error){discovery={error:String(error&&error.message||error).slice(0,500)};}
- try{access=await checkTwitchDownloads(env.DB,env,500);}catch(error){access={error:String(error&&error.message||error).slice(0,500)};}
  const prepared=await prepareAll(env.DB);
  await env.DB.prepare("UPDATE jobs SET status=CASE WHEN COALESCE(render_attempts,0)>=3 THEN 'failed' ELSE 'failed' END,last_error='Recovered stale dispatch after 45 minutes without callback.',updated_at=CURRENT_TIMESTAMP WHERE status='processing' AND dispatch_started_at IS NOT NULL AND dispatch_started_at<datetime('now','-45 minutes')").run();
  await env.DB.prepare("UPDATE shorts_drafts SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE source_id IN (SELECT source_id FROM jobs WHERE status IN ('failed','failed') AND last_error='Recovered stale dispatch after 45 minutes without callback.')").run();
  const rendering=await dispatchQueuedRenders(env.DB,env,10);
  for(const error of rendering.errors||[])console.error("Scheduled render dispatch:",error);
- return {discovery,access,prepared,...rendering};
+ return {discovery,prepared,...rendering};
 }
 function makeZip(files){const enc=new TextEncoder(),local=[],central=[];let offset=0;const u16=n=>new Uint8Array([n&255,(n>>>8)&255]),u32=n=>new Uint8Array([n&255,(n>>>8)&255,(n>>>16)&255,(n>>>24)&255]),join=parts=>{const out=new Uint8Array(parts.reduce((n,p)=>n+p.length,0));let at=0;for(const p of parts){out.set(p,at);at+=p.length;}return out;},crc32=data=>{let c=0xffffffff;for(const b of data){c^=b;for(let k=0;k<8;k++)c=(c>>>1)^((c&1)?0xedb88320:0);}return(c^0xffffffff)>>>0;};for(const f of files){const name=enc.encode(f.name),data=f.data,crc=crc32(data),lh=join([u32(0x04034b50),u16(20),u16(0x0800),u16(0),u16(0),u16(0),u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),name]);local.push(lh,data);central.push(join([u32(0x02014b50),u16(20),u16(20),u16(0x0800),u16(0),u16(0),u16(0),u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),u16(0),u16(0),u16(0),u32(0),u32(offset),name]));offset+=lh.length+data.length;}const centralBytes=join(central),localBytes=join(local),end=join([u32(0x06054b50),u16(0),u16(0),u16(files.length),u16(files.length),u32(centralBytes.length),u32(localBytes.length),u16(0)]);return join([localBytes,centralBytes,end]);}
 function escHtml(v){return String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
@@ -303,7 +302,7 @@ if(path==="/api/system/status"&&method==="GET")return json({version:VERSION,data
 if(path==="/api/data"&&method==="GET")return json(await getData(env.DB));
 if(path==="/api/discover"&&method==="POST")return json(await discover(env.DB,env));
 
-if(path==="/api/prepare"&&method==="POST"){let discovery;try{discovery=await discover(env.DB,env);}catch(error){discovery={error:String(error&&error.message||error).slice(0,500)};}const clipValidation=await resolveTwitchClips(env.DB,env,500);const prepared=await prepareAll(env.DB);let access;try{access=await checkTwitchDownloads(env.DB,env,500);}catch(error){access={error:String(error&&error.message||error).slice(0,500)};}const rendering=await dispatchQueuedRenders(env.DB,env,10);return json({...prepared,discovery,clip_validation:clipValidation,access,rendering});}
+if(path==="/api/prepare"&&method==="POST"){let discovery;try{discovery=await discover(env.DB,env);}catch(error){discovery={error:String(error&&error.message||error).slice(0,500)};}const clipValidation=await resolveTwitchClips(env.DB,env,500);const prepared=await prepareAll(env.DB);const rendering=await dispatchQueuedRenders(env.DB,env,10);return json({...prepared,discovery,clip_validation:clipValidation,rendering});}
 if(path==="/api/render/dispatch"&&method==="POST"){const data=await readBody(request);const result=await dispatchRender(env.DB,env,String(data.draft_id||""),data.evidence_reference,data.authorization_confirmation);return result.error?json({error:result.error},400):json(result);}
 if(path==="/api/source/quick"&&method==="POST"){
 if(!await authorized(request,env))return json({error:"Giriş gerekli."},401);
@@ -324,7 +323,7 @@ else{sourceId=uid();await env.DB.prepare("INSERT INTO sources(id,platform,source
 await analyzeSource(env.DB,{id:sourceId,title:clip.title||"GTA VI clip"},clip.view_count||0,clip.duration||30);
 const prepared=await prepareAll(env.DB),draft=await env.DB.prepare("SELECT id FROM shorts_drafts WHERE source_id=? LIMIT 1").bind(sourceId).first();
 if(!draft)return json({error:"Klip doğrulandı ancak üretim paketi oluşturulamadı.",prepared},400);
-await checkTwitchDownloads(env.DB,env,100);const result=await dispatchRender(env.DB,env,draft.id,"","owner-confirmed");
+const result=await dispatchRender(env.DB,env,draft.id,"","owner-confirmed");
 return result.error?json({error:result.error},400):json({ok:true,job_id:result.job_id,draft_id:draft.id,status:result.status,prepared});
 }
 if(path==="/api/source/manual"&&method==="POST"){const data=await readBody(request);if(!data.url||!/^https?:\/\//i.test(data.url))return json({error:"Geçerli bir kaynak URL gir."},400);const exists=await env.DB.prepare("SELECT id FROM sources WHERE source_url=? LIMIT 1").bind(data.url).first();if(exists)return json({error:"Bu kaynak zaten kayıtlı."},409);const id=uid(),title=data.title||"Untitled",isRelevant=isGta6Relevant(title);await env.DB.prepare(`INSERT INTO sources(id,platform,source_url,creator_name,title,rights_status,relevance_status) VALUES(?,?,?,?,?,'pending',?)`).bind(id,"manual",data.url,data.creator||"Unknown",title,isRelevant?"relevant":"unknown").run();await analyzeSource(env.DB,{id,title});return json({ok:true,id,relevance_status:isRelevant?"relevant":"unknown"});}
