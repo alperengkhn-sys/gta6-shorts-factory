@@ -1,7 +1,6 @@
 import unittest
 from unittest.mock import patch
 from renderer.render import clean, split_caption, stamp, validate_source_url, tts_executable
-from renderer.discover import GTA6, channel_uploads_playlist, channel_rss_entries
 
 class RendererHelpersTest(unittest.TestCase):
     def test_discovery_matches_common_gta_vi_title_spellings(self):
@@ -63,7 +62,7 @@ class RendererHelpersTest(unittest.TestCase):
 
     def test_accepts_public_https_video_and_clip_urls(self):
         self.assertTrue(validate_source_url("https://example.com/public-clip"))
-        self.assertTrue(validate_source_url("https://www.youtube.com/watch?v=example"))
+        self.assertTrue(validate_source_url("https://www.twitch.tv/example/clip/ExampleClip"))
         self.assertTrue(validate_source_url("https://example.com/video.mp4"))
         self.assertFalse(validate_source_url("http://example.com/video.mp4"))
         self.assertFalse(validate_source_url("https://user:pass@example.com/video.mp4"))
