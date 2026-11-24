@@ -122,7 +122,7 @@ jobs:
           SOURCE_URL: ${{ inputs.source_url || steps.task.outputs.source_url }}
           SHORT_TITLE: ${{ inputs.title || steps.task.outputs.title }}
           PACKAGE_TEXT: ${{ inputs.package_text || steps.task.outputs.package_text }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPERA_AI_API_KEY: ${{ secrets.OPERA_AI_API_KEY }}
           VISION_MODEL: gpt-4o-mini
           VISION_MIN_SCORE: "58"
         run: |
