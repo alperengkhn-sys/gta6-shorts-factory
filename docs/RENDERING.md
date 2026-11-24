@@ -4,8 +4,8 @@
 
 1. Configure `GITHUB_TOKEN` (Actions: write access to this repository) and `RENDER_WEBHOOK_SECRET` in the Cloudflare Worker settings.
 2. Add the same `RENDER_WEBHOOK_SECRET` value to GitHub Actions repository secrets.
-3. Open the dashboard and add a public HTTPS video or clip URL supported by yt-dlp. Enter a title that identifies the footage as GTA VI.
-4. Confirm the source reuse-rights checkbox only when you own the content or have the necessary license / explicit permission for editing and commercial YouTube use. The checkbox is an operator attestation, not legal proof or a copyright clearance service.
+3. Open the dashboard. Either add a public HTTPS video/clip URL manually or enter a public channel, videos-tab, or playlist URL in the discovery panel. Discovery scans recent entries and keeps GTA VI-titled videos.
+4. Confirm the source or channel reuse-rights checkbox only when you own the content or have the necessary license / explicit permission for editing and commercial YouTube use. The checkbox is an operator attestation, not legal proof or a copyright clearance service.
 5. Create the editorial package and start MP4 rendering. For sources longer than 55 seconds, the renderer chooses a candidate 55-second window using non-silent audio and scene-change density, then trims long silent gaps. This heuristic cannot understand the story or guarantee that the selected segment is the best moment; review the result.
 6. The workflow renders 1080×1920 H.264/AAC, preserves source audio, applies the supplied channel logo, generates a title-stamped cover from the footage, and creates an MP4, editorial TXT, cover JPG, and combined ZIP. The three supplied JPG channel graphics are included in the ZIP but are not currently overlaid in the video.
 7. GitHub Release links are used for direct MP4 and ZIP downloads when release publishing succeeds. The workflow also stores a seven-day Actions artifact and posts render status back to the Worker.
