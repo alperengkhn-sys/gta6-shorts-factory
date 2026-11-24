@@ -1,28 +1,31 @@
 # Production implementation status
 
-## Target pipeline
+## Product scope
 
-The intended product is a source-agnostic Shorts production system. It does not broadcast livestreams and must not depend on PostMassive or Twitch OAuth, editor permissions, or game-category verification. Only submit source material that the operator has the legal right and platform permission to reuse.
+This project prepares authorized source videos as original, branded YouTube Shorts. It does not broadcast livestreams and has no PostMassive or Twitch integration. The dashboard accepts a public HTTPS source URL; the source must be supported by yt-dlp. Automated source discovery from third-party channels is not implemented yet.
 
-## Renderer status
+## Implemented
 
-- GitHub Actions accepts public HTTPS source URLs supported by yt-dlp. Localhost/private-network URLs and non-HTTPS URLs are rejected.
-- The renderer checks for video/audio, rejects clips shorter than 25 seconds, trims long silent gaps, and outputs 1080x1920 H.264/AAC.
+- Dashboard source intake no longer requires Twitch OAuth, Twitch editor permissions, or Twitch game-category checks.
+- The source form requires an explicit reuse-rights confirmation before it records a source as approved. This is an operator attestation, not independent proof of copyright ownership or a legal determination.
+- Worker blocks non-HTTPS, credential-bearing, private/local, and malformed source URLs.
+- Render dispatch is blocked unless the source is marked approved and identified as GTA VI content.
+- Renderer accepts supported public HTTPS source URLs, checks media streams, removes long silent gaps, and produces 1080x1920 H.264/AAC.
 - A unique cover is generated from the actual footage.
 - The logo in `branding/logo.png` is overlaid persistently.
-- The three supplied JPG channel graphics are included in the ZIP, but are not yet composited into the video because their checkerboard backgrounds require transparency cleanup.
-- Delivery includes MP4, editorial TXT, cover, and ZIP; GitHub Release links are used when repository permissions allow.
-- Optional AI narration is mixed with the original audio when configured.
+- The three supplied JPG channel graphics are included in the ZIP but are not yet composited into the video; their checkerboard backgrounds still need cleanup.
+- Delivery includes MP4, editorial TXT, cover, and ZIP when the render job and artifact storage complete successfully.
+- Optional AI narration is mixed with original audio when configured.
 - Optional YouTube upload remains private-only. Public publishing requires manual review.
 
-## Important remaining work
+## Remaining work
 
-- The Cloudflare Worker UI, discovery, source ingestion, database queries, and API routes still contain Twitch-specific logic and must be refactored to accept authorized independent sources. This has **not** been completed by the renderer changes.
-- Add an explicit rights/permission confirmation and persist its audit metadata before any render is dispatched. A public URL or automated metadata check is not proof of copyright permission.
+- Implement automated source discovery / clip selection from approved channels or feeds. Current source intake is manual URL entry.
+- Store stronger rights evidence (permission URL, license, owner, date, and source) rather than relying only on the dashboard checkbox. The checkbox does not establish fair use or guarantee that a platform will not issue a claim.
 - Convert the three JPG channel graphics into clean transparent overlays and integrate timed placements.
 - Run a real end-to-end render using a source the operator is authorized to reuse, then verify MP4 and ZIP download links in the dashboard.
-- Verify Cloudflare deployment, webhook callback, and optional YouTube OAuth with the actual configured accounts.
+- Verify Cloudflare deployment, webhook callback, and optional YouTube OAuth with the configured accounts.
 
 ## Secrets and data safety
 
-Preserve all existing D1 tables and records; use additive migrations only. Never commit secrets, OAuth tokens, cookies, or private source URLs. Remove obsolete Twitch secrets from Cloudflare only after the Worker no longer references them and the new independent ingestion path is deployed.
+Preserve existing D1 records and tables; use additive migrations only. Never commit secrets, OAuth tokens, cookies, or private source URLs. Obsolete Twitch secrets can be removed from Cloudflare after the new Worker deployment is confirmed; they are no longer referenced by the Worker code.
