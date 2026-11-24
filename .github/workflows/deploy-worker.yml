@@ -31,9 +31,6 @@ jobs:
       - name: Start initial automatic production cycle
         run: |
           set -euo pipefail
-          RESPONSE="$(curl --fail-with-body --silent --show-error --max-time 600 -X POST \\
-            "https://gta6-shorts-engine.alperen-gkhn.workers.dev/api/prepare" \\
-            -H "Content-Type: application/json" \\
-            --data '{}')"
+          RESPONSE="$(curl --fail-with-body --silent --show-error --max-time 600 -X POST "https://gta6-shorts-engine.alperen-gkhn.workers.dev/api/prepare" -H "Content-Type: application/json" --data '{}')"
           echo "$RESPONSE"
           python -c 'import json,sys; d=json.loads(sys.argv[1]); r=d.get("rendering",{}); print("Eligible:",r.get("eligible",0),"Dispatched:",r.get("dispatched",0),"Dispatch errors:",r.get("dispatchErrors",0)); sys.exit(1 if r.get("dispatchErrors",0) else 0)' "$RESPONSE"
