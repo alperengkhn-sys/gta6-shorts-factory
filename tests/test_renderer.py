@@ -1,5 +1,4 @@
 import unittest
-from unittest.mock import patch
 from renderer.render import clean, split_caption, stamp, validate_source_url
 
 class RendererHelpersTest(unittest.TestCase):
