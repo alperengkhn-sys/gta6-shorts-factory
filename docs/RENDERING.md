@@ -2,41 +2,36 @@
 
 ## Automatic dashboard flow
 
-1. In Cloudflare Worker settings, configure `GITHUB_TOKEN` (a GitHub token with Actions: write access to this repository) and `RENDER_WEBHOOK_SECRET` (a long random secret). Keep all existing Worker secrets.
-2. In GitHub → repository Settings → Secrets and variables → Actions, create `RENDER_WEBHOOK_SECRET` with the exact same value.
-3. Open the GTA6 Shorts Factory dashboard and select a draft.
-4. Start MP4 production only for footage you own or are authorized to reuse. The application does not ask for a permission URL; Twitch category/access checks are technical checks, not copyright clearance.
-5. The Worker dispatches the job to GitHub Actions. The workflow renders 1080×1920 H.264/AAC, preserves the source audio, applies any supplied channel overlays from `branding/`, generates a title-stamped `short-cover.jpg` from the actual rendered footage, stores the MP4, cover, and analysis as a seven-day artifact, optionally uploads the video as **private** and submits the cover as its YouTube thumbnail, then posts status back to the Worker. Thumbnail upload can be rejected by YouTube account/API restrictions without discarding the MP4. The dashboard shows the render state, artifact link, and YouTube URL/status.
+1. Configure `GITHUB_TOKEN` (Actions: write access to this repository) and `RENDER_WEBHOOK_SECRET` in the Cloudflare Worker settings.
+2. Add the same `RENDER_WEBHOOK_SECRET` value to GitHub Actions repository secrets.
+3. Open the dashboard and add a public HTTPS video or clip URL supported by yt-dlp. Enter a title that identifies the footage as GTA VI.
+4. Confirm the source reuse-rights checkbox only when you own the content or have the necessary license / explicit permission for editing and commercial YouTube use. The checkbox is an operator attestation, not legal proof or a copyright clearance service.
+5. Create the editorial package and start MP4 rendering. For sources longer than 55 seconds, the renderer chooses a candidate 55-second window using non-silent audio and scene-change density, then trims long silent gaps. This heuristic cannot understand the story or guarantee that the selected segment is the best moment; review the result.
+6. The workflow renders 1080×1920 H.264/AAC, preserves source audio, applies the supplied channel logo, generates a title-stamped cover from the footage, and creates an MP4, editorial TXT, cover JPG, and combined ZIP. The three supplied JPG channel graphics are included in the ZIP but are not currently overlaid in the video.
+7. GitHub Release links are used for direct MP4 and ZIP downloads when release publishing succeeds. The workflow also stores a seven-day Actions artifact and posts render status back to the Worker.
 
 ## Optional private YouTube upload
 
-Create a Google Cloud project, enable **YouTube Data API v3**, and create OAuth credentials that can grant the scope `https://www.googleapis.com/auth/youtube.upload`. Obtain an offline refresh token for the channel and add these GitHub Actions repository secrets: `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, and `YOUTUBE_REFRESH_TOKEN`. When all three are present, every successful render uploads as **private**; the uploader does not schedule public release. Review and publish manually only after confirming rights. YouTube Data API quota is finite and controls daily upload volume. If the secrets are absent, rendering still completes and the upload step is marked `not_configured`.
+Create a Google Cloud project, enable **YouTube Data API v3**, and create OAuth credentials that can grant the scope `https://www.googleapis.com/auth/youtube.upload`. Obtain an offline refresh token for the channel and add these GitHub Actions repository secrets: `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, and `YOUTUBE_REFRESH_TOKEN`. When all three are present, successful renders upload as **private**; the uploader does not schedule public release. Review rights, edits, title, description, and thumbnail, then publish manually. If the secrets are absent, rendering still completes and upload is marked `not_configured`.
 
 ## Manual fallback
 
 1. Open the repository's **Actions** tab.
 2. Select **Render GTA6 Short** → **Run workflow**.
-3. Enter an authorized clip URL, title, original narration, and set rights approval to true only when documented permission exists.
-4. Start the workflow and download the artifact after it completes.
+3. Enter a public HTTPS source URL supported by yt-dlp and a title.
+4. Use this fallback only after independently confirming that you have the necessary rights. The manual workflow does not replace the dashboard's rights-attestation record.
 
 ## Limits and safeguards
 
-- Cloud rendering only; no local PC processing is required.
-- GitHub Actions free usage is quota-limited. This does not guarantee 5–10 renders daily.
+- Rendering runs in GitHub Actions; it does not use the local PC for processing.
+- GitHub Actions usage is quota-limited; daily output volume is not guaranteed.
 - The built-in English voice is synthetic/basic. Captions are timed across narration, not word-level ASR.
-- This does not analyze the footage visually or verify ownership. Metadata/title-derived editorial text must be checked against the clip.
-- Twitch clip access and GTA VI category verification are not permission to reuse it. Metadata checks cannot determine copyright ownership. Do not publish content without the necessary rights; YouTube uploads are private by default.
-- Artifact retention is seven days. The artifact link requires access to the GitHub repository.
-
+- The editorial script is derived from source metadata and has not independently verified the events in the footage. Review every factual statement.
+- Public accessibility is not permission to reuse a video. The system cannot determine copyright ownership, fair use, or platform licensing. Do not publish content without the necessary rights.
+- Artifact retention is seven days. Release links are subject to repository release permissions.
 
 ## Channel branding and per-video cover
 
-Place the supplied PNG assets in `branding/` using these filenames:
-
-- `banner.png` — persistent top banner.
-- `logo.png` — persistent upper-left channel logo.
-- `subscribe.png` — subscribe prompt in the final five seconds.
-- `notification.png` — bell prompt in the final five seconds.
-- `outro.png` — full-screen closing image in the final three seconds.
-
-Missing assets are skipped automatically. Transparent PNG is preferred for logo and call-to-action artwork. Every rendered Short receives a separate `short-cover.jpg` built from a frame of that video's actual footage and its title. The cover is included in the render artifact and submitted to YouTube as a thumbnail when upload credentials are configured; YouTube may reject custom thumbnail uploads depending on channel eligibility or image constraints.
+- `branding/logo.png` is applied as a persistent logo overlay.
+- The supplied JPG graphics are included in the ZIP package but are not currently composited into the video. Their checkerboard backgrounds need cleanup and transparency treatment first.
+- Every rendered Short receives a separate `short-cover.jpg` generated from a frame of the actual footage with the title. YouTube may reject custom thumbnail uploads depending on channel eligibility or image constraints.
