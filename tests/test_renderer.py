@@ -14,6 +14,16 @@ class RendererHelpersTest(unittest.TestCase):
         self.assertEqual(flattened, text)
         self.assertTrue(all(len(line) <= 18 for chunk in chunks for line in chunk.split("\n")))
 
+    def test_trailing_silence_detects_cut_off_audio(self):
+        from renderer.render import trailing_silence_seconds
+        log = "[silencedetect] silence_start: 8.0"
+        self.assertEqual(trailing_silence_seconds(log, 55.0), 47.0)
+
+    def test_trailing_silence_allows_audio_to_resume(self):
+        from renderer.render import trailing_silence_seconds
+        log = "[silencedetect] silence_start: 8.0\n[silencedetect] silence_end: 9.0"
+        self.assertEqual(trailing_silence_seconds(log, 55.0), 0.0)
+
     def test_stamp_formats_subseconds(self):
         self.assertEqual(stamp(1.234), "00:00:01,234")
 
