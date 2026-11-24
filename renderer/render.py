@@ -214,6 +214,20 @@ def vision_review(media, workdir):
       headers={"Authorization":"Bearer "+api_key,"Content-Type":"application/json"},method="POST")
     try:
         result = request_vision_completion(req)
+    except RuntimeError as exc:
+        if "quota/billing is exhausted" in str(exc):
+            # Keep production moving, but never publish an unreviewed clip publicly.
+            return {
+                "score": 0, "compelling": False, "event": "AI review unavailable",
+                "category": "unreviewed", "youtube_safe": False,
+                "age_restriction_recommended": True,
+                "editing_treatment": "standard", "editorial_tone": "neutral",
+                "reasons": ["OpenAI quota exhausted; generated without visual AI review and held private."],
+                "confidence": 0.0, "status": "unreviewed_private",
+                "provider": "none", "model": "none", "frames_sampled": len(frames),
+                "age_restriction_status": "manual_review_required"
+            }
+        raise RuntimeError(f"Vision review API failed; refusing an unreviewed render: {exc}") from exc
     except Exception as exc:
         raise RuntimeError(f"Vision review API failed; refusing an unreviewed render: {exc}") from exc
     try:
