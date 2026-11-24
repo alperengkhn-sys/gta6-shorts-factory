@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       source_url:
-        description: Public HTTPS video or clip URL (must be authorized for reuse)
+        description: Public Twitch clip URL
         required: true
         type: string
       title:
@@ -120,7 +120,7 @@ jobs:
               "YOUTUBE TAGS:", tags, "",
               "HASHTAGS:", "#GTA6 #GTAVI #GTAVIGameplay #GamingShorts #Shorts", "",
               "FULL EDITORIAL PACKAGE:", script, "",
-              "NOTE: Verify editorial claims against the actual footage before publishing. Use only content you are authorized to reuse."
+              "NOTE: Clip creator credit is included in the description. All generated titles, descriptions, tags and hashtags are English."
           ]
           Path(f"GTA6-Short-{number}.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
           Path(f"GTA6-Short-{number}.mp4").write_bytes(Path("short.mp4").read_bytes())
