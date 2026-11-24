@@ -251,13 +251,14 @@ jobs:
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
         run: python renderer/youtube_upload.py
-      - name: Record successful YouTube publication to prevent duplicates
-        if: steps.youtube.outputs.upload_status == 'uploaded_public'
+      - name: Record successful YouTube upload to prevent duplicates
+        if: startsWith(steps.youtube.outputs.upload_status, 'uploaded_')
         env:
           GH_TOKEN: ${{ github.token }}
           SOURCE_URL: ${{ inputs.source_url || steps.task.outputs.source_url }}
           VIDEO_URL: ${{ steps.youtube.outputs.video_url }}
           TITLE: ${{ inputs.title || steps.task.outputs.title }}
+          UPLOAD_STATUS: ${{ steps.youtube.outputs.upload_status }}
           KEY: ${{ steps.dedupe.outputs.key }}
         run: |
           set -euo pipefail
@@ -273,7 +274,7 @@ jobs:
                   "source_url": os.environ["SOURCE_URL"],
                   "video_url": os.environ["VIDEO_URL"],
                   "title": os.environ["TITLE"],
-                  "status": "uploaded_public"
+                  "status": os.environ["UPLOAD_STATUS"]
               }, indent=2) + "\\n", encoding="utf-8")
           PY
           git config user.name "github-actions[bot]"
