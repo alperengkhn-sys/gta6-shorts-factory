@@ -1,31 +1,30 @@
-# Production implementation status
+# Implementation notes
 
-## Product scope
+## Platform responsibilities
 
-This project prepares authorized source videos as original, branded YouTube Shorts. It does not broadcast livestreams or require a streaming-platform account connection. The dashboard currently accepts a public HTTPS video or clip URL supported by yt-dlp. The dashboard can scan recent public channel, videos-tab, or playlist entries through GitHub Actions.
+- Twitch is the sole source platform for automatic clip discovery and source download.
+- YouTube is the destination for finished Shorts; it is not a source-discovery target.
+- No PostMassive, live broadcast, or stream publishing integration is used.
 
-## Implemented
+## Twitch integration
 
-- Manual source intake and channel discovery require explicit reuse-rights confirmation before a source is marked approved. Discovery scans recent public channel/feed entries and keeps GTA VI-titled videos. The attestation is not independent proof of copyright ownership or a legal determination.
-- The Worker blocks non-HTTPS, credential-bearing, private/local, and malformed source URLs.
-- Render dispatch is blocked unless the source is marked approved and identified as GTA VI content.
-- The renderer checks video/audio streams, rejects sources shorter than 25 seconds, and selects a 55-second highlight window from longer videos using non-silent audio and scene-change density. This is a heuristic, not semantic AI understanding; the operator must review the selected moment.
-- Long silent gaps are trimmed and the output is encoded as 1080x1920 H.264/AAC.
-- A unique cover is generated from the actual footage.
-- The logo in `branding/logo.png` is overlaid persistently.
-- The subscribe and notification JPGs are converted to transparent PNGs by `renderer/prepare_branding.py` and overlaid during the final five seconds. The wide VI RUSH artwork is included in the ZIP.
-- Delivery includes MP4, editorial TXT, cover, and ZIP when the render job and artifact storage complete successfully.
-- Original source audio is preserved; the MP4 adds no AI narration, music, or burned-in captions.
-- Optional YouTube upload remains private-only. Public publishing requires manual review.
+- OAuth callback: `/auth/twitch/callback`.
+- Secrets: `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`, and `APP_PASSWORD`.
+- Access and refresh tokens are encrypted in D1; refresh is attempted when validation fails.
+- Clip slugs resolve through Twitch Helix `/clips`; category metadata is checked against Grand Theft Auto VI.
+- Authorized download requests use `/clips/downloads`, grouped by broadcaster and sent in batches of at most 10 clip IDs.
+- Temporary download URLs are not persisted. Broadcasters without editor permission are marked unauthorized and skipped.
+- The 127 existing source records must be preserved. Twitch download authorization and commercial reuse rights are separate states.
 
-## Remaining work
+## Rendering
 
-- Validate channel discovery against the operator's real source channels and expand platform-specific playlist support where needed.
-- Store stronger rights evidence (permission URL, license, owner, date, and source) rather than relying only on the dashboard checkbox. The checkbox does not establish fair use or guarantee that a platform will not issue a claim.
-- Inspect the transparent CTA overlays in a real rendered MP4 and fine-tune their placement/scale if needed. The wide VI RUSH artwork could be used as a dedicated outro after review.
-- Run a real end-to-end render using a source the operator is authorized to reuse, then verify MP4 and ZIP download links in the dashboard.
-- Verify Cloudflare deployment, webhook callback, and optional YouTube OAuth with the configured accounts.
+The renderer produces vertical 1080x1920 H.264/AAC Shorts, preserves original source audio, removes long silent gaps, selects a high-activity section from longer videos, applies the supplied branding, generates a cover, and packages the MP4 plus editorial metadata and assets into a ZIP. It does not add AI narration or music.
 
-## Secrets and data safety
+## Validation still required
 
-Preserve existing D1 records and tables; use additive migrations only. Never commit secrets, OAuth tokens, cookies, or private source URLs. The retired streaming-platform credentials are no longer referenced by the Worker and may be removed from its secret configuration after confirming the latest deployment.
+- Verify the existing Twitch OAuth connection and token refresh against the deployed Worker.
+- Process the existing Twitch sources in small batches; report resolved, downloadable, unauthorized, unavailable, and error counts.
+- Test a real authorized Twitch clip through MP4 render and ZIP download.
+- Verify the optional private YouTube upload only after a successful real render.
+
+Do not reset D1. Do not store temporary Twitch download URLs. Do not treat technical download permission as copyright or commercial-use permission.
