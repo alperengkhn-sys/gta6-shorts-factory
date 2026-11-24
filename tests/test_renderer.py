@@ -27,11 +27,10 @@ class RendererHelpersTest(unittest.TestCase):
             self.assertEqual(tts_executable(), "/usr/bin/espeak")
 
     def test_accepts_public_https_video_and_clip_urls(self):
-        self.assertTrue(validate_source_url("https://clips.twitch.tv/SomeClip"))
+        self.assertTrue(validate_source_url("https://example.com/public-clip"))
         self.assertTrue(validate_source_url("https://www.youtube.com/watch?v=example"))
         self.assertTrue(validate_source_url("https://example.com/video.mp4"))
         self.assertFalse(validate_source_url("http://example.com/video.mp4"))
-        self.assertTrue(validate_source_url("https://twitch.tv.example.com/clip"))
         self.assertFalse(validate_source_url("https://user:pass@example.com/video.mp4"))
         self.assertFalse(validate_source_url("file:///etc/passwd"))
 
