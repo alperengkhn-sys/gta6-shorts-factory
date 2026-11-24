@@ -74,7 +74,7 @@ def main():
             "categoryId": "20",
         },
         "status": {
-            "privacyStatus": "private",
+            "privacyStatus": "public",
             "selfDeclaredMadeForKids": False,
         },
     }
@@ -144,10 +144,10 @@ def main():
         except Exception as exc:
             thumbnail_status = "failed"
             print("YouTube thumbnail upload failed: " + str(exc)[:500], file=sys.stderr)
-    output("upload_status", "uploaded_private")
+    output("upload_status", "uploaded_public")
     output("video_url", video_url)
     output("thumbnail_status", thumbnail_status)
-    print(json.dumps({"ok": True, "privacy": "private",
+    print(json.dumps({"ok": True, "privacy": "public",
                       "video_url": video_url, "thumbnail_status": thumbnail_status}))
     return 0
 
