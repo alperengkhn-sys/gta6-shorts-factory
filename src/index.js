@@ -171,7 +171,8 @@ async function dispatchRender(db,env,draftId,evidenceReference,authorizationConf
 
  const title=String(row.draft_title||row.source_title||"GTA 6 Short").slice(0,90);
  const questionMatch=String(row.script||"").match(/ENDING QUESTION:\s*([^\n]+)/);
- const original=String(row.source_title||row.draft_title||"GTA 6 moment").replace(/\\s+/g," ").trim().slice(0,180);\n const angle=String(row.script||"").match(/EDITORIAL ANGLE:\\s*([^\\n]+)/)?.[1]||"gaming";\n const description=[original+" — a GTA 6 moment worth discussing.", "Original clip creator: "+String(row.creator_name||"Unknown").slice(0,100)+".", "Follow for more GTA VI moments, reactions and gameplay discussions.", "#GTA6 #GTAVI #GamingShorts #Shorts"].join("\\n\\n").slice(0,5000);
+ const original=String(row.source_title||row.draft_title||"GTA 6 moment").replace(/\s+/g," ").trim().slice(0,180);
+ const description=[original+" — a GTA 6 moment worth discussing.", "Original clip creator: "+String(row.creator_name||"Unknown").slice(0,100)+".", "Follow for more GTA VI moments, reactions and gameplay discussions.", "#GTA6 #GTAVI #GamingShorts #Shorts"].join("\n\n").slice(0,5000);
  await db.prepare("UPDATE jobs SET status='processing',render_attempts=COALESCE(render_attempts,0)+1,last_error=NULL,dispatch_started_at=CURRENT_TIMESTAMP,editorial_note='Authorized render dispatched to GitHub Actions.',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.job_id).run();
  await db.prepare("UPDATE shorts_drafts SET status='processing',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.draft_id).run();
  let response;
