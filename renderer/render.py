@@ -225,7 +225,12 @@ def video_filter(duration, assets, subtitles_path=None):
     for index, (_, scale, x, y, timing) in enumerate(assets, start=1):
         label = f"ov{index}"
         next_label = f"v{index}"
-        parts.append(f"[{index}:v]scale={scale}:force_original_aspect_ratio=decrease,format=rgba[{label}]")
+        if timing in ("intro", "outro"):
+            # Full-frame vertical branded bumper/end card.
+            image_filter = "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,format=rgba"
+        else:
+            image_filter = f"scale={scale}:force_original_aspect_ratio=decrease,format=rgba"
+        parts.append(f"[{index}:v]{image_filter}[{label}]")
         if timing == "always":
             enable = f"between(t,0,{duration:.3f})"
         elif timing == "intro":
