@@ -4,7 +4,7 @@ Cloud-first video-to-YouTube-Shorts production workflow.
 
 ## Product direction
 
-This system prepares edited vertical Shorts from **video/clip sources that the operator is authorized to reuse**. It does not broadcast livestreams or require a streaming-platform account connection.
+This system prepares edited vertical Shorts from **video/clip sources that the operator is authorized to reuse**. It can scan recent public channel/video-tab/playlist entries for GTA VI titles and can also accept a direct video URL. It does not broadcast livestreams or require a streaming-platform account connection.
 
 ## Existing cloud resources
 
@@ -16,7 +16,7 @@ Preserve existing D1 tables and records. Use additive migrations only. Never com
 
 ## Renderer
 
-The GitHub Actions renderer accepts public HTTPS video/clip URLs supported by yt-dlp, downloads the source, checks media streams, trims long silent gaps, creates a 1080x1920 H.264/AAC MP4, generates a frame-based cover, and packages the MP4, editorial TXT, cover, and branding assets into a ZIP. It also publishes a direct MP4/package release link when GitHub Releases permissions allow it.
+The GitHub Actions renderer accepts public HTTPS video/clip URLs supported by yt-dlp, downloads the source, checks media streams, selects a 55-second high-activity window from longer videos using audio activity and scene changes, trims long silent gaps, creates a 1080x1920 H.264/AAC MP4, generates a frame-based cover, and packages the MP4, editorial TXT, cover, and branding assets into a ZIP. It also publishes a direct MP4/package release link when GitHub Releases permissions allow it.
 
 The renderer rejects localhost/private-network URLs and non-HTTPS sources. Only submit material for which you have the necessary copyright, license, and platform permissions. A URL being publicly accessible is not permission to reuse it. Automated checks cannot guarantee that a clip is copyright-safe; human rights review remains required.
 
