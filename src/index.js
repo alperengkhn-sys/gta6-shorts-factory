@@ -236,6 +236,14 @@ async function renderCallback(request,env,db){
 async function prepareAll(db){const result=await db.prepare(`SELECT s.id,s.title,s.creator_name,s.source_url,s.rights_status,s.relevance_status,s.twitch_game_id,a.score FROM sources s LEFT JOIN clip_analysis a ON a.source_id=s.id ORDER BY s.created_at ASC`).all(),rows=result.results||[];let created=0,updated=0,existing=0,skippedIrrelevant=0;const statements=[];
 for(const source of rows){if(source.relevance_status==="irrelevant"){skippedIrrelevant++;continue;}const categoryConfirmed=!!source.twitch_game_id&&source.relevance_status==="relevant";if(!categoryConfirmed){skippedIrrelevant++;continue;}const pack=makeEditorialPackage(source),found=await db.prepare("SELECT id,status FROM shorts_drafts WHERE source_id=? LIMIT 1").bind(source.id).first();if(found){existing++;await db.prepare("UPDATE shorts_drafts SET title=?,script=?,source_url=?,creator_name=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(pack.title,pack.script,source.source_url,source.creator_name||"Unknown",found.id).run();const existingJob=await db.prepare("SELECT id FROM jobs WHERE source_id=? LIMIT 1").bind(source.id).first();if(!existingJob)await db.prepare("INSERT INTO jobs(id,source_id,status,target_format,editorial_note,output_key) VALUES(?,?,'queued_review','shorts_9_16','Legacy draft migrated to cloud render queue.',NULL)").bind(uid(),source.id).run();updated++;continue;}const draftId=uid();statements.push(db.prepare(`INSERT INTO shorts_drafts(id,source_id,status,title,script,created_at,updated_at,source_url,creator_name) VALUES (?,?,'queued_review',?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,?,?)`).bind(draftId,source.id,pack.title,pack.script,source.source_url,source.creator_name||"Unknown"));statements.push(db.prepare(`INSERT INTO jobs(id,source_id,status,target_format,editorial_note,output_key) VALUES (?,?,'queued_review','shorts_9_16',?,NULL)`).bind(uid(),source.id,"Editorial package prepared. Rights status: "+source.rights_status+". Cloud rendering is enabled for Twitch-verified GTA VI clips; uploader remains responsible for reuse rights."));created++;}
 for(let i=0;i<statements.length;i+=40)await db.batch(statements.slice(i,i+40));const total=await db.prepare("SELECT COUNT(*) AS n FROM shorts_drafts WHERE status='queued_review'").first();return{checked:rows.length,created,updated,existing,skipped_irrelevant:skippedIrrelevant,total:Number(total?.n||0)};}
+async function dispatchQueuedRenders(db,env,limit=10){
+ if(!env.GITHUB_TOKEN)return{dispatched:0,dispatchErrors:1,errors:["GITHUB_TOKEN eksik."]};
+ const candidates=await db.prepare(`SELECT d.id AS draft_id FROM shorts_drafts d JOIN sources s ON s.id=d.source_id JOIN jobs j ON j.source_id=s.id LEFT JOIN clip_analysis a ON a.source_id=s.id WHERE s.relevance_status='relevant' AND s.twitch_game_id IS NOT NULL AND s.rights_status='approved' AND j.status IN ('queued_review','failed') AND COALESCE(j.render_attempts,0)<3 ORDER BY COALESCE(a.score,0) DESC,j.created_at ASC LIMIT ?`).bind(Math.max(1,Math.min(10,Number(limit)||10))).all();
+ const results=await Promise.all((candidates.results||[]).map(row=>dispatchRender(db,env,row.draft_id,"")));
+ let dispatched=0,dispatchErrors=0;const errors=[];
+ for(const result of results){if(result.ok)dispatched++;else if(result.error){dispatchErrors++;errors.push(result.error);}}
+ return{eligible:(candidates.results||[]).length,dispatched,dispatchErrors,errors};
+}
 async function getData(db){const sources=await db.prepare(`SELECT s.id,s.platform,s.source_url,s.creator_name,s.title,s.rights_status,s.relevance_status,s.twitch_game_id,a.score,a.media_quality_score,a.media_duration,a.source_width,a.source_height,a.source_fps,a.source_has_audio,a.silence_ratio,a.media_usable,a.scene_change_count,a.mean_volume_db,a.media_analyzed_at FROM sources s LEFT JOIN clip_analysis a ON a.source_id=s.id ORDER BY s.created_at DESC LIMIT 500`).all(),drafts=await db.prepare(`SELECT d.id,d.source_id,d.status,d.title,d.script,d.source_url,d.creator_name,d.created_at,s.rights_status,j.status AS job_status,j.output_key,j.package_url,j.last_error,j.youtube_status,j.youtube_url FROM shorts_drafts d JOIN sources s ON s.id=d.source_id LEFT JOIN jobs j ON j.source_id=d.source_id ORDER BY d.created_at DESC LIMIT 500`).all();return{sources:sources.results||[],drafts:drafts.results||[]};}
 async function runScheduled(env){
  if(!env.DB)return {error:"D1 binding missing"};
@@ -246,18 +254,9 @@ async function runScheduled(env){
  const prepared=await prepareAll(env.DB);
  await env.DB.prepare("UPDATE jobs SET status=CASE WHEN COALESCE(render_attempts,0)>=3 THEN 'failed' ELSE 'failed' END,last_error='Recovered stale dispatch after 45 minutes without callback.',updated_at=CURRENT_TIMESTAMP WHERE status='processing' AND dispatch_started_at IS NOT NULL AND dispatch_started_at<datetime('now','-45 minutes')").run();
  await env.DB.prepare("UPDATE shorts_drafts SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE source_id IN (SELECT source_id FROM jobs WHERE status IN ('failed','failed') AND last_error='Recovered stale dispatch after 45 minutes without callback.')").run();
- let dispatched=0,dispatchErrors=0;
- if(env.GITHUB_TOKEN){
-  // Dispatch a batch on every scheduled run. The workflow concurrency group
-  // serializes the actual render/upload jobs, while this fills the queue with up
-  // to ten distinct, eligible Twitch clips instead of only one.
-  const candidates=await env.DB.prepare(`SELECT d.id AS draft_id FROM shorts_drafts d JOIN sources s ON s.id=d.source_id JOIN jobs j ON j.source_id=s.id LEFT JOIN clip_analysis a ON a.source_id=s.id WHERE s.relevance_status='relevant' AND s.twitch_game_id IS NOT NULL AND s.rights_status='approved' AND j.status IN ('queued_review','failed') AND COALESCE(j.render_attempts,0)<3 ORDER BY COALESCE(a.score,0) DESC,j.created_at ASC LIMIT 10`).all();
-  const results=await Promise.all((candidates.results||[]).map(row=>dispatchRender(env.DB,env,row.draft_id,"")));
-  for(const result of results){
-   if(result.ok)dispatched++;else if(result.error){dispatchErrors++;console.error("Scheduled render dispatch:",result.error);}
-  }
- }
- return {discovery,access,prepared,dispatched,dispatchErrors};
+ const rendering=await dispatchQueuedRenders(env.DB,env,10);
+ for(const error of rendering.errors||[])console.error("Scheduled render dispatch:",error);
+ return {discovery,access,prepared,...rendering};
 }
 function makeZip(files){const enc=new TextEncoder(),local=[],central=[];let offset=0;const u16=n=>new Uint8Array([n&255,(n>>>8)&255]),u32=n=>new Uint8Array([n&255,(n>>>8)&255,(n>>>16)&255,(n>>>24)&255]),join=parts=>{const out=new Uint8Array(parts.reduce((n,p)=>n+p.length,0));let at=0;for(const p of parts){out.set(p,at);at+=p.length;}return out;},crc32=data=>{let c=0xffffffff;for(const b of data){c^=b;for(let k=0;k<8;k++)c=(c>>>1)^((c&1)?0xedb88320:0);}return(c^0xffffffff)>>>0;};for(const f of files){const name=enc.encode(f.name),data=f.data,crc=crc32(data),lh=join([u32(0x04034b50),u16(20),u16(0x0800),u16(0),u16(0),u16(0),u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),name]);local.push(lh,data);central.push(join([u32(0x02014b50),u16(20),u16(20),u16(0x0800),u16(0),u16(0),u16(0),u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),u16(0),u16(0),u16(0),u32(0),u32(offset),name]));offset+=lh.length+data.length;}const centralBytes=join(central),localBytes=join(local),end=join([u32(0x06054b50),u16(0),u16(0),u16(files.length),u16(files.length),u32(centralBytes.length),u32(localBytes.length),u16(0)]);return join([localBytes,centralBytes,end]);}
 function escHtml(v){return String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
@@ -279,7 +278,7 @@ if(path==="/api/system/status"&&method==="GET")return json({version:VERSION,data
 if(path==="/api/data"&&method==="GET")return json(await getData(env.DB));
 if(path==="/api/discover"&&method==="POST")return json(await discover(env.DB,env));
 
-if(path==="/api/prepare"&&method==="POST"){const clipValidation=await resolveTwitchClips(env.DB,env,20);const prepared=await prepareAll(env.DB);return json({...prepared,clip_validation:clipValidation});}
+if(path==="/api/prepare"&&method==="POST"){const clipValidation=await resolveTwitchClips(env.DB,env,20);const prepared=await prepareAll(env.DB);let access;try{access=await checkTwitchDownloads(env.DB,env,100);}catch(error){access={error:String(error&&error.message||error).slice(0,500)};}const rendering=await dispatchQueuedRenders(env.DB,env,10);return json({...prepared,clip_validation:clipValidation,access,rendering});}
 if(path==="/api/render/dispatch"&&method==="POST"){const data=await readBody(request);const result=await dispatchRender(env.DB,env,String(data.draft_id||""),data.evidence_reference,data.authorization_confirmation);return result.error?json({error:result.error},400):json(result);}
 if(path==="/api/source/quick"&&method==="POST"){
 if(!await authorized(request,env))return json({error:"Giriş gerekli."},401);
