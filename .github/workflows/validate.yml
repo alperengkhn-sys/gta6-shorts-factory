@@ -107,6 +107,13 @@ jobs:
           assert not output.exists() or output.stat().st_size == 0, "A silent MP4 was incorrectly produced"
           print("PASS: silent source rejected without producing an MP4")
           PY
+      - name: Verify YouTube OAuth refresh token without uploading
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: python renderer/youtube_auth_check.py
       - name: Check required deployment files
         run: |
           test -s wrangler.toml
