@@ -26,19 +26,21 @@ class RendererHelpersTest(unittest.TestCase):
         with patch("renderer.render.shutil.which", side_effect=lambda name: "/usr/bin/espeak" if name == "espeak" else None):
             self.assertEqual(tts_executable(), "/usr/bin/espeak")
 
-    def test_accepts_https_twitch_clip_urls(self):
+    def test_accepts_public_https_video_and_clip_urls(self):
         self.assertTrue(validate_source_url("https://clips.twitch.tv/SomeClip"))
-        self.assertTrue(validate_source_url("https://www.twitch.tv/creator/clip/SomeClip"))
-        self.assertFalse(validate_source_url("https://www.twitch.tv/creator"))
-        self.assertFalse(validate_source_url("https://www.twitch.tv/creator/videos/12345"))
+        self.assertTrue(validate_source_url("https://www.youtube.com/watch?v=example"))
+        self.assertTrue(validate_source_url("https://example.com/video.mp4"))
+        self.assertFalse(validate_source_url("http://example.com/video.mp4"))
+        self.assertFalse(validate_source_url("https://twitch.tv.example.com/clip"))
+        self.assertFalse(validate_source_url("https://user:pass@example.com/video.mp4"))
+        self.assertFalse(validate_source_url("file:///etc/passwd"))
 
-    def test_rejects_non_twitch_and_unsafe_urls(self):
+    def test_rejects_local_and_private_network_hosts(self):
         for url in (
-            "http://clips.twitch.tv/SomeClip",
-            "https://example.com/video.mp4",
-            "https://twitch.tv.example.com/clip",
-            "https://user:pass@twitch.tv/clip",
-            "file:///etc/passwd",
+            "https://localhost/video.mp4",
+            "https://127.0.0.1/video.mp4",
+            "https://192.168.1.20/video.mp4",
+            "https://router.local/video.mp4",
         ):
             with self.subTest(url=url):
                 self.assertFalse(validate_source_url(url))
