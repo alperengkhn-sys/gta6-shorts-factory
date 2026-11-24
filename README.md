@@ -1,52 +1,35 @@
 # GTA6 Shorts Factory
 
-Cloud-first Twitch-to-YouTube Shorts workflow.
+Cloud-first video-to-YouTube-Shorts production workflow.
 
-## Current baseline
+## Product direction
 
-The supplied `GTA6-FACTORY-3.5` Worker is the compatibility baseline. It must be deployed as an in-place upgrade: never drop tables, reset the database, or delete existing source/draft records.
+This system prepares edited vertical Shorts from **video/clip sources that the operator is authorized to reuse**. It does not broadcast livestreams, and it must not depend on PostMassive or Twitch OAuth/category verification.
 
-## Existing Cloudflare resources
+## Existing cloud resources
 
-- Worker: `gta6-shorts-engine`
+- Cloudflare Worker: `gta6-shorts-engine`
 - D1 database: `gta6-shorts-db`
-- D1 binding: `DB`
-- Existing secrets: `APP_PASSWORD`, `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`
-- Twitch callback: `https://gta6-shorts-engine.alperen-gkhn.workers.dev/auth/twitch/callback`
+- GitHub Actions renderer: `.github/workflows/render-short.yml`
 
-Never commit secrets, OAuth tokens, cookies, or private clip URLs.
+Preserve existing D1 tables and records. Use additive migrations only. Never commit credentials, OAuth tokens, cookies, or private source URLs.
 
-## What 3.5 currently does not do
+## Renderer
 
-The baseline creates editorial text packages only. It does not render MP4 files, inspect actual video/audio, or upload to YouTube. Twitch API access is not a grant of copyright or commercial-use permission.
+The GitHub Actions renderer accepts public HTTPS video/clip URLs supported by yt-dlp, downloads the source, checks media streams, trims long silent gaps, creates a 1080x1920 H.264/AAC MP4, generates a frame-based cover, and packages the MP4, editorial TXT, cover, and branding assets into a ZIP. It also publishes a direct MP4/package release link when GitHub Releases permissions allow it.
 
-## Upgrade principles
+The renderer rejects localhost/private-network URLs and non-HTTPS sources. Only submit material for which you have the necessary copyright, license, and platform permissions. A URL being publicly accessible is not permission to reuse it. Automated checks cannot guarantee that a clip is copyright-safe; human rights review remains required.
 
-1. Preserve every existing D1 table and record.
-2. Use additive migrations only.
-3. Keep processing cloud-side.
-4. Do not depend on paid APIs or paid SaaS.
-5. Never treat Twitch access or category verification as reuse rights; keep rights responsibility explicit and review content before publication.
-6. Default YouTube uploads to private until explicitly reviewed.
-7. Treat free compute quotas as hard limits; never claim unlimited free rendering.
+## Branding assets
 
-## Deployment
+The supplied logo and three JPG channel graphics are stored in `branding/`. The logo is currently applied as an always-on overlay. The JPG graphics are packaged in the ZIP; they are **not yet composited into the video** because their checkerboard backgrounds need proper transparency treatment first.
 
-The repository contains the GTA6-FACTORY-4.1 Worker, Wrangler configuration, and a GitHub Actions cloud renderer with optional channel overlays and per-video cover generation. A three-hour Cloudflare Cron discovers new Twitch clips, verifies the GTA VI game category, prepares editorial packages, and dispatches one render job per run (up to eight attempts per day when sources are available). The Worker can dispatch approved draft jobs to GitHub Actions and receive completion callbacks. If workflow-dispatch permission is unavailable, it falls back to a repository-backed render queue (Contents: write), which triggers the same renderer without requiring Actions: write. Completed jobs publish a direct MP4 link and a combined ZIP containing the MP4, editorial TXT, cover, and available channel branding assets; a seven-day workflow artifact remains as backup. Configure these secrets before using the render button:
+## YouTube
 
-- Cloudflare Worker secrets: existing `APP_PASSWORD`, `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`, plus `GITHUB_TOKEN` (a GitHub token with Actions: write access, or Contents: write for the automatic queue fallback) and `RENDER_WEBHOOK_SECRET` (a long random value).
-- GitHub repository Actions secrets: `RENDER_WEBHOOK_SECRET` (same value as Cloudflare) and, if private YouTube upload is wanted, `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, `YOUTUBE_REFRESH_TOKEN` (OAuth scope `youtube.upload`).
+Optional YouTube OAuth uploads are private by default. No automatic public publishing is performed. Review rights, edits, title, description, and thumbnail before changing visibility.
 
-A push to `main` starts the connected Cloudflare Workers Build (`npx wrangler deploy`). Keep the existing D1 binding and all existing records; migrations are additive. Do not paste secrets into chat or commit them to the repository.
+Configure secrets only in the relevant Cloudflare/GitHub settings. Never paste secrets into chat or commit them to this repository.
 
-See `docs/IMPLEMENTATION.md`.
+## Validation limits
 
-
-## 3.7 safeguards and diagnostics
-
-- The dashboard's **Bulut bağlantıları** panel reports whether the required Cloudflare and GitHub secrets are configured. It never displays secret values.
-- The Worker does not ask for a per-clip permission URL or written approval. It only sends Twitch clips whose actual Twitch game category is verified as GTA VI to the renderer. Twitch API access is not copyright permission; the channel operator remains responsible for having reuse rights.
-- The renderer accepts HTTPS Twitch clip URLs only. Its local-file test mode is enabled only inside the isolated CI test environment.
-- Voiceovers longer than 59.9 seconds are rejected rather than silently cut off.
-- YouTube API uploads remain private; there is no automatic public scheduling. Review rights, edits and metadata before manually publishing.
-- CI includes helper tests and a synthetic end-to-end 1080x1920 MP4 render. This test does not verify a real Twitch clip, Cloudflare deployment, or YouTube OAuth credentials.
+CI synthetic renders validate the renderer pipeline only. They do not prove that a real third-party source is downloadable, that reuse rights exist, that Cloudflare is deployed, or that YouTube credentials work. See `docs/IMPLEMENTATION.md` for implementation notes.
