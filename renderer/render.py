@@ -467,7 +467,7 @@ def main():
                 vf += ";" if vf else ""
             if voiceover:
                 vf += (f"[0:a][{voice_index}:a]sidechaincompress=threshold=0.025:ratio=8:attack=20:release=450[duck];"
-                       f"[duck][{voice_index}:a]amix=inputs=2:duration=first:dropout_transition=2[aout]")
+                       f"[duck][{voice_index}:a]amix=inputs=2:duration=longest:dropout_transition=0[aout]")
                 audio_map = "[aout]"
             else:
                 audio_map = "0:a:0"
@@ -486,7 +486,7 @@ def main():
         cover_path=out.parent/"short-cover.jpg"
         make_cover(out,title,duration,cover_path)
         print(f"RENDER_STAGE: generated cover {cover_path}",flush=True)
-    check=json.loads(run(["ffprobe","-v","error","-show_entries","stream=codec_type,codec_name,width,height",
+    check=json.loads(run(["ffprobe","-v","error","-show_entries","stream=codec_type,codec_name,width,height,duration",
                           "-show_entries","format=duration","-of","json",str(out)]))
     video=next((x for x in check["streams"] if x["codec_type"]=="video"),{})
     if video.get("width")!=1080 or video.get("height")!=1920 or video.get("codec_name")!="h264":
