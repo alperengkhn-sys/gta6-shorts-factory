@@ -22,19 +22,22 @@ def main():
 
     command = [
         "yt-dlp", "--quiet", "--no-warnings", "--ignore-errors",
-        "--flat-playlist", "--dump-single-json", "--playlist-end", str(limit),
+        "--flat-playlist", "--dump-json", "--playlist-end", str(limit),
         channel_url,
     ]
     result = subprocess.run(command, text=True, stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE, timeout=600)
-    if not result.stdout.strip():
-        raise RuntimeError("No public video entries were returned by yt-dlp: " + result.stderr[-1200:])
-    try:
-        data = json.loads(result.stdout)
-    except json.JSONDecodeError as exc:
-        raise RuntimeError("yt-dlp returned invalid playlist metadata.") from exc
-
-    entries = data.get("entries") or [data]
+    entries = []
+    for line in result.stdout.splitlines():
+        try:
+            item = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(item, dict):
+            entries.append(item)
+    if not entries:
+        detail = (result.stderr or result.stdout or "yt-dlp returned no video entries.").strip()
+        raise RuntimeError("No public video entries were returned by yt-dlp: " + detail[-1800:])
     items = []
     seen = set()
     for entry in entries:
@@ -53,7 +56,7 @@ def main():
         items.append({
             "url": url,
             "title": title,
-            "creator": str(entry.get("channel") or entry.get("uploader") or data.get("uploader") or data.get("channel") or "Unknown")[:120],
+            "creator": str(entry.get("channel") or entry.get("uploader") or "Unknown")[:120],
         })
 
     payload = {
