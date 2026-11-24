@@ -77,7 +77,7 @@ async function ensureTwitchSchema(db){
  await db.prepare(`CREATE TABLE IF NOT EXISTS twitch_clip_access (source_id TEXT PRIMARY KEY,clip_id TEXT,broadcaster_id TEXT,broadcaster_name TEXT,access_status TEXT NOT NULL DEFAULT 'unresolved',reason TEXT,checked_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
  await ensureColumn(db,"twitch_clip_access","download_url","TEXT");
  await db.prepare(`CREATE TABLE IF NOT EXISTS twitch_broadcaster_access (broadcaster_id TEXT PRIMARY KEY,broadcaster_name TEXT,access_status TEXT NOT NULL DEFAULT 'unknown',reason TEXT,checked_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
- for(const [c,d] of [["twitch_clip_id","TEXT"],["twitch_broadcaster_id","TEXT"],["twitch_resolved_at","TEXT"],["twitch_game_id","TEXT"],["relevance_status","TEXT DEFAULT 'unknown'"]])await ensureColumn(db,"sources",c,d);
+ for(const [c,d] of [["twitch_clip_id","TEXT"],["twitch_broadcaster_id","TEXT"],["twitch_resolved_at","TEXT"],["twitch_game_id","TEXT"],["twitch_clip_duration","REAL"],["relevance_status","TEXT DEFAULT 'unknown'"]])await ensureColumn(db,"sources",c,d);
 }
 async function ensureSchema(db){
  await db.prepare(`CREATE TABLE IF NOT EXISTS clip_analysis (source_id TEXT PRIMARY KEY,score INTEGER NOT NULL,relevance_score INTEGER NOT NULL,hook_score INTEGER NOT NULL,format_score INTEGER NOT NULL,score_reason TEXT,analyzed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
@@ -130,6 +130,28 @@ function extractClipSlug(sourceUrl){try{const u=new URL(sourceUrl),host=u.hostna
 async function countUnresolved(db){const r=await db.prepare("SELECT COUNT(*) AS n FROM sources WHERE platform='twitch' AND (twitch_clip_id IS NULL OR twitch_broadcaster_id IS NULL)").first();return Number(r?.n||0);}
 async function accessCounts(db){const r=await db.prepare("SELECT access_status,COUNT(*) AS n FROM twitch_clip_access GROUP BY access_status").all(),out={downloadable:0,unauthorized:0,not_available:0,error:0,resolved:0,unresolved:0};for(const x of(r.results||[]))if(Object.prototype.hasOwnProperty.call(out,x.access_status))out[x.access_status]+=Number(x.n||0);return out;}
 async function getDownloadStatus(db){const r=await db.prepare(`SELECT a.source_id,a.clip_id,a.broadcaster_id,a.broadcaster_name,a.access_status,a.download_url,a.reason,a.checked_at,s.title,s.creator_name,s.source_url FROM twitch_clip_access a LEFT JOIN sources s ON s.id=a.source_id ORDER BY a.checked_at DESC LIMIT 500`).all();return{items:r.results||[]};}
+async function validateResolvedClipDurations(db,env,limit=500){
+ const safe=Math.max(1,Math.min(500,Number(limit)||500));
+ const rows=(await db.prepare("SELECT id,twitch_clip_id FROM sources WHERE platform='twitch' AND twitch_clip_id IS NOT NULL AND twitch_clip_duration IS NULL AND relevance_status='relevant' ORDER BY created_at ASC LIMIT ?").bind(safe).all()).results||[];
+ if(!rows.length)return{checked:0,short:0,missing:0};
+ const token=await twitchToken(env);let checked=0,short=0,missing=0;
+ for(let i=0;i<rows.length;i+=100){
+  const batch=rows.slice(i,i+100),q=batch.map(x=>"id="+encodeURIComponent(x.twitch_clip_id)).join("&");
+  const clips=await twitchGet("https://api.twitch.tv/helix/clips?"+q,env,token),byId=new Map(clips.map(x=>[x.id,x]));
+  for(const row of batch){
+   const clip=byId.get(row.twitch_clip_id);
+   if(!clip){missing++;await db.prepare("UPDATE sources SET relevance_status='irrelevant',twitch_clip_duration=0 WHERE id=?").bind(row.id).run();await db.prepare("UPDATE shorts_drafts SET status='blocked',updated_at=CURRENT_TIMESTAMP WHERE source_id=? AND status NOT IN ('processing','ready')").bind(row.id).run();await db.prepare("UPDATE jobs SET status='blocked',last_error='Twitch clip no longer exists; skipped.',updated_at=CURRENT_TIMESTAMP WHERE source_id=? AND status NOT IN ('processing','ready')").bind(row.id).run();continue;}
+   const duration=Number(clip.duration||0);checked++;
+   if(!Number.isFinite(duration)||duration<25){
+    short++;await db.prepare("UPDATE sources SET twitch_clip_duration=?,relevance_status='irrelevant' WHERE id=?").bind(Number.isFinite(duration)?duration:0,row.id).run();
+    await db.prepare("UPDATE shorts_drafts SET status='blocked',updated_at=CURRENT_TIMESTAMP WHERE source_id=? AND status NOT IN ('processing','ready')").bind(row.id).run();
+    await db.prepare("UPDATE jobs SET status='blocked',last_error='Source clip is shorter than 25 seconds; skipped.',updated_at=CURRENT_TIMESTAMP WHERE source_id=? AND status NOT IN ('processing','ready')").bind(row.id).run();
+    await db.prepare("UPDATE twitch_clip_access SET access_status='not_available',reason='Source clip is shorter than 25 seconds; skipped.',checked_at=CURRENT_TIMESTAMP WHERE source_id=?").bind(row.id).run();
+   }else await db.prepare("UPDATE sources SET twitch_clip_duration=? WHERE id=?").bind(duration,row.id).run();
+  }
+ }
+ return{checked,short,missing};
+}
 async function resolveTwitchClips(db,env,limit=20){const safe=Math.max(1,Math.min(500,Number(limit)||20)),rows=(await db.prepare(`SELECT id,source_url,creator_name,title FROM sources WHERE platform='twitch' AND (twitch_clip_id IS NULL OR twitch_broadcaster_id IS NULL) ORDER BY created_at ASC LIMIT ?`).bind(safe).all()).results||[];if(!rows.length){const result=await getDownloadStatus(db),c=await accessCounts(db);return{processed:0,resolved:0,downloadable:c.downloadable,unauthorized:c.unauthorized,errors:c.error,remaining:await countUnresolved(db),items:result.items};}
 const appToken=await twitchToken(env),gta6GameId=await getGta6GameId(env,appToken);let resolved=0,errors=0,skipped=0;
 for(const source of rows){const slug=extractClipSlug(source.source_url);if(!slug){skipped++;await db.prepare(`INSERT INTO twitch_clip_access(source_id,access_status,reason) VALUES(?,?,?) ON CONFLICT(source_id) DO UPDATE SET access_status=excluded.access_status,reason=excluded.reason,checked_at=CURRENT_TIMESTAMP`).bind(source.id,"not_available","Geçerli Twitch klip kimliği bulunamadı; kaynak atlandı.").run();continue;}
@@ -142,7 +164,7 @@ if(!isGta6){
  await db.prepare("INSERT INTO twitch_clip_access(source_id,clip_id,broadcaster_id,broadcaster_name,access_status,reason) VALUES(?,?,?,?,?,?) ON CONFLICT(source_id) DO UPDATE SET clip_id=excluded.clip_id,broadcaster_id=excluded.broadcaster_id,broadcaster_name=excluded.broadcaster_name,access_status=excluded.access_status,reason=excluded.reason,checked_at=CURRENT_TIMESTAMP").bind(source.id,clip.id,clip.broadcaster_id,clip.broadcaster_name||source.creator_name||"Unknown","not_available","Klipin Twitch oyun kategorisi GTA VI değil: "+(gameName||clip.game_id||"bilinmiyor")).run();
  resolved++;continue;
 }
-await db.prepare("UPDATE sources SET twitch_clip_id=?,twitch_broadcaster_id=?,twitch_game_id=?,relevance_status='relevant',twitch_resolved_at=CURRENT_TIMESTAMP WHERE id=?").bind(clip.id,clip.broadcaster_id,clip.game_id||null,source.id).run();
+await db.prepare("UPDATE sources SET twitch_clip_id=?,twitch_broadcaster_id=?,twitch_game_id=?,twitch_clip_duration=?,relevance_status='relevant',twitch_resolved_at=CURRENT_TIMESTAMP WHERE id=?").bind(clip.id,clip.broadcaster_id,clip.game_id||null,Number(clip.duration||0),source.id).run();
 await db.prepare(`INSERT INTO twitch_clip_access(source_id,clip_id,broadcaster_id,broadcaster_name,access_status,reason) VALUES(?,?,?,?,?,?) ON CONFLICT(source_id) DO UPDATE SET clip_id=excluded.clip_id,broadcaster_id=excluded.broadcaster_id,broadcaster_name=excluded.broadcaster_name,access_status=excluded.access_status,reason=excluded.reason,checked_at=CURRENT_TIMESTAMP`).bind(source.id,clip.id,clip.broadcaster_id,clip.broadcaster_name||source.creator_name||"Unknown","resolved","Klip bilgisi çözüldü.").run();resolved++;
 }catch(e){errors++;await db.prepare(`INSERT INTO twitch_clip_access(source_id,access_status,reason) VALUES(?,?,?) ON CONFLICT(source_id) DO UPDATE SET access_status=excluded.access_status,reason=excluded.reason,checked_at=CURRENT_TIMESTAMP`).bind(source.id,"error",e.message).run();}}
 const result=await getDownloadStatus(db),c=await accessCounts(db);return{processed:rows.length,resolved,skipped,downloadable:c.downloadable,unauthorized:c.unauthorized,errors,remaining:await countUnresolved(db),items:result.items};}
@@ -273,14 +295,15 @@ async function getData(db){const sources=await db.prepare(`SELECT s.id,s.platfor
 async function runScheduled(env){
  if(!env.DB)return {error:"D1 binding missing"};
  await ensureSchema(env.DB);await ensureTwitchSchema(env.DB);
- let discovery;
+ let discovery,durationValidation;
  try{discovery=await discover(env.DB,env);}catch(error){discovery={error:String(error&&error.message||error).slice(0,500)};}
+ try{durationValidation=await validateResolvedClipDurations(env.DB,env,500);}catch(error){durationValidation={error:String(error&&error.message||error).slice(0,500)};}
  const prepared=await prepareAll(env.DB);
  await env.DB.prepare("UPDATE jobs SET status=CASE WHEN COALESCE(render_attempts,0)>=3 THEN 'failed' ELSE 'failed' END,last_error='Recovered stale dispatch after 45 minutes without callback.',updated_at=CURRENT_TIMESTAMP WHERE status='processing' AND dispatch_started_at IS NOT NULL AND dispatch_started_at<datetime('now','-45 minutes')").run();
  await env.DB.prepare("UPDATE shorts_drafts SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE source_id IN (SELECT source_id FROM jobs WHERE status IN ('failed','failed') AND last_error='Recovered stale dispatch after 45 minutes without callback.')").run();
  const rendering=await dispatchQueuedRenders(env.DB,env,10);
  for(const error of rendering.errors||[])console.error("Scheduled render dispatch:",error);
- return {discovery,prepared,...rendering};
+ return {discovery,duration_validation:durationValidation,prepared,...rendering};
 }
 function makeZip(files){const enc=new TextEncoder(),local=[],central=[];let offset=0;const u16=n=>new Uint8Array([n&255,(n>>>8)&255]),u32=n=>new Uint8Array([n&255,(n>>>8)&255,(n>>>16)&255,(n>>>24)&255]),join=parts=>{const out=new Uint8Array(parts.reduce((n,p)=>n+p.length,0));let at=0;for(const p of parts){out.set(p,at);at+=p.length;}return out;},crc32=data=>{let c=0xffffffff;for(const b of data){c^=b;for(let k=0;k<8;k++)c=(c>>>1)^((c&1)?0xedb88320:0);}return(c^0xffffffff)>>>0;};for(const f of files){const name=enc.encode(f.name),data=f.data,crc=crc32(data),lh=join([u32(0x04034b50),u16(20),u16(0x0800),u16(0),u16(0),u16(0),u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),name]);local.push(lh,data);central.push(join([u32(0x02014b50),u16(20),u16(20),u16(0x0800),u16(0),u16(0),u16(0),u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),u16(0),u16(0),u16(0),u32(0),u32(offset),name]));offset+=lh.length+data.length;}const centralBytes=join(central),localBytes=join(local),end=join([u32(0x06054b50),u16(0),u16(0),u16(files.length),u16(files.length),u32(centralBytes.length),u32(localBytes.length),u16(0)]);return join([localBytes,centralBytes,end]);}
 function escHtml(v){return String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
@@ -302,7 +325,7 @@ if(path==="/api/system/status"&&method==="GET")return json({version:VERSION,data
 if(path==="/api/data"&&method==="GET")return json(await getData(env.DB));
 if(path==="/api/discover"&&method==="POST")return json(await discover(env.DB,env));
 
-if(path==="/api/prepare"&&method==="POST"){let discovery;try{discovery=await discover(env.DB,env);}catch(error){discovery={error:String(error&&error.message||error).slice(0,500)};}const clipValidation=await resolveTwitchClips(env.DB,env,500);const prepared=await prepareAll(env.DB);const rendering=await dispatchQueuedRenders(env.DB,env,10);return json({...prepared,discovery,clip_validation:clipValidation,rendering});}
+if(path==="/api/prepare"&&method==="POST"){let discovery;try{discovery=await discover(env.DB,env);}catch(error){discovery={error:String(error&&error.message||error).slice(0,500)};}const clipValidation=await resolveTwitchClips(env.DB,env,500);const durationValidation=await validateResolvedClipDurations(env.DB,env,500);const prepared=await prepareAll(env.DB);const rendering=await dispatchQueuedRenders(env.DB,env,10);return json({...prepared,discovery,clip_validation:clipValidation,duration_validation:durationValidation,rendering});}
 if(path==="/api/render/dispatch"&&method==="POST"){const data=await readBody(request);const result=await dispatchRender(env.DB,env,String(data.draft_id||""),data.evidence_reference,data.authorization_confirmation);return result.error?json({error:result.error},400):json(result);}
 if(path==="/api/source/quick"&&method==="POST"){
 if(!await authorized(request,env))return json({error:"Giriş gerekli."},401);
