@@ -1,0 +1,6 @@
+{
+  "channel_url": "https://www.youtube.com/@VIRUSHGTA6/videos",
+  "max_items": 10,
+  "callback_url": "https://gta6-shorts-engine.alperen-gkhn.workers.dev/api/source/discovery-callback",
+  "rights_confirmation": true
+}
