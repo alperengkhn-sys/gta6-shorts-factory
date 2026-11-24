@@ -22,7 +22,7 @@ The renderer rejects localhost/private-network URLs and non-HTTPS sources. Only 
 
 ## Branding assets
 
-The supplied logo and three JPG channel graphics are stored in `branding/`. The logo is currently applied as an always-on overlay. The JPG graphics are packaged in the ZIP; they are **not yet composited into the video** because their checkerboard backgrounds need proper transparency treatment first.
+The supplied logo and three JPG channel graphics are stored in `branding/`. The logo is applied persistently. The workflow removes the checkerboard backgrounds from the subscribe and notification artwork, converts them to transparent PNG overlays, and displays them during the final five seconds. The wide VI RUSH artwork remains included in the ZIP.
 
 ## YouTube
 
