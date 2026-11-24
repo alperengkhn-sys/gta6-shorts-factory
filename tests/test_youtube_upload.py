@@ -21,7 +21,14 @@ class YouTubeUploadTests(unittest.TestCase):
         output.assert_any_call("thumbnail_status", "failed")
 
     def test_public_visibility_is_the_upload_default(self):
-        self.assertIn('"privacyStatus": "public"', open(youtube_upload.__file__, encoding="utf-8").read())
+        source = open(youtube_upload.__file__, encoding="utf-8").read()
+        self.assertIn('os.environ.get("SHORT_PRIVACY_STATUS", "public")', source)
+        self.assertIn('"privacyStatus": privacy', source)
+
+    def test_private_visibility_can_be_selected_for_age_review(self):
+        source = open(youtube_upload.__file__, encoding="utf-8").read()
+        self.assertIn('privacy = os.environ.get("SHORT_PRIVACY_STATUS", "public")', source)
+        self.assertIn('if privacy not in ("public", "private", "unlisted")', source)
 
 
 if __name__ == "__main__":
