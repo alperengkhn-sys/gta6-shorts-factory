@@ -1,7 +1,36 @@
+import json
 import unittest
-from renderer.render import clean, split_caption, stamp, validate_source_url
+from unittest.mock import patch
+from urllib.error import HTTPError
+from renderer.render import clean, request_vision_completion, split_caption, stamp, validate_source_url
 
 class RendererHelpersTest(unittest.TestCase):
+
+    def test_vision_request_retries_transient_rate_limit(self):
+        class Response:
+            def __enter__(self): return self
+            def __exit__(self, *args): return False
+            def read(self): return b'{"choices": []}'
+
+        error = HTTPError("https://api.openai.com", 429, "rate limited",
+                          {"Retry-After": "1"}, None)
+        with patch("urllib.request.urlopen", side_effect=[error, Response()]) as request, \\
+             patch("time.sleep") as sleep:
+            result = request_vision_completion(object())
+        self.assertEqual(result, {"choices": []})
+        self.assertEqual(request.call_count, 2)
+        sleep.assert_called_once_with(1)
+
+    def test_vision_request_reports_exhausted_quota_without_retry(self):
+        body = b'{"error":{"code":"insufficient_quota","message":"You exceeded your quota."}}'
+        error = HTTPError("https://api.openai.com", 429, "quota", {}, None)
+        error.read = lambda: body
+        with patch("urllib.request.urlopen", side_effect=error) as request, \\
+             patch("time.sleep") as sleep:
+            with self.assertRaisesRegex(RuntimeError, "quota/billing is exhausted"):
+                request_vision_completion(object())
+        request.assert_called_once()
+        sleep.assert_not_called()
 
     def test_clean_collapses_whitespace(self):
         self.assertEqual(clean("  GTA6\n  moment  "), "GTA6 moment")
