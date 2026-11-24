@@ -59,14 +59,14 @@ jobs:
       - name: Discover recent GTA VI videos (manual run)
         if: github.event_name == 'workflow_dispatch'
         env:
-          CHANNEL_URL: \${{ inputs.channel_url || 'https://www.youtube.com/@VIRUSHGTA6/videos' }}
-          MAX_ITEMS: \${{ inputs.max_items || '10' }}
-          CALLBACK_URL: \${{ inputs.callback_url || 'https://gta6-shorts-engine.alperen-gkhn.workers.dev/api/source/discovery-callback' }}
-          RIGHTS_CONFIRMATION: \${{ inputs.rights_confirmation || 'true' }}
-          RENDER_WEBHOOK_SECRET: \${{ secrets.RENDER_WEBHOOK_SECRET }}
+          CHANNEL_URL: ${{ inputs.channel_url || 'https://www.youtube.com/@VIRUSHGTA6/videos' }}
+          MAX_ITEMS: ${{ inputs.max_items || '10' }}
+          CALLBACK_URL: ${{ inputs.callback_url || 'https://gta6-shorts-engine.alperen-gkhn.workers.dev/api/source/discovery-callback' }}
+          RIGHTS_CONFIRMATION: ${{ inputs.rights_confirmation || 'true' }}
+          RENDER_WEBHOOK_SECRET: ${{ secrets.RENDER_WEBHOOK_SECRET }}
         run: python renderer/discover.py
       - name: Discover recent GTA VI videos (queued run)
         if: github.event_name == 'push'
         env:
-          RENDER_WEBHOOK_SECRET: \${{ secrets.RENDER_WEBHOOK_SECRET }}
+          RENDER_WEBHOOK_SECRET: ${{ secrets.RENDER_WEBHOOK_SECRET }}
         run: python renderer/discover.py
