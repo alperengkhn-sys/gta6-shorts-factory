@@ -158,11 +158,19 @@ async function checkTwitchDownloads(db,env,limit=20){
  for(const[broadcasterId,arr]of groups){for(let i=0;i<arr.length;i+=10){const batch=arr.slice(i,i+10);let data=null,batchError=null;
   try{data=await fetchClipDownloads(db,env,{...connected,broadcaster_id:broadcasterId},batch.map(x=>x.clip_id));}catch(e){batchError=e;}
   if(batchError){
-   // Retry individually: a single bad clip must not classify an entire batch as failed.
+   const batchMessage=String(batchError&&batchError.message||batchError).slice(0,500);
+   // A 403 editor-permission response applies to this broadcaster, not to each clip separately.
+   if(isEditorPermissionError(batchError)){
+    await markBroadcasterUnauthorized(db,broadcasterId,batch[0]?.broadcaster_name,batchMessage,batch);
+    unauthorized+=batch.length;
+    errorDetails.push({broadcaster_id:broadcasterId,status:"unauthorized",count:batch.length,error:batchMessage});
+    continue;
+   }
+   // Retry individually only for non-permission failures; one bad clip must not block its batch.
    for(const x of batch){try{const one=await fetchClipDownloads(db,env,{...connected,broadcaster_id:broadcasterId},[x.clip_id]);const d=(one||[]).find(v=>v.clip_id===x.clip_id),u=d&&(d.portrait_download_url||d.landscape_download_url);
     if(u){await db.prepare("UPDATE twitch_clip_access SET access_status='downloadable',download_url=?,reason=?,checked_at=CURRENT_TIMESTAMP WHERE source_id=?").bind(u,"Twitch Downloads API returned a direct MP4 URL.",x.source_id).run();await db.prepare("UPDATE sources SET rights_status='approved' WHERE id=?").bind(x.source_id).run();downloadable++;}
     else{await db.prepare("UPDATE twitch_clip_access SET access_status='not_available',download_url=NULL,reason=?,checked_at=CURRENT_TIMESTAMP WHERE source_id=?").bind("Twitch Downloads API returned no download URL.",x.source_id).run();notAvailable++;}
-   }catch(e){const msg=String(e&&e.message||e).slice(0,500),m=msg.toLowerCase(),denied=(m.includes("403")||m.includes("forbidden"))&&m.includes("editor");const status=denied?"unauthorized":"error";if(denied)unauthorized++;else apiErrors++;await db.prepare("UPDATE twitch_clip_access SET access_status=?,download_url=NULL,reason=?,checked_at=CURRENT_TIMESTAMP WHERE source_id=?").bind(status,msg,x.source_id).run();errorDetails.push({source_id:x.source_id,status,error:msg});}}
+   }catch(e){const msg=String(e&&e.message||e).slice(0,500),status=isEditorPermissionError(e)?"unauthorized":"error";if(status==="unauthorized")unauthorized++;else apiErrors++;await db.prepare("UPDATE twitch_clip_access SET access_status=?,download_url=NULL,reason=?,checked_at=CURRENT_TIMESTAMP WHERE source_id=?").bind(status,msg,x.source_id).run();errorDetails.push({source_id:x.source_id,status,error:msg});}}
    continue;
   }
   const found=new Map((data||[]).map(v=>[v.clip_id,v]));for(const x of batch){const d=found.get(x.clip_id),u=d&&(d.portrait_download_url||d.landscape_download_url);
