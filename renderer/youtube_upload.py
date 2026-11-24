@@ -141,7 +141,7 @@ def main():
     output("upload_status", "uploaded_private")
     output("video_url", video_url)
     output("thumbnail_status", thumbnail_status)
-     print(json.dumps({"ok": True, "privacy": "private",
+    print(json.dumps({"ok": True, "privacy": "private",
                       "video_url": video_url, "thumbnail_status": thumbnail_status}))
     return 0
 
