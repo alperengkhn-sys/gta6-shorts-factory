@@ -129,8 +129,8 @@ def branding_assets():
     specs = [
         ("banner.png", "1080:-1", "(W-w)/2", "0", "always"),
         ("logo.png", "190:-1", "40", "40", "always"),
-        ("subscribe.png", "390:-1", "60", "H-h-115", "ending"),
-        ("notification.png", "125:-1", "W-w-60", "H-h-115", "ending"),
+        ("subscribe.png", "390:-1", "(W-w)/2", "H-h-130", "ending"),
+        ("notification.png", "460:-1", "(W-w)/2", "H-h-420", "ending"),
         ("outro.png", "1080:1920", "0", "0", "outro"),
     ]
     return [(root / name, scale, x, y, timing) for name, scale, x, y, timing in specs if (root / name).is_file()]
