@@ -10,6 +10,35 @@ from urllib.parse import urlparse
 # Match GTA VI spellings in video titles using normal regex word boundaries.
 GTA6 = re.compile(r"\b(gta\s*6|gta\s*vi|grand theft auto\s*(vi|6))\b", re.I)
 
+CHANNEL_ID = re.compile(r'(?:"channelId"|"externalId"|channelId|externalId)\s*[:=]\s*["\']?(UC[a-zA-Z0-9_-]{22})')
+
+
+def channel_uploads_playlist(channel_url, page_html=None):
+    """Resolve a channel's canonical uploads playlist even when /videos is absent."""
+    parsed = urlparse(channel_url)
+    match = re.search(r"/channel/(UC[a-zA-Z0-9_-]{22})", parsed.path)
+    channel_id = match.group(1) if match else None
+    if not channel_id and page_html is None:
+        request = urllib.request.Request(
+            channel_url,
+            headers={"User-Agent": "Mozilla/5.0 (compatible; GTA6ShortsFactory/1.0)"},
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:
+                page_html = response.read().decode("utf-8", "replace")
+        except (urllib.error.URLError, TimeoutError, OSError):
+            page_html = ""
+    if not channel_id and page_html:
+        match = CHANNEL_ID.search(page_html)
+        if not match:
+            match = re.search(r'<meta[^>]+itemprop=["\']channelId["\'][^>]+content=["\'](UC[a-zA-Z0-9_-]{22})', page_html, re.I)
+        if match:
+            channel_id = match.group(1)
+    if not channel_id:
+        return None
+    return "https://www.youtube.com/playlist?list=UU" + channel_id[2:]
+
+
 def main():
     channel_url = os.environ["CHANNEL_URL"].strip()
     callback_url = os.environ["CALLBACK_URL"].strip()
