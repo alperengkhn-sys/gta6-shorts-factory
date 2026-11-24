@@ -7,7 +7,7 @@ import subprocess
 import urllib.error
 import urllib.request
 
-GTA6 = re.compile(r"\b(gta\s*6|gta\s*vi|grand theft auto\s*(vi|6))\b", re.I)
+GTA6 = re.compile(r"\\b(gta\\s*6|gta\\s*vi|grand theft auto\\s*(vi|6))\\b", re.I)
 
 def main():
     channel_url = os.environ["CHANNEL_URL"].strip()
@@ -65,7 +65,12 @@ def main():
     request = urllib.request.Request(
         callback_url,
         data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json", "X-Render-Secret": secret},
+        headers={
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": "Mozilla/5.0 (compatible; GTA6ShortsFactory/1.0; +https://github.com/alperengkhn-sys/gta6-shorts-factory)",
+            "X-Render-Secret": secret,
+        },
         method="POST",
     )
     try:
@@ -75,7 +80,14 @@ def main():
                 raise RuntimeError(f"Worker callback HTTP {response.status}: {body[:1200]}")
             print(body)
     except urllib.error.HTTPError as exc:
-        raise RuntimeError(f"Worker callback HTTP {exc.code}: {exc.read().decode('utf-8','replace')[:1200]}") from exc
+        body = exc.read().decode("utf-8", "replace")[:1200]
+        if exc.code == 403 and "1010" in body:
+            raise RuntimeError(
+                "Cloudflare blocked the GitHub Actions callback (Error 1010) before it reached the Worker. "
+                "Allow this callback path in Cloudflare Security/WAF or disable Browser Integrity Check for the Worker hostname. "
+                "Response: " + body
+            ) from exc
+        raise RuntimeError(f"Worker callback HTTP {exc.code}: {body}") from exc
     print(f"DISCOVERY_COMPLETE scanned={len(entries)} gta6_candidates={len(items)}")
 
 if __name__ == "__main__":
