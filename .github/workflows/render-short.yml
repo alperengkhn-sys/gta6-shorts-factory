@@ -128,6 +128,23 @@ jobs:
           number = os.environ["RUN_NUMBER"]
           script = os.environ.get("PACKAGE_TEXT", "").strip()
           description = os.environ.get("YOUTUBE_DESCRIPTION", "").strip()
+          analysis = {}
+          try:
+              analysis = json.loads(Path("render-analysis.json").read_text(encoding="utf-8"))
+          except (OSError, json.JSONDecodeError):
+              pass
+          vision = analysis.get("vision_review", {})
+          mature = analysis.get("mature_content_editing", {})
+          content_review = [
+              "CONTENT REVIEW:",
+              f"Visual category: {vision.get('category', 'unknown')}",
+              f"Editing treatment: {vision.get('editing_treatment', 'standard')}",
+              f"Age restriction recommended: {vision.get('age_restriction_recommended', False)}",
+              f"Age restriction status: {vision.get('age_restriction_status', 'not_assessed')}",
+              f"Mature-scene notice applied: {mature.get('applied', False)}",
+              "Note: YouTube's Data API does not expose a creator-set age-restriction control; platform review/Studio setting remains authoritative.",
+              ""
+          ]
           def section(name):
               pattern = r"(?m)^" + re.escape(name) + r":\s*\n([\s\S]*?)(?=\n[A-Z][A-Z /_-]+:|\Z)"
               match = re.search(pattern, script)
@@ -147,6 +164,7 @@ jobs:
               "YOUTUBE TAGS:", tags, "",
               "HASHTAGS:", "#GTA6 #GTAVI #GTAVIGameplay #GamingShorts #Shorts", "",
               "FULL EDITORIAL PACKAGE:", script, "",
+              *content_review,
               "NOTE: Clip creator credit is included in the description. All generated titles, descriptions, tags and hashtags are English."
           ]
           Path(f"GTA6-Short-{number}.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -162,7 +180,7 @@ jobs:
           import os, zipfile
           from pathlib import Path
           number = os.environ["RUN_NUMBER"]
-          files = [Path(f"GTA6-Short-{number}.mp4"), Path(f"GTA6-Short-{number}.txt"), Path(f"GTA6-Short-{number}-cover.jpg")]
+          files = [Path(f"GTA6-Short-{number}.mp4"), Path(f"GTA6-Short-{number}.txt"), Path(f"GTA6-Short-{number}-cover.jpg"), Path("render-analysis.json")]
           with zipfile.ZipFile(f"GTA6-Short-{number}-PACKAGE.zip", "w", zipfile.ZIP_DEFLATED) as archive:
               for path in files:
                   if not path.is_file():
