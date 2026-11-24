@@ -1,8 +1,15 @@
 import unittest
 from unittest.mock import patch
 from renderer.render import clean, split_caption, stamp, validate_source_url, tts_executable
+from renderer.discover import GTA6
 
 class RendererHelpersTest(unittest.TestCase):
+    def test_discovery_matches_common_gta_vi_title_spellings(self):
+        for title in ("GTA 6 Police Chase", "GTA VI Gameplay", "Grand Theft Auto VI Trailer", "Grand Theft Auto 6 News"):
+            with self.subTest(title=title):
+                self.assertIsNotNone(GTA6.search(title))
+        self.assertIsNone(GTA6.search("Red Dead Redemption 2"))
+
     def test_clean_collapses_whitespace(self):
         self.assertEqual(clean("  GTA6\n  moment  "), "GTA6 moment")
 
