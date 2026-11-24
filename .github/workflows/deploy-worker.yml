@@ -32,7 +32,7 @@ jobs:
           fi
           npx --yes wrangler@4.45.0 deploy
       - name: Start initial automatic production cycle
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[initial-production]')
         env:
           RENDER_WEBHOOK_SECRET: ${{ secrets.RENDER_WEBHOOK_SECRET }}
         run: |
