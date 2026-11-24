@@ -35,20 +35,29 @@ def main():
             continue
         if isinstance(item, dict):
             entries.append(item)
-    if not entries and "does not have a videos tab" in (result.stderr or "").lower():
-        base = channel_url.rstrip("/")
-        fallback_url = base[:-7] + "/shorts" if base.endswith("/videos") else base + "/shorts"
-        print("CHANNEL_HAS_NO_VIDEOS_TAB; retrying Shorts tab: " + fallback_url, flush=True)
-        command[-1] = fallback_url
-        result = subprocess.run(command, text=True, stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE, timeout=600)
-        for line in result.stdout.splitlines():
-            try:
-                item = json.loads(line)
-            except json.JSONDecodeError:
+    if not entries:
+        root = channel_url.rstrip("/")
+        if root.endswith("/videos") or root.endswith("/shorts"):
+            root = root.rsplit("/", 1)[0]
+        candidates = [root + "/shorts", root + "/videos", root + "/playlists", root]
+        tried = {channel_url}
+        for fallback_url in candidates:
+            if fallback_url in tried:
                 continue
-            if isinstance(item, dict):
-                entries.append(item)
+            tried.add(fallback_url)
+            print("DISCOVERY_FALLBACK trying " + fallback_url, flush=True)
+            command[-1] = fallback_url
+            result = subprocess.run(command, text=True, stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE, timeout=600)
+            for line in result.stdout.splitlines():
+                try:
+                    item = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(item, dict):
+                    entries.append(item)
+            if entries:
+                break
     if not entries:
         detail = (result.stderr or result.stdout or "yt-dlp returned no video entries.").strip()
         raise RuntimeError("No public video entries were returned by yt-dlp: " + detail[-1800:])
