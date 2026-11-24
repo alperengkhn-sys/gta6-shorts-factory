@@ -35,6 +35,21 @@ class RendererHelpersTest(unittest.TestCase):
         self.assertFalse(validate_source_url("https://user:pass@example.com/video.mp4"))
         self.assertFalse(validate_source_url("file:///etc/passwd"))
 
+
+    def test_highlight_selection_prefers_active_scene_dense_window(self):
+        from renderer.render import select_highlight_window
+        start, length, score = select_highlight_window(
+            120, [(0, 40), (80, 120)], [52, 57, 62, 67], window=30, stride=5
+        )
+        self.assertGreaterEqual(start, 45)
+        self.assertLessEqual(start, 55)
+        self.assertEqual(length, 30)
+        self.assertGreater(score, 30)
+
+    def test_highlight_selection_keeps_short_sources_whole(self):
+        from renderer.render import select_highlight_window
+        self.assertEqual(select_highlight_window(42, [], [10, 20]), (0.0, 42.0, 0.0))
+
     def test_rejects_local_and_private_network_hosts(self):
         for url in (
             "https://localhost/video.mp4",
