@@ -24,19 +24,22 @@ def validate_source_url(value):
     try:
         parsed = urlsplit(value)
         host = (parsed.hostname or "").lower().rstrip(".")
-        parts = [part for part in parsed.path.split("/") if part]
-        is_clip = (
-            (host in ("twitch.tv", "www.twitch.tv")
-             and ((len(parts) == 2 and parts[0].lower() == "clip")
-                  or (len(parts) == 3 and parts[1].lower() == "clip")))
-            or (host == "clips.twitch.tv" and len(parts) == 1)
-        )
+        if not host or host in ("localhost", "localhost.localdomain"):
+            return False
+        import ipaddress
+        try:
+            address = ipaddress.ip_address(host)
+            if not address.is_global:
+                return False
+        except ValueError:
+            if "." not in host or host.endswith(".local"):
+                return False
         return (
             parsed.scheme == "https"
             and parsed.username is None
             and parsed.password is None
             and parsed.port in (None, 443)
-            and is_clip
+            and not parsed.fragment
         )
     except ValueError:
         return False
@@ -229,7 +232,7 @@ def main():
         if not Path(a.test_local_source).is_file():
             raise SystemExit("Test source file does not exist.")
     elif not validate_source_url(a.source_url):
-        raise SystemExit("Invalid source URL: use an HTTPS Twitch clip URL only.")
+        raise SystemExit("Invalid source URL: use a public HTTPS video or clip URL.")
     title=clean(a.title)[:90]
     out=Path(a.output).resolve(); out.parent.mkdir(parents=True,exist_ok=True)
     with tempfile.TemporaryDirectory() as td:
@@ -249,7 +252,7 @@ def main():
         if source_duration < 25:
             raise RuntimeError(f"Source clip is only {source_duration:.1f} seconds. A Short requires a source clip of at least 25 seconds; the source will not be looped or padded.")
         if not has_source_audio:
-            raise RuntimeError("Original Twitch clip has no audio stream; refusing to add synthetic audio.")
+            raise RuntimeError("Source clip has no audio stream; refusing to add synthetic audio.")
         analysis=media_analysis(media)
         media_for_render,edited_duration,removed_silence=auto_trim_silence(media,w)
         analysis["silence_removed_seconds"]=removed_silence
@@ -269,7 +272,7 @@ def main():
         render_cmd += ["-map","0:a:0","-t",str(duration),"-r","30",
              "-c:v","libx264","-preset","ultrafast","-crf","23",
              "-pix_fmt","yuv420p","-c:a","aac","-b:a","160k","-movflags","+faststart",str(out)]
-        print(f"RENDER_STAGE: encoding original Twitch video and audio with {len(assets)} branding overlays",flush=True)
+        print(f"RENDER_STAGE: encoding source video and audio with {len(assets)} branding overlays",flush=True)
         run(render_cmd)
         print("RENDER_STAGE: final encode completed",flush=True)
         voiceover=make_ai_voiceover(os.environ.get("PACKAGE_TEXT",""),w/"ai-commentary.mp3")
