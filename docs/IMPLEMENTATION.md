@@ -13,7 +13,7 @@ This project prepares authorized source videos as original, branded YouTube Shor
 - Long silent gaps are trimmed and the output is encoded as 1080x1920 H.264/AAC.
 - A unique cover is generated from the actual footage.
 - The logo in `branding/logo.png` is overlaid persistently.
-- The three supplied JPG channel graphics are included in the ZIP but are not yet composited into the video; their checkerboard backgrounds still need cleanup.
+- The subscribe and notification JPGs are converted to transparent PNGs by `renderer/prepare_branding.py` and overlaid during the final five seconds. The wide VI RUSH artwork is included in the ZIP.
 - Delivery includes MP4, editorial TXT, cover, and ZIP when the render job and artifact storage complete successfully.
 - Optional AI narration is mixed with original audio when configured.
 - Optional YouTube upload remains private-only. Public publishing requires manual review.
@@ -22,7 +22,7 @@ This project prepares authorized source videos as original, branded YouTube Shor
 
 - Validate channel discovery against the operator's real source channels and expand platform-specific playlist support where needed.
 - Store stronger rights evidence (permission URL, license, owner, date, and source) rather than relying only on the dashboard checkbox. The checkbox does not establish fair use or guarantee that a platform will not issue a claim.
-- Convert the three JPG channel graphics into clean transparent overlays and integrate timed placements.
+- Inspect the transparent CTA overlays in a real rendered MP4 and fine-tune their placement/scale if needed. The wide VI RUSH artwork could be used as a dedicated outro after review.
 - Run a real end-to-end render using a source the operator is authorized to reuse, then verify MP4 and ZIP download links in the dashboard.
 - Verify Cloudflare deployment, webhook callback, and optional YouTube OAuth with the configured accounts.
 
