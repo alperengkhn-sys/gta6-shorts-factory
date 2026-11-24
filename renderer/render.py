@@ -218,7 +218,8 @@ def vision_review(media, workdir):
     try:
         result = request_vision_completion(req)
     except RuntimeError as exc:
-        if "quota/billing is exhausted" in str(exc):
+        error_text = str(exc).lower()
+        if any(marker in error_text for marker in ("quota/billing is exhausted", "no credits remaining", "insufficient_quota", "billing hard limit")):
             # Keep production moving, but never publish an unreviewed clip publicly.
             return {
                 "score": 0, "compelling": False, "event": "AI review unavailable",
