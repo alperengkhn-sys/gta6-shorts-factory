@@ -285,7 +285,7 @@ for(const source of rows){if(source.relevance_status==="irrelevant"){skippedIrre
 for(let i=0;i<statements.length;i+=40)await db.batch(statements.slice(i,i+40));const total=await db.prepare("SELECT COUNT(*) AS n FROM shorts_drafts WHERE status='queued_review'").first();return{checked:rows.length,created,updated,existing,skipped_irrelevant:skippedIrrelevant,total:Number(total?.n||0)};}
 async function dispatchQueuedRenders(db,env,limit=10){
  if(!env.GITHUB_TOKEN)return{dispatched:0,dispatchErrors:1,errors:["GITHUB_TOKEN eksik."]};
- const candidates=await db.prepare(`SELECT d.id AS draft_id FROM shorts_drafts d JOIN sources s ON s.id=d.source_id JOIN jobs j ON j.source_id=s.id LEFT JOIN clip_analysis a ON a.source_id=s.id WHERE s.relevance_status='relevant' AND s.twitch_game_id IS NOT NULL AND j.status IN ('queued_review','failed') AND COALESCE(j.render_attempts,0)<3 ORDER BY COALESCE(a.score,0) DESC,j.created_at ASC LIMIT ?`).bind(Math.max(1,Math.min(10,Number(limit)||10))).all();
+ const candidates=await db.prepare(`SELECT d.id AS draft_id FROM shorts_drafts d JOIN sources s ON s.id=d.source_id JOIN jobs j ON j.source_id=s.id LEFT JOIN clip_analysis a ON a.source_id=s.id WHERE s.relevance_status='relevant' AND s.twitch_game_id IS NOT NULL AND s.twitch_clip_duration>=25 AND j.status IN ('queued_review','failed') AND COALESCE(j.render_attempts,0)<3 ORDER BY COALESCE(a.score,0) DESC,j.created_at ASC LIMIT ?`).bind(Math.max(1,Math.min(10,Number(limit)||10))).all();
  const results=await Promise.all((candidates.results||[]).map(row=>dispatchRender(db,env,row.draft_id,"")));
  let dispatched=0,dispatchErrors=0;const errors=[];
  for(const result of results){if(result.ok)dispatched++;else if(result.error){dispatchErrors++;errors.push(result.error);}}
@@ -336,6 +336,7 @@ if(!clipSlug)return json({error:"Geçerli bir Twitch klip bağlantısı yapışt
 
 const appToken=await twitchToken(env),clipRows=await twitchGet("https://api.twitch.tv/helix/clips?id="+encodeURIComponent(clipSlug),env,appToken),clip=clipRows[0];
 if(!clip)return json({error:"Twitch bu klibi bulamadı veya klip artık erişilebilir değil."},404);
+if(Number(clip.duration||0)<25)return json({error:"Klip 25 saniyeden kısa; Shorts üretimi için atlandı."},400);
 const gameId=await getGta6GameId(env,appToken),clipGameRows=clip.game_id?await twitchGet("https://api.twitch.tv/helix/games?id="+encodeURIComponent(clip.game_id),env,appToken):[],clipGameName=String(clipGameRows[0]?.name||"").trim().toLowerCase();
 const categoryConfirmed=(!!gameId&&String(clip.game_id||"")===String(gameId))||clipGameName==="grand theft auto vi"||clipGameName==="gta vi";
 if(!categoryConfirmed)return json({error:"Bu klibin Twitch kategorisi GTA VI olarak doğrulanamadı ("+(clipGameRows[0]?.name||"kategori boş")+"). MP4 üretimi başlatılmadı."},400);
