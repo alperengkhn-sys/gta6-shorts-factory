@@ -246,9 +246,12 @@ async function runScheduled(env){
  await env.DB.prepare("UPDATE shorts_drafts SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE source_id IN (SELECT source_id FROM jobs WHERE status IN ('failed','failed') AND last_error='Recovered stale dispatch after 45 minutes without callback.')").run();
  let dispatched=0,dispatchErrors=0;
  if(env.GITHUB_TOKEN){
-  const candidates=await env.DB.prepare(`SELECT d.id AS draft_id FROM shorts_drafts d JOIN sources s ON s.id=d.source_id JOIN jobs j ON j.source_id=s.id LEFT JOIN clip_analysis a ON a.source_id=s.id WHERE s.relevance_status='relevant' AND s.twitch_game_id IS NOT NULL AND j.status IN ('queued_review','failed') AND COALESCE(j.render_attempts,0)<3 ORDER BY COALESCE(a.score,0) DESC,j.created_at ASC LIMIT 1`).all();
-  for(const row of candidates.results||[]){
-   const result=await dispatchRender(env.DB,env,row.draft_id,"");
+  // Dispatch a batch on every scheduled run. The workflow concurrency group
+  // serializes the actual render/upload jobs, while this fills the queue with up
+  // to ten distinct, eligible Twitch clips instead of only one.
+  const candidates=await env.DB.prepare(`SELECT d.id AS draft_id FROM shorts_drafts d JOIN sources s ON s.id=d.source_id JOIN jobs j ON j.source_id=s.id LEFT JOIN clip_analysis a ON a.source_id=s.id WHERE s.relevance_status='relevant' AND s.twitch_game_id IS NOT NULL AND j.status IN ('queued_review','failed') AND COALESCE(j.render_attempts,0)<3 ORDER BY COALESCE(a.score,0) DESC,j.created_at ASC LIMIT 10`).all();
+  const results=await Promise.all((candidates.results||[]).map(row=>dispatchRender(env.DB,env,row.draft_id,"")));
+  for(const result of results){
    if(result.ok)dispatched++;else if(result.error){dispatchErrors++;console.error("Scheduled render dispatch:",result.error);}
   }
  }
