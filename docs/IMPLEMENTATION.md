@@ -15,7 +15,7 @@ This project prepares authorized source videos as original, branded YouTube Shor
 - The logo in `branding/logo.png` is overlaid persistently.
 - The subscribe and notification JPGs are converted to transparent PNGs by `renderer/prepare_branding.py` and overlaid during the final five seconds. The wide VI RUSH artwork is included in the ZIP.
 - Delivery includes MP4, editorial TXT, cover, and ZIP when the render job and artifact storage complete successfully.
-- Optional AI narration is mixed with original audio when configured.
+- Original source audio is preserved; the MP4 adds no AI narration, music, or burned-in captions.
 - Optional YouTube upload remains private-only. Public publishing requires manual review.
 
 ## Remaining work
