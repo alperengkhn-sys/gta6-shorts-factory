@@ -1,4 +1,4 @@
-const VERSION = "GTA6-FACTORY-5.2-AUTO-DOWNLOAD";
+const VERSION = "GTA6-FACTORY-5.3-RESTORED-RENDER";
 
 const HTML = String.raw`<!doctype html>
 <html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GTA6 Shorts Factory 5.2</title>
