@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       source_url:
-        description: Authorized Twitch clip URL
+        description: Public HTTPS video or clip URL (must be authorized for reuse)
         required: true
         type: string
       title:
@@ -26,11 +26,11 @@ on:
         required: false
         type: string
       creator_name:
-        description: Original Twitch creator
+        description: Original creator / source channel
         required: false
         type: string
       source_title:
-        description: Original Twitch clip title
+        description: Original source title
         required: false
         type: string
       package_text:
