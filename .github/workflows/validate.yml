@@ -24,10 +24,9 @@ jobs:
           node-version: "22"
       - name: Lint GitHub Actions workflows
         run: |
-          sudo apt-get update
-          sudo apt-get install -y golang-go
-          go install github.com/rhysd/actionlint/cmd/actionlint@latest
-          "$(go env GOPATH)/bin/actionlint" -color
+          curl -fsSL https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz -o /tmp/actionlint.tar.gz
+          tar -xzf /tmp/actionlint.tar.gz -C /tmp actionlint
+          /tmp/actionlint -color
       - name: Check Worker JavaScript syntax
         run: node --input-type=module --check < src/index.js
       - name: Check dashboard JavaScript syntax
