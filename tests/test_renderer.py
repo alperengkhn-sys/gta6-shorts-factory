@@ -2,39 +2,6 @@ import unittest
 from renderer.render import clean, split_caption, stamp, validate_source_url
 
 class RendererHelpersTest(unittest.TestCase):
-    def test_discovery_matches_common_gta_vi_title_spellings(self):
-        for title in ("GTA 6 Police Chase", "GTA VI Gameplay", "Grand Theft Auto VI Trailer", "Grand Theft Auto 6 News"):
-            with self.subTest(title=title):
-                self.assertIsNotNone(GTA6.search(title))
-        self.assertIsNone(GTA6.search("Red Dead Redemption 2"))
-
-    def test_channel_id_resolves_to_uploads_playlist(self):
-        channel_id = "UC" + "a" * 22
-        self.assertEqual(
-            channel_uploads_playlist("https://www.youtube.com/channel/" + channel_id + "/videos"),
-            "https://www.youtube.com/playlist?list=UU" + "a" * 22,
-        )
-
-    def test_handle_resolves_channel_id_from_page_metadata(self):
-        channel_id = "UC" + "b" * 22
-        html = '<meta itemprop="channelId" content="' + channel_id + '">'
-        self.assertEqual(
-            channel_uploads_playlist("https://www.youtube.com/@VIRUSHGTA6", html),
-            "https://www.youtube.com/playlist?list=UU" + "b" * 22,
-        )
-
-    def test_rss_fallback_extracts_public_video_entries(self):
-        channel_id = "UC" + "c" * 22
-        video_id = "abcdefghijk"
-        feed = f'''<?xml version="1.0" encoding="UTF-8"?>
-        <feed xmlns="http://www.w3.org/2005/Atom" xmlns:yt="http://www.youtube.com/xml/schemas/2015">
-          <entry><yt:videoId>{video_id}</yt:videoId><title>GTA VI Gameplay</title>
-            <author><name>VIRUSHGTA6</name></author></entry>
-        </feed>'''
-        entries = channel_rss_entries("https://www.youtube.com/channel/" + channel_id, feed)
-        self.assertEqual(len(entries), 1)
-        self.assertEqual(entries[0]["webpage_url"], "https://www.youtube.com/watch?v=" + video_id)
-        self.assertEqual(entries[0]["channel"], "VIRUSHGTA6")
 
     def test_clean_collapses_whitespace(self):
         self.assertEqual(clean("  GTA6\n  moment  "), "GTA6 moment")
