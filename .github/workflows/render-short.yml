@@ -179,7 +179,7 @@ jobs:
             render-analysis.json
           if-no-files-found: error
           retention-days: 7
-      - name: Upload YouTube Short privately (optional)
+      - name: Automatically publish YouTube Short publicly
         id: youtube
         if: steps.task.outputs.noop != 'true' && success()
         continue-on-error: true
