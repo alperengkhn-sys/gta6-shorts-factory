@@ -6,6 +6,7 @@ import re
 import subprocess
 import urllib.error
 import urllib.request
+import xml.etree.ElementTree as ET
 from urllib.parse import urlparse
 # Match GTA VI spellings in video titles using normal regex word boundaries.
 GTA6 = re.compile(r"\b(gta\s*6|gta\s*vi|grand theft auto\s*(vi|6))\b", re.I)
@@ -37,6 +38,46 @@ def channel_uploads_playlist(channel_url, page_html=None):
     if not channel_id:
         return None
     return "https://www.youtube.com/playlist?list=UU" + channel_id[2:]
+
+
+def channel_rss_entries(channel_url, feed_xml=None):
+    """Read public uploads from YouTube's Atom feed as a final tab-independent fallback."""
+    uploads_url = channel_uploads_playlist(channel_url)
+    match = re.search(r"[?&]list=UU([a-zA-Z0-9_-]{22})", uploads_url or "")
+    if not match:
+        return []
+    channel_id = "UC" + match.group(1)
+    if feed_xml is None:
+        feed_url = "https://www.youtube.com/feeds/videos.xml?channel_id=" + channel_id
+        request = urllib.request.Request(
+            feed_url,
+            headers={"User-Agent": "Mozilla/5.0 (compatible; GTA6ShortsFactory/1.0)", "Accept": "application/atom+xml"},
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:
+                feed_xml = response.read()
+        except (urllib.error.URLError, TimeoutError, OSError):
+            return []
+    try:
+        root = ET.fromstring(feed_xml)
+    except ET.ParseError:
+        return []
+    atom = "{http://www.w3.org/2005/Atom}"
+    youtube = "{http://www.youtube.com/xml/schemas/2015}"
+    entries = []
+    for entry in root.findall(atom + "entry"):
+        video_id = entry.findtext(youtube + "videoId")
+        title = entry.findtext(atom + "title")
+        author = entry.find(atom + "author")
+        creator = author.findtext(atom + "name") if author is not None else "Unknown"
+        if video_id and title:
+            entries.append({
+                "title": title,
+                "webpage_url": "https://www.youtube.com/watch?v=" + video_id,
+                "channel": creator or "Unknown",
+                "extractor_key": "Youtube",
+            })
+    return entries
 
 
 def main():
@@ -103,7 +144,10 @@ def main():
                 if isinstance(item, dict):
                     entries.append(item)
     if not entries:
-        detail = (result.stderr or result.stdout or "yt-dlp returned no video entries.").strip()
+        print("DISCOVERY_FALLBACK trying YouTube public RSS feed", flush=True)
+        entries = channel_rss_entries(channel_url)
+    if not entries:
+        detail = (result.stderr or result.stdout or "yt-dlp and YouTube RSS returned no public video entries.").strip()
         raise RuntimeError("No public video entries were returned by yt-dlp after channel-tab and uploads-playlist fallbacks: " + detail[-1800:])
     items = []
     seen = set()
