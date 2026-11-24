@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Upload a rendered Short privately with a future YouTube auto-publish time."""
+"""Automatically publish a rendered Short publicly on the configured YouTube channel."""
 import json
 import os
 import sys
@@ -59,8 +59,6 @@ def main():
         "SHORT_DESCRIPTION",
         "Grand Theft Auto VI gaming moment. #GTA6 #GTAVI #Shorts",
     ).strip()[:5000]
-    # Safety default: upload privately only. Never schedule public release
-    # automatically; the channel owner must review rights, edits and metadata.
     metadata = {
         "snippet": {
             "title": title,
@@ -69,7 +67,8 @@ def main():
             "categoryId": "20",
         },
         "status": {
-            "privacyStatus": "private",
+            "privacyStatus": "public",
+            "selfDeclaredMadeForKids": False,
         },
     }
     init_url = "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status"
@@ -138,10 +137,10 @@ def main():
         except Exception as exc:
             thumbnail_status = "failed"
             print("YouTube thumbnail upload failed: " + str(exc)[:500], file=sys.stderr)
-    output("upload_status", "uploaded_private")
+    output("upload_status", "published_public")
     output("video_url", video_url)
     output("thumbnail_status", thumbnail_status)
-    print(json.dumps({"ok": True, "privacy": "private",
+    print(json.dumps({"ok": True, "privacy": "public",
                       "video_url": video_url, "thumbnail_status": thumbnail_status}))
     return 0
 
