@@ -1,12 +1,12 @@
 # Channel branding assets
 
-The following supplied assets are already committed in this folder:
+The supplied assets are committed in this folder:
 
-- `logo.png` — persistent channel logo; applied to the upper-left corner of every rendered Short.
-- `image_50843161.jpg` — wide VI RUSH / Leonida Loop channel artwork with subscribe call-to-action.
-- `image_2d2a6dba.jpg` — crocodile subscribe call-to-action graphic.
-- `image_c69a04ba.jpg` — notification/bell call-to-action graphic.
+- `logo.png` — persistent channel logo, applied to the upper-left corner of every rendered Short.
+- `image_50843161.jpg` — wide VI RUSH / Leonida Loop artwork with a subscribe call-to-action; included in delivery ZIPs.
+- `image_2d2a6dba.jpg` — crocodile subscribe call-to-action. The render workflow converts this to `subscribe.png` with the checkerboard background removed and displays it in the final five seconds.
+- `image_c69a04ba.jpg` — notification/bell call-to-action. The render workflow converts this to `notification.png` with the checkerboard background removed and displays it in the final five seconds.
 
-The three JPG images have a checkerboard pattern baked into their pixels rather than transparency. They are included in every delivery ZIP, but must be converted to transparent PNG overlays before being placed on top of footage; otherwise the checkerboard would be visible in the video.
+The conversion uses a color-based checkerboard-removal heuristic. Review the generated overlays in a real MP4 for edge artifacts before publishing.
 
 The renderer also generates a unique `short-cover.jpg` from a frame of each video's actual footage and includes it in the delivery package. When YouTube upload is configured, this cover is submitted as the thumbnail.
