@@ -60,6 +60,13 @@ jobs:
           python renderer/prepare_branding.py
           test -s branding/subscribe.png
           test -s branding/notification.png
+          python - <<'PY'
+          from PIL import Image
+          for name in ("branding/subscribe.png", "branding/notification.png"):
+              alpha = Image.open(name).convert("RGBA").getchannel("A")
+              low, high = alpha.getextrema()
+              assert low == 0 and high == 255, (name, low, high)
+          PY
           ffmpeg -nostdin -hide_banner -loglevel error -y -f lavfi -i "color=c=blue@0.35:s=1080x160:d=1,format=rgba" -frames:v 1 branding/banner.png
           ffmpeg -nostdin -hide_banner -loglevel error -y -f lavfi -i "color=c=yellow@0.65:s=200x200:d=1,format=rgba" -frames:v 1 branding/logo.png
           ffmpeg -nostdin -hide_banner -loglevel error -y -f lavfi -i "color=c=green@0.65:s=390x120:d=1,format=rgba" -frames:v 1 branding/subscribe.png
