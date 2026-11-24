@@ -133,6 +133,38 @@ def media_analysis(media):
 
 
 
+def request_vision_completion(request):
+    """Retry transient OpenAI rate limits, but fail clearly when project quota is exhausted."""
+    import time
+    import urllib.error
+    import urllib.request
+
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(request, timeout=90) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode("utf-8", "replace")
+            try:
+                error = json.loads(body).get("error", {})
+            except (json.JSONDecodeError, AttributeError):
+                error = {}
+            code = str(error.get("code") or "")
+            message = str(error.get("message") or body or exc)
+            if exc.code == 429 and code == "insufficient_quota":
+                raise RuntimeError("OpenAI API quota/billing is exhausted for this API project. Add API credits or raise its usage limit; no unreviewed video was rendered.") from exc
+            if exc.code == 429 and attempt < 2:
+                retry_after = exc.headers.get("Retry-After") if exc.headers else None
+                try:
+                    delay = max(1, min(10, int(float(retry_after)))) if retry_after else 2 ** (attempt + 1)
+                except (TypeError, ValueError):
+                    delay = 2 ** (attempt + 1)
+                time.sleep(delay)
+                continue
+            raise RuntimeError(f"OpenAI vision API HTTP {exc.code}: {message}") from exc
+    raise RuntimeError("OpenAI vision API remained rate-limited after three attempts.")
+
+
 def vision_review(media, workdir):
     """Use sampled real frames for semantic highlight review when an API key is configured."""
     # The isolated CI fixture has no real Twitch content and must not call a paid vision API.
@@ -181,7 +213,7 @@ def vision_review(media, workdir):
     req=urllib.request.Request("https://api.openai.com/v1/chat/completions",data=json.dumps(payload).encode("utf-8"),
       headers={"Authorization":"Bearer "+api_key,"Content-Type":"application/json"},method="POST")
     try:
-        with urllib.request.urlopen(req,timeout=90) as response: result=json.loads(response.read().decode("utf-8"))
+        result = request_vision_completion(req)
     except Exception as exc:
         raise RuntimeError(f"Vision review API failed; refusing an unreviewed render: {exc}") from exc
     try:
