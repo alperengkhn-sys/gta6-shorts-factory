@@ -41,7 +41,7 @@ permissions:
   contents: write
   actions: read
 concurrency:
-  group: gta6-shorts-youtube-publish
+  group: gta6-shorts-youtube-publish-${{ inputs.job_id || github.run_id }}
   cancel-in-progress: false
 jobs:
   render:
