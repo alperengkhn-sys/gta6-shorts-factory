@@ -79,6 +79,8 @@ def main():
         "status": {
             "privacyStatus": privacy,
             "selfDeclaredMadeForKids": False,
+            # Prevent third-party site embedding; this does not disable Shorts remixing or downloads.
+            "embeddable": False,
         },
     }
     init_url = "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status"
