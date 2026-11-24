@@ -202,7 +202,10 @@ def branding_assets():
         ("logo.png", "190:-1", "40", "40", "always"),
         ("subscribe.png", "390:-1", "(W-w)/2", "H-h-130", "ending"),
         ("notification.png", "460:-1", "(W-w)/2", "H-h-420", "ending"),
-        ("outro.png", "1080:1920", "0", "0", "outro"),
+        # Supplied VI RUSH / Leonida Loop artwork is used as a short branded
+        # opening bumper and closing end card, not merely archived in the ZIP.
+        ("image_50843161.jpg", "1080:1920", "0", "0", "intro"),
+        ("image_50843161.jpg", "1080:1920", "0", "0", "outro"),
     ]
     return [(root / name, scale, x, y, timing) for name, scale, x, y, timing in specs if (root / name).is_file()]
 
@@ -225,6 +228,8 @@ def video_filter(duration, assets, subtitles_path=None):
         parts.append(f"[{index}:v]scale={scale}:force_original_aspect_ratio=decrease,format=rgba[{label}]")
         if timing == "always":
             enable = f"between(t,0,{duration:.3f})"
+        elif timing == "intro":
+            enable = f"between(t,0,{min(2.5,duration):.3f})"
         elif timing == "ending":
             enable = f"between(t,{max(0,duration-5):.3f},{duration:.3f})"
         else:
