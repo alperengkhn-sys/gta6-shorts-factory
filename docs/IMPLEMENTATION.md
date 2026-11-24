@@ -2,15 +2,15 @@
 
 ## Product scope
 
-This project prepares authorized source videos as original, branded YouTube Shorts. It does not broadcast livestreams or require a streaming-platform account connection. The dashboard accepts a public HTTPS source URL; the source must be supported by yt-dlp. Automated source discovery from third-party channels is not implemented yet.
+This project prepares authorized source videos as original, branded YouTube Shorts. It does not broadcast livestreams or require a streaming-platform account connection. The dashboard currently accepts a public HTTPS video or clip URL supported by yt-dlp. Automated channel/feed discovery is not implemented yet.
 
 ## Implemented
 
-- Dashboard source intake no longer requires Twitch OAuth, Twitch editor permissions, or Twitch game-category checks.
-- The source form requires an explicit reuse-rights confirmation before it records a source as approved. This is an operator attestation, not independent proof of copyright ownership or a legal determination.
-- Worker blocks non-HTTPS, credential-bearing, private/local, and malformed source URLs.
+- The source form requires explicit reuse-rights confirmation before a source is marked approved. This is an operator attestation, not independent proof of copyright ownership or a legal determination.
+- The Worker blocks non-HTTPS, credential-bearing, private/local, and malformed source URLs.
 - Render dispatch is blocked unless the source is marked approved and identified as GTA VI content.
-- Renderer accepts supported public HTTPS source URLs, checks media streams, removes long silent gaps, and produces 1080x1920 H.264/AAC.
+- The renderer checks video/audio streams, rejects sources shorter than 25 seconds, and selects a 55-second highlight window from longer videos using non-silent audio and scene-change density. This is a heuristic, not semantic AI understanding; the operator must review the selected moment.
+- Long silent gaps are trimmed and the output is encoded as 1080x1920 H.264/AAC.
 - A unique cover is generated from the actual footage.
 - The logo in `branding/logo.png` is overlaid persistently.
 - The three supplied JPG channel graphics are included in the ZIP but are not yet composited into the video; their checkerboard backgrounds still need cleanup.
@@ -28,4 +28,4 @@ This project prepares authorized source videos as original, branded YouTube Shor
 
 ## Secrets and data safety
 
-Preserve existing D1 records and tables; use additive migrations only. Never commit secrets, OAuth tokens, cookies, or private source URLs. Obsolete Twitch secrets can be removed from Cloudflare after the new Worker deployment is confirmed; they are no longer referenced by the Worker code.
+Preserve existing D1 records and tables; use additive migrations only. Never commit secrets, OAuth tokens, cookies, or private source URLs. The retired streaming-platform credentials are no longer referenced by the Worker and may be removed from its secret configuration after confirming the latest deployment.
