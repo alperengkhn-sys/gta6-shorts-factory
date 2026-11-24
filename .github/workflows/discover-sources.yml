@@ -1,18 +1,10 @@
 name: Discover GTA6 Source Videos
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/discover-sources.yml"
-      - "renderer/discover.py"
-  schedule:
-    - cron: "17 */12 * * *"
   workflow_dispatch:
     inputs:
       channel_url:
         description: Public HTTPS channel, videos tab, or playlist URL
         required: true
-        default: "https://www.youtube.com/@VIRUSHGTA6/videos"
         type: string
       max_items:
         description: Number of recent entries to inspect (1-30)
