@@ -66,6 +66,9 @@ def main():
         "SHORT_DESCRIPTION",
         "Grand Theft Auto VI gaming moment. #GTA6 #GTAVI #Shorts",
     ).strip()[:5000]
+    privacy = os.environ.get("SHORT_PRIVACY_STATUS", "public").strip().lower()
+    if privacy not in ("public", "private", "unlisted"):
+        raise RuntimeError("SHORT_PRIVACY_STATUS must be public, private, or unlisted.")
     metadata = {
         "snippet": {
             "title": title,
@@ -74,7 +77,7 @@ def main():
             "categoryId": "20",
         },
         "status": {
-            "privacyStatus": "public",
+            "privacyStatus": privacy,
             "selfDeclaredMadeForKids": False,
         },
     }
@@ -144,10 +147,10 @@ def main():
         except Exception as exc:
             thumbnail_status = "failed"
             print("YouTube thumbnail upload failed: " + str(exc)[:500], file=sys.stderr)
-    output("upload_status", "uploaded_public")
+    output("upload_status", "uploaded_" + privacy)
     output("video_url", video_url)
     output("thumbnail_status", thumbnail_status)
-    print(json.dumps({"ok": True, "privacy": "public",
+    print(json.dumps({"ok": True, "privacy": privacy,
                       "video_url": video_url, "thumbnail_status": thumbnail_status}))
     return 0
 
