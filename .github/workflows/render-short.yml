@@ -176,7 +176,7 @@ jobs:
             render-analysis.json
           if-no-files-found: error
           retention-days: 7
-      - name: Upload MP4 to YouTube privately (optional)
+      - name: Upload and schedule YouTube Short (optional)
         id: youtube
         if: steps.task.outputs.noop != 'true' && success()
         continue-on-error: true
