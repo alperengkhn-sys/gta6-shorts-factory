@@ -152,7 +152,7 @@ async function markBroadcasterUnauthorized(db,broadcasterId,name,reason,rows){aw
 async function checkTwitchDownloads(db,env,limit=20){
  const resolved=await resolveTwitchClips(db,env,limit),connected=await userTwitchToken(db,env);
  if(!connected){const st=await getDownloadStatus(db);return{...resolved,items:st.items,skipped_broadcasters:0};}
- const all=(await db.prepare(`SELECT a.source_id,a.clip_id,a.broadcaster_id,a.broadcaster_name,s.title,s.creator_name,s.source_url FROM twitch_clip_access a JOIN sources s ON s.id=a.source_id WHERE a.clip_id IS NOT NULL AND a.broadcaster_id IS NOT NULL ORDER BY a.checked_at ASC LIMIT ?`).bind(Math.max(1,Math.min(100,Number(limit)||20))).all()).results||[];
+ const all=(await db.prepare(`SELECT a.source_id,a.clip_id,a.broadcaster_id,a.broadcaster_name,s.title,s.creator_name,s.source_url FROM twitch_clip_access a JOIN sources s ON s.id=a.source_id WHERE a.clip_id IS NOT NULL AND a.broadcaster_id IS NOT NULL AND a.access_status IN ('resolved','error') ORDER BY a.checked_at ASC LIMIT ?`).bind(Math.max(1,Math.min(500,Number(limit)||20))).all()).results||[];
  const groups=new Map();for(const x of all){if(!groups.has(x.broadcaster_id))groups.set(x.broadcaster_id,[]);groups.get(x.broadcaster_id).push(x);}
  let apiErrors=0,downloadable=0,notAvailable=0,unauthorized=0;const errorDetails=[];
  for(const[broadcasterId,arr]of groups){for(let i=0;i<arr.length;i+=10){const batch=arr.slice(i,i+10);let data=null,batchError=null;
@@ -276,7 +276,7 @@ async function runScheduled(env){
  await ensureSchema(env.DB);await ensureTwitchSchema(env.DB);
  let discovery,access;
  try{discovery=await discover(env.DB,env);}catch(error){discovery={error:String(error&&error.message||error).slice(0,500)};}
- try{access=await checkTwitchDownloads(env.DB,env,100);}catch(error){access={error:String(error&&error.message||error).slice(0,500)};}
+ try{access=await checkTwitchDownloads(env.DB,env,500);}catch(error){access={error:String(error&&error.message||error).slice(0,500)};}
  const prepared=await prepareAll(env.DB);
  await env.DB.prepare("UPDATE jobs SET status=CASE WHEN COALESCE(render_attempts,0)>=3 THEN 'failed' ELSE 'failed' END,last_error='Recovered stale dispatch after 45 minutes without callback.',updated_at=CURRENT_TIMESTAMP WHERE status='processing' AND dispatch_started_at IS NOT NULL AND dispatch_started_at<datetime('now','-45 minutes')").run();
  await env.DB.prepare("UPDATE shorts_drafts SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE source_id IN (SELECT source_id FROM jobs WHERE status IN ('failed','failed') AND last_error='Recovered stale dispatch after 45 minutes without callback.')").run();
