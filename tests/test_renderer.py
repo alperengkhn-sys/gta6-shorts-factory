@@ -30,12 +30,14 @@ class RendererHelpersTest(unittest.TestCase):
     def test_stamp_formats_hours(self):
         self.assertEqual(stamp(3661.005), "01:01:01,005")
 
-    def test_accepts_public_https_video_and_clip_urls(self):
-        self.assertTrue(validate_source_url("https://example.com/public-clip"))
+    def test_accepts_only_public_https_twitch_clip_urls(self):
+        self.assertTrue(validate_source_url("https://clips.twitch.tv/ExampleClip"))
         self.assertTrue(validate_source_url("https://www.twitch.tv/example/clip/ExampleClip"))
-        self.assertTrue(validate_source_url("https://example.com/video.mp4"))
-        self.assertFalse(validate_source_url("http://example.com/video.mp4"))
-        self.assertFalse(validate_source_url("https://user:pass@example.com/video.mp4"))
+        self.assertTrue(validate_source_url("https://twitch.tv/example/clip/ExampleClip?filter=clips"))
+        self.assertFalse(validate_source_url("https://youtube.com/watch?v=example"))
+        self.assertFalse(validate_source_url("https://example.com/public-clip"))
+        self.assertFalse(validate_source_url("http://www.twitch.tv/example/clip/ExampleClip"))
+        self.assertFalse(validate_source_url("https://user:pass@www.twitch.tv/example/clip/ExampleClip"))
         self.assertFalse(validate_source_url("file:///etc/passwd"))
 
 
