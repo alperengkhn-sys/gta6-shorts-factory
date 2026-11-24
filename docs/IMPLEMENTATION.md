@@ -2,11 +2,11 @@
 
 ## Product scope
 
-This project prepares authorized source videos as original, branded YouTube Shorts. It does not broadcast livestreams or require a streaming-platform account connection. The dashboard currently accepts a public HTTPS video or clip URL supported by yt-dlp. Automated channel/feed discovery is not implemented yet.
+This project prepares authorized source videos as original, branded YouTube Shorts. It does not broadcast livestreams or require a streaming-platform account connection. The dashboard currently accepts a public HTTPS video or clip URL supported by yt-dlp. The dashboard can scan recent public channel, videos-tab, or playlist entries through GitHub Actions.
 
 ## Implemented
 
-- The source form requires explicit reuse-rights confirmation before a source is marked approved. This is an operator attestation, not independent proof of copyright ownership or a legal determination.
+- Manual source intake and channel discovery require explicit reuse-rights confirmation before a source is marked approved. Discovery scans recent public channel/feed entries and keeps GTA VI-titled videos. The attestation is not independent proof of copyright ownership or a legal determination.
 - The Worker blocks non-HTTPS, credential-bearing, private/local, and malformed source URLs.
 - Render dispatch is blocked unless the source is marked approved and identified as GTA VI content.
 - The renderer checks video/audio streams, rejects sources shorter than 25 seconds, and selects a 55-second highlight window from longer videos using non-silent audio and scene-change density. This is a heuristic, not semantic AI understanding; the operator must review the selected moment.
@@ -20,7 +20,7 @@ This project prepares authorized source videos as original, branded YouTube Shor
 
 ## Remaining work
 
-- Implement automated source discovery / clip selection from approved channels or feeds. Current source intake is manual URL entry.
+- Validate channel discovery against the operator's real source channels and expand platform-specific playlist support where needed.
 - Store stronger rights evidence (permission URL, license, owner, date, and source) rather than relying only on the dashboard checkbox. The checkbox does not establish fair use or guarantee that a platform will not issue a claim.
 - Convert the three JPG channel graphics into clean transparent overlays and integrate timed placements.
 - Run a real end-to-end render using a source the operator is authorized to reuse, then verify MP4 and ZIP download links in the dashboard.
