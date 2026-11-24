@@ -495,7 +495,6 @@ def trailing_silence_seconds(log, duration):
 def main():
     ap=argparse.ArgumentParser()
     ap.add_argument("--source-url",required=True)
-    ap.add_argument("--download-url",default="")
     ap.add_argument("--title",required=True)
     ap.add_argument("--output",default="short.mp4")
     ap.add_argument("--test-local-source", help=argparse.SUPPRESS)
@@ -506,11 +505,7 @@ def main():
         if not Path(a.test_local_source).is_file():
             raise SystemExit("Test source file does not exist.")
     elif not validate_source_url(a.source_url):
-        raise SystemExit("Invalid source URL: production metadata must reference a public HTTPS Twitch clip.")
-    if not a.test_local_source:
-        parsed_download=urlsplit(a.download_url)
-        if not a.download_url or parsed_download.scheme!="https" or not parsed_download.hostname or parsed_download.username or parsed_download.password:
-            raise SystemExit("Invalid Twitch API download URL.")
+        raise SystemExit("Invalid source URL: production rendering accepts public HTTPS Twitch clip URLs only.")
     title=clean(a.title)[:90]
     out=Path(a.output).resolve(); out.parent.mkdir(parents=True,exist_ok=True)
     with tempfile.TemporaryDirectory() as td:
@@ -518,12 +513,7 @@ def main():
         if a.test_local_source:
             shutil.copyfile(a.test_local_source, media)
         else:
-            import urllib.request
-            request=urllib.request.Request(a.download_url,headers={"User-Agent":"Mozilla/5.0 GTA6-Shorts-Factory"})
-            with urllib.request.urlopen(request,timeout=180) as response, media.open("wb") as target:
-                shutil.copyfileobj(response,target)
-            if not media.is_file() or media.stat().st_size<102400:
-                raise RuntimeError("Twitch API download URL returned an empty or undersized MP4.")
+            run(["yt-dlp","--no-playlist","--merge-output-format","mp4","-o",str(media),a.source_url])
             if not media.exists():
                 found=list(w.glob("source.*"))
                 if not found: raise RuntimeError("Source download produced no media file.")
