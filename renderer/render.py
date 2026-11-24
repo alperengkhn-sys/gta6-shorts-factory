@@ -473,7 +473,7 @@ def auto_trim_silence(media, workdir):
         run(["ffmpeg","-nostdin","-hide_banner","-loglevel","error","-y","-ss",str(a),"-i",str(media),"-t",str(b-a),"-map","0:v:0","-map","0:a:0","-c:v","libx264","-preset","ultrafast","-crf","23","-pix_fmt","yuv420p","-c:a","aac","-b:a","160k",str(part)])
         parts.append(part)
     listing=workdir/"concat.txt"
-    listing.write_text("".join("file '"+p.as_posix()+"'\\n" for p in parts),encoding="utf-8")
+    listing.write_text("".join("file '"+p.as_posix()+"'\n" for p in parts),encoding="utf-8")
     output=workdir/"trimmed.mp4"
     run(["ffmpeg","-nostdin","-hide_banner","-loglevel","error","-y","-f","concat","-safe","0","-i",str(listing),"-c","copy",str(output)])
     return output,kept,round(duration-kept,2)
