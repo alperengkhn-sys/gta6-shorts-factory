@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Vertical Shorts renderer with silence trimming, branding overlays, unique covers and optional AI commentary."""
+"""Vertical Shorts renderer with silence trimming, original audio, branding overlays and unique covers."""
 import argparse, json, os, shutil, subprocess, sys, tempfile
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -16,9 +16,6 @@ def run(cmd):
     return p.stdout
 
 def clean(s): return " ".join((s or "").split())
-
-def tts_executable():
-    return shutil.which("espeak-ng") or shutil.which("espeak")
 
 def validate_source_url(value):
     try:
