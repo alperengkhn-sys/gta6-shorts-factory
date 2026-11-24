@@ -2,7 +2,7 @@
 
 ## Product scope
 
-This project prepares authorized source videos as original, branded YouTube Shorts. It does not broadcast livestreams and has no PostMassive or Twitch integration. The dashboard accepts a public HTTPS source URL; the source must be supported by yt-dlp. Automated source discovery from third-party channels is not implemented yet.
+This project prepares authorized source videos as original, branded YouTube Shorts. It does not broadcast livestreams or require a streaming-platform account connection. The dashboard accepts a public HTTPS source URL; the source must be supported by yt-dlp. Automated source discovery from third-party channels is not implemented yet.
 
 ## Implemented
 
