@@ -132,8 +132,14 @@ def branding_assets():
     ]
     return [(root / name, scale, x, y, timing) for name, scale, x, y, timing in specs if (root / name).is_file()]
 
-def video_filter(duration, assets):
+def video_filter(duration, assets, subtitles_path=None):
     base = "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1"
+    if subtitles_path:
+        subtitle_file = str(subtitles_path).replace("\\", "\\\\").replace(":", "\\:")
+        base += (f",subtitles='{subtitle_file}':force_style="
+                 "'FontName=DejaVu Sans,FontSize=18,PrimaryColour=&H00FFFFFF,"
+                 "OutlineColour=&H00000000,BorderStyle=1,Outline=3,Shadow=1,"
+                 "Alignment=2,MarginV=330'")
     if not assets:
         return base, []
     parts = [f"[0:v]{base}[base]"]
@@ -153,6 +159,49 @@ def video_filter(duration, assets):
         current = next_label
         inputs.extend(["-loop", "1", "-i", str(assets[index-1][0])])
     return ";".join(parts), inputs + ["-map", f"[{current}]"]
+
+
+def create_voiceover(package_text, workdir):
+    import re
+    match = re.search(r"ORIGINAL VOICEOVER DRAFT:\\s*([\\s\\S]*?)(?=\\n\\n[A-Z][A-Z /_-]+:|\\Z)", package_text or "")
+    narration = clean(match.group(1)) if match else ""
+    if len(narration) < 35:
+        return None, None
+    audio = workdir / "editorial-voiceover.mp3"
+    result = subprocess.run(
+        ["edge-tts", "--voice", "en-US-GuyNeural", "--rate=+5%", "--text", narration, "--write-media", str(audio)],
+        text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        stdin=subprocess.DEVNULL, timeout=120
+    )
+    if result.returncode or not audio.is_file() or audio.stat().st_size < 1000:
+        raise RuntimeError("English editorial voiceover generation failed: " + (result.stdout or "")[-1200:])
+    info = json.loads(run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "json", str(audio)]))
+    voice_duration = float(info.get("format", {}).get("duration") or 0)
+    if voice_duration < 2:
+        raise RuntimeError("Generated editorial voiceover is unexpectedly short.")
+    sentences = [clean(x) for x in re.split(r"(?<=[.!?])\\s+", narration) if clean(x)]
+    chunks = []
+    for sentence in sentences:
+        words = sentence.split()
+        while words:
+            chunks.append(" ".join(words[:7]))
+            words = words[7:]
+    if not chunks:
+        chunks = [narration]
+    weights = [max(1, len(x.split())) for x in chunks]
+    total = sum(weights)
+    cursor = 0.0
+    srt = []
+    def stamp(seconds):
+        ms = int(seconds * 1000)
+        return f"{ms//3600000:02}:{(ms%3600000)//60000:02}:{(ms%60000)//1000:02},{ms%1000:03}"
+    for index, (chunk, weight) in enumerate(zip(chunks, weights), 1):
+        start = cursor
+        cursor += voice_duration * weight / total
+        srt.append(f"{index}\\n{stamp(start)} --> {stamp(cursor)}\\n{chunk}\\n")
+    subtitles = workdir / "editorial-captions.srt"
+    subtitles.write_text("\\n".join(srt), encoding="utf-8")
+    return audio, subtitles
 
 def make_cover(video, title, duration, destination):
     safe = (clean(title)[:52].replace("\\", "\\\\").replace(":", "\\:")
@@ -285,22 +334,39 @@ def main():
         analysis_path.write_text(json.dumps(analysis,indent=2),encoding="utf-8")
         duration=min(60.0,edited_duration)
         assets=branding_assets()
-        vf, overlay_inputs=video_filter(duration,assets)
+        voiceover, subtitles = create_voiceover(os.environ.get("PACKAGE_TEXT", ""), w)
+        vf, overlay_inputs=video_filter(duration,assets,subtitles)
         render_cmd=["ffmpeg","-nostdin","-hide_banner","-loglevel","info","-stats_period","1",
              "-filter_threads","1","-threads","2","-y","-i",str(media_for_render)]
         if assets:
             render_cmd += overlay_inputs[:-2]
-            render_cmd += ["-filter_complex",vf,*overlay_inputs[-2:]]
+        voice_index = 1 + len(assets)
+        if voiceover:
+            render_cmd += ["-i", str(voiceover)]
+        if assets or voiceover:
+            if not assets:
+                vf = f"[0:v]{vf}[vout]"
+                video_map = "[vout]"
+            else:
+                video_map = overlay_inputs[-1]
+                vf += ";" if vf else ""
+            if voiceover:
+                vf += (f"[0:a][{voice_index}:a]sidechaincompress=threshold=0.025:ratio=8:attack=20:release=450[duck];"
+                       f"[duck][{voice_index}:a]amix=inputs=2:duration=first:dropout_transition=2[aout]")
+                audio_map = "[aout]"
+            else:
+                audio_map = "0:a:0"
+            render_cmd += ["-filter_complex",vf,"-map",video_map,"-map",audio_map]
         else:
-            render_cmd += ["-vf",vf,"-map","0:v:0"]
-        render_cmd += ["-map","0:a:0","-t",str(duration),"-r","30",
+            render_cmd += ["-vf",vf,"-map","0:v:0","-map","0:a:0"]
+        render_cmd += ["-t",str(duration),"-r","30",
              "-c:v","libx264","-preset","ultrafast","-crf","23",
              "-pix_fmt","yuv420p","-c:a","aac","-b:a","160k","-movflags","+faststart",str(out)]
         print(f"RENDER_STAGE: encoding source video and audio with {len(assets)} branding overlays",flush=True)
         run(render_cmd)
         print("RENDER_STAGE: final encode completed",flush=True)
-        analysis["ai_voiceover_added"]=False
-        analysis["audio_editing"]="original source audio preserved; no added voice or music"
+        analysis["ai_voiceover_added"]=bool(voiceover)
+        analysis["audio_editing"]="original source audio ducked under English editorial voiceover" if voiceover else "original source audio preserved; no added voiceover"
         analysis_path.write_text(json.dumps(analysis,indent=2),encoding="utf-8")
         cover_path=out.parent/"short-cover.jpg"
         make_cover(out,title,duration,cover_path)
