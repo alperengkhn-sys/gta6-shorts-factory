@@ -69,7 +69,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg fonts-dejavu-core
           python -m pip install --upgrade pip
-          pip install yt-dlp edge-tts
+          pip install yt-dlp edge-tts pillow
+      - name: Prepare transparent channel overlays
+        if: steps.task.outputs.noop != 'true'
+        run: python renderer/prepare_branding.py
       - name: Render vertical MP4
         if: steps.task.outputs.noop != 'true'
         id: render
