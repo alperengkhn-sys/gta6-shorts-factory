@@ -33,6 +33,7 @@ GitHub Actions secrets:
 - `YOUTUBE_CLIENT_ID`
 - `YOUTUBE_CLIENT_SECRET`
 - `YOUTUBE_REFRESH_TOKEN`
+- `OPENAI_API_KEY` (visual review and editorial AI)
 - `RENDER_WEBHOOK_SECRET`
 
 The YouTube OAuth refresh token must belong to the **@VIRUSHGTA6** channel and include the YouTube upload scope. The uploader fails visibly if credentials are missing; it never silently skips publishing.
