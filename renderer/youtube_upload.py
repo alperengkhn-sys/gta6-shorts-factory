@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Upload a rendered Short to YouTube as PRIVATE using OAuth refresh-token credentials."""
+"""Upload a rendered Short privately with a future YouTube auto-publish time."""
 import json
 import os
 import sys
@@ -59,15 +59,18 @@ def main():
         "SHORT_DESCRIPTION",
         "Grand Theft Auto VI gaming moment. #GTA6 #GTAVI #Shorts",
     ).strip()[:5000]
+    import datetime
+    publish_at = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=30)).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     metadata = {
         "snippet": {
             "title": title,
             "description": description,
-            "tags": ["GTA 6", "GTA VI", "Grand Theft Auto VI", "gaming", "Shorts"],
+            "tags": ["GTA 6", "GTA VI", "Grand Theft Auto VI", "GTA 6 gameplay", "GTA 6 clips", "gaming shorts", "Shorts"],
             "categoryId": "20",
         },
         "status": {
             "privacyStatus": "private",
+            "publishAt": publish_at,
         },
     }
     init_url = "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status"
@@ -136,11 +139,12 @@ def main():
         except Exception as exc:
             thumbnail_status = "failed"
             print("YouTube thumbnail upload failed: " + str(exc)[:500], file=sys.stderr)
-    output("upload_status", "uploaded")
+    output("upload_status", "scheduled")
     output("video_url", video_url)
     output("thumbnail_status", thumbnail_status)
-    print(json.dumps({"ok": True, "privacy": "private", "video_url": video_url,
-                      "thumbnail_status": thumbnail_status}))
+    output("publish_at", publish_at)
+    print(json.dumps({"ok": True, "privacy": "private_until_publish", "publish_at": publish_at,
+                      "video_url": video_url, "thumbnail_status": thumbnail_status}))
     return 0
 
 if __name__ == "__main__":
