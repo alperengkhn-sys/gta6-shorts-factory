@@ -248,7 +248,7 @@ async function runScheduled(env){
  await env.DB.prepare("UPDATE shorts_drafts SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE source_id IN (SELECT source_id FROM jobs WHERE status IN ('failed','failed') AND last_error='Recovered stale dispatch after 45 minutes without callback.')").run();
  let dispatched=0,dispatchErrors=0;
  if(env.GITHUB_TOKEN){
-  const candidates=await env.DB.prepare(`SELECT d.id AS draft_id FROM shorts_drafts d JOIN sources s ON s.id=d.source_id JOIN jobs j ON j.source_id=s.id WHERE s.relevance_status='relevant' AND s.twitch_game_id IS NOT NULL AND j.status IN ('queued_review','failed') AND COALESCE(j.render_attempts,0)<3 ORDER BY j.created_at ASC LIMIT 1`).all();
+  const candidates=await env.DB.prepare(`SELECT d.id AS draft_id FROM shorts_drafts d JOIN sources s ON s.id=d.source_id JOIN jobs j ON j.source_id=s.id LEFT JOIN clip_analysis a ON a.source_id=s.id WHERE s.relevance_status='relevant' AND s.twitch_game_id IS NOT NULL AND j.status IN ('queued_review','failed') AND COALESCE(j.render_attempts,0)<3 ORDER BY COALESCE(a.score,0) DESC,j.created_at ASC LIMIT 1`).all();
   for(const row of candidates.results||[]){
    const result=await dispatchRender(env.DB,env,row.draft_id,"");
    if(result.ok)dispatched++;else if(result.error){dispatchErrors++;console.error("Scheduled render dispatch:",result.error);}
