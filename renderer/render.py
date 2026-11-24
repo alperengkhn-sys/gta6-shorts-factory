@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Vertical Shorts renderer with silence trimming, branding overlays, unique covers and optional AI commentary."""
-import argparse, json, os, shutil, subprocess, sys, tempfile, urllib.request
+import argparse, json, os, shutil, subprocess, sys, tempfile
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -238,35 +238,6 @@ def auto_trim_silence(media, workdir):
     return output,kept,round(duration-kept,2)
 
 
-def make_ai_voiceover(script,destination):
-    key=os.environ.get("OPENAI_API_KEY","").strip()
-    marker="ORIGINAL VOICEOVER DRAFT:"
-    narration=""
-    if marker in script:
-        narration=script.split(marker,1)[1].split("CAPTION TEXT DRAFT:",1)[0].strip()
-    if len(narration)<12: return None
-    try:
-        if key:
-            payload=json.dumps({"model":"gpt-4o-mini-tts","voice":"alloy","input":narration[:3500],"instructions":"Natural concise gaming commentary. Do not invent facts beyond the supplied script."}).encode()
-            request=urllib.request.Request("https://api.openai.com/v1/audio/speech",data=payload,headers={"Authorization":"Bearer "+key,"Content-Type":"application/json"},method="POST")
-            with urllib.request.urlopen(request,timeout=90) as response: destination.write_bytes(response.read())
-        elif shutil.which("edge-tts"):
-            result=subprocess.run(["edge-tts","--voice","en-US-GuyNeural","--text",narration[:3500],"--write-media",str(destination)],text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=90)
-            if result.returncode: raise RuntimeError(result.stdout[-500:])
-        else:
-            return None
-        return destination if destination.is_file() and destination.stat().st_size>1000 else None
-    except Exception as error:
-        print("VOICEOVER_SKIPPED: "+str(error)[:250],flush=True)
-        return None
-
-
-def mix_voiceover(video,voiceover,workdir):
-    mixed=workdir/"commentary-mix.mp4"
-    run(["ffmpeg","-nostdin","-hide_banner","-loglevel","error","-y","-i",str(video),"-i",str(voiceover),"-filter_complex","[0:a]volume=0.55[original];[1:a]volume=1.15[voice];[original][voice]amix=inputs=2:duration=first:dropout_transition=2[aout]","-map","0:v:0","-map","[aout]","-c:v","copy","-c:a","aac","-b:a","192k",str(mixed)])
-    shutil.move(str(mixed),str(video))
-
-
 def main():
     ap=argparse.ArgumentParser()
     ap.add_argument("--source-url",required=True)
@@ -331,11 +302,8 @@ def main():
         print(f"RENDER_STAGE: encoding source video and audio with {len(assets)} branding overlays",flush=True)
         run(render_cmd)
         print("RENDER_STAGE: final encode completed",flush=True)
-        voiceover=make_ai_voiceover(os.environ.get("PACKAGE_TEXT",""),w/"ai-commentary.mp3")
-        analysis["ai_voiceover_added"]=bool(voiceover)
-        if voiceover:
-            mix_voiceover(out,voiceover,w)
-            print("RENDER_STAGE: AI commentary mixed with original audio",flush=True)
+        analysis["ai_voiceover_added"]=False
+        analysis["audio_editing"]="original source audio preserved; no added voice or music"
         analysis_path.write_text(json.dumps(analysis,indent=2),encoding="utf-8")
         cover_path=out.parent/"short-cover.jpg"
         make_cover(out,title,duration,cover_path)
