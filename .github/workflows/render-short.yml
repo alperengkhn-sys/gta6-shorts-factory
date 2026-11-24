@@ -123,7 +123,7 @@ jobs:
           RUN_NUMBER: ${{ github.run_number }}
         run: |
           python - <<'PY'
-          import os, re
+          import json, os, re
           from pathlib import Path
           number = os.environ["RUN_NUMBER"]
           script = os.environ.get("PACKAGE_TEXT", "").strip()
