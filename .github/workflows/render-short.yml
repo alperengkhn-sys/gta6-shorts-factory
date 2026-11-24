@@ -9,6 +9,10 @@ on:
         description: Public Twitch clip URL
         required: true
         type: string
+      download_url:
+        description: Direct MP4 URL returned by Twitch Clips Downloads API
+        required: true
+        type: string
       title:
         description: Short title
         required: true
@@ -60,7 +64,7 @@ jobs:
           from pathlib import Path
           task = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
           print("noop=" + ("true" if task.get("noop") else "false"))
-          for key in ("source_url", "title", "description", "job_id", "render_attempt", "creator_name", "source_title"):
+          for key in ("source_url", "download_url", "title", "description", "job_id", "render_attempt", "creator_name", "source_title"):
               print(f"{key}={str(task.get(key, '')).replace(chr(10), ' ')}")
           print("package_text<<GTA6_TASK_EOF")
           print(str(task.get("package_text", "")))
@@ -120,6 +124,7 @@ jobs:
         id: render
         env:
           SOURCE_URL: ${{ inputs.source_url || steps.task.outputs.source_url }}
+          DOWNLOAD_URL: ${{ inputs.download_url || steps.task.outputs.download_url }}
           SHORT_TITLE: ${{ inputs.title || steps.task.outputs.title }}
           PACKAGE_TEXT: ${{ inputs.package_text || steps.task.outputs.package_text }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -128,6 +133,7 @@ jobs:
         run: |
           python renderer/render.py \
             --source-url "$SOURCE_URL" \
+            --download-url "$DOWNLOAD_URL" \
             --title "$SHORT_TITLE" \
             --output short.mp4
       - name: Build numbered delivery package
