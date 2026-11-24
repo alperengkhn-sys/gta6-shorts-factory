@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 from renderer.render import clean, split_caption, stamp, validate_source_url, tts_executable
-from renderer.discover import GTA6
+from renderer.discover import GTA6, channel_uploads_playlist
 
 class RendererHelpersTest(unittest.TestCase):
     def test_discovery_matches_common_gta_vi_title_spellings(self):
@@ -9,6 +9,21 @@ class RendererHelpersTest(unittest.TestCase):
             with self.subTest(title=title):
                 self.assertIsNotNone(GTA6.search(title))
         self.assertIsNone(GTA6.search("Red Dead Redemption 2"))
+
+    def test_channel_id_resolves_to_uploads_playlist(self):
+        channel_id = "UC" + "a" * 22
+        self.assertEqual(
+            channel_uploads_playlist("https://www.youtube.com/channel/" + channel_id + "/videos"),
+            "https://www.youtube.com/playlist?list=UU" + "a" * 22,
+        )
+
+    def test_handle_resolves_channel_id_from_page_metadata(self):
+        channel_id = "UC" + "b" * 22
+        html = '<meta itemprop="channelId" content="' + channel_id + '">'
+        self.assertEqual(
+            channel_uploads_playlist("https://www.youtube.com/@VIRUSHGTA6", html),
+            "https://www.youtube.com/playlist?list=UU" + "b" * 22,
+        )
 
     def test_clean_collapses_whitespace(self):
         self.assertEqual(clean("  GTA6\n  moment  "), "GTA6 moment")
