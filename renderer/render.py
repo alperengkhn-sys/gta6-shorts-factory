@@ -495,7 +495,7 @@ def trailing_silence_seconds(log, duration):
 def main():
     ap=argparse.ArgumentParser()
     ap.add_argument("--source-url",required=True)
-    ap.add_argument("--download-url",required=True)
+    ap.add_argument("--download-url",default="")
     ap.add_argument("--title",required=True)
     ap.add_argument("--output",default="short.mp4")
     ap.add_argument("--test-local-source", help=argparse.SUPPRESS)
@@ -509,7 +509,7 @@ def main():
         raise SystemExit("Invalid source URL: production metadata must reference a public HTTPS Twitch clip.")
     if not a.test_local_source:
         parsed_download=urlsplit(a.download_url)
-        if parsed_download.scheme!="https" or not parsed_download.hostname or parsed_download.username or parsed_download.password:
+        if not a.download_url or parsed_download.scheme!="https" or not parsed_download.hostname or parsed_download.username or parsed_download.password:
             raise SystemExit("Invalid Twitch API download URL.")
     title=clean(a.title)[:90]
     out=Path(a.output).resolve(); out.parent.mkdir(parents=True,exist_ok=True)
