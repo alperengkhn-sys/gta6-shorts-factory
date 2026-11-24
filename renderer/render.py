@@ -209,7 +209,7 @@ def branding_assets():
     ]
     return [(root / name, scale, x, y, timing) for name, scale, x, y, timing in specs if (root / name).is_file()]
 
-def video_filter(duration, assets, subtitles_path=None):
+def video_filter(duration, assets, subtitles_path=None, mature=False):
     base = "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1"
     if subtitles_path:
         subtitle_file = str(subtitles_path).replace("\\", "\\\\").replace(":", "\\:")
@@ -242,6 +242,14 @@ def video_filter(duration, assets, subtitles_path=None):
         parts.append(f"[{current}][{label}]overlay=x={x}:y={y}:eof_action=pass:enable='{enable}'[{next_label}]")
         current = next_label
         inputs.extend(["-loop", "1", "-i", str(assets[index-1][0])])
+    if mature:
+        parts.append(
+            f"[{current}]drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:"
+            "text='MATURE THEMES':fontcolor=white:fontsize=34:borderw=3:bordercolor=black:"
+            "box=1:boxcolor=black@0.55:boxborderw=12:x=(w-text_w)/2:y=110:"
+            "enable='between(t,0,5)'[mature]"
+        )
+        current = "mature"
     return ";".join(parts), inputs + ["-map", f"[{current}]"]
 
 
@@ -420,7 +428,15 @@ def main():
         duration=min(60.0,edited_duration)
         assets=branding_assets()
         voiceover, subtitles = create_voiceover(os.environ.get("PACKAGE_TEXT", ""), w)
-        vf, overlay_inputs=video_filter(duration,assets,subtitles)
+        mature_edit = analysis["vision_review"].get("editing_treatment") == "mature_non_explicit"
+        vf, overlay_inputs=video_filter(duration,assets,subtitles,mature=mature_edit)
+        analysis["mature_content_editing"] = {
+            "applied": mature_edit,
+            "opening_notice": "MATURE THEMES" if mature_edit else None,
+            "narration_tone": analysis["vision_review"].get("editorial_tone", "neutral"),
+            "age_restriction_recommended": analysis["vision_review"].get("age_restriction_recommended", False),
+            "age_restriction_status": analysis["vision_review"].get("age_restriction_status", "not_recommended")
+        }
         render_cmd=["ffmpeg","-nostdin","-hide_banner","-loglevel","info","-stats_period","1",
              "-filter_threads","1","-threads","2","-y","-i",str(media_for_render)]
         if assets:
