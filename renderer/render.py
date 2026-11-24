@@ -31,13 +31,24 @@ def validate_source_url(value):
         except ValueError:
             if "." not in host or host.endswith(".local"):
                 return False
-        return (
+        secure_public_url = (
             parsed.scheme == "https"
             and parsed.username is None
             and parsed.password is None
             and parsed.port in (None, 443)
             and not parsed.fragment
         )
+        # Production inputs must be Twitch clips only. The isolated CI fixture
+        # uses a local file and bypasses this URL check in main().
+        twitch_clip = (
+            (host == "clips.twitch.tv" and len([p for p in parsed.path.split("/") if p]) >= 1)
+            or (
+                host in ("twitch.tv", "www.twitch.tv", "m.twitch.tv")
+                and len([p for p in parsed.path.split("/") if p]) >= 3
+                and [p.lower() for p in parsed.path.split("/") if p][-2] == "clip"
+            )
+        )
+        return secure_public_url and twitch_clip
     except ValueError:
         return False
 
@@ -403,7 +414,7 @@ def main():
         if not Path(a.test_local_source).is_file():
             raise SystemExit("Test source file does not exist.")
     elif not validate_source_url(a.source_url):
-        raise SystemExit("Invalid source URL: use a public HTTPS video or clip URL.")
+        raise SystemExit("Invalid source URL: production rendering accepts public HTTPS Twitch clip URLs only.")
     title=clean(a.title)[:90]
     out=Path(a.output).resolve(); out.parent.mkdir(parents=True,exist_ok=True)
     with tempfile.TemporaryDirectory() as td:
