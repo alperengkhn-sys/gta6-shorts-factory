@@ -578,8 +578,6 @@ def main():
                "dropout_transition=0:weights='1 0.28'[finala]")
         audio_map = "[finala]"
         render_cmd += ["-filter_complex",vf,"-map",video_map,"-map",audio_map]
-        else:
-            render_cmd += ["-vf",vf,"-map","0:v:0","-map","0:a:0"]
         render_cmd += ["-t",str(duration),"-r","30",
              "-c:v","libx264","-preset","ultrafast","-crf","23",
              "-pix_fmt","yuv420p","-c:a","aac","-b:a","160k","-movflags","+faststart",str(out)]
