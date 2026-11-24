@@ -29,12 +29,19 @@ def main():
     client_id = os.environ.get("YOUTUBE_CLIENT_ID", "").strip()
     client_secret = os.environ.get("YOUTUBE_CLIENT_SECRET", "").strip()
     refresh_token = os.environ.get("YOUTUBE_REFRESH_TOKEN", "").strip()
-    if not (client_id and client_secret and refresh_token):
-        output("upload_status", "not_configured")
+    missing = [name for name, value in (
+        ("YOUTUBE_CLIENT_ID", client_id),
+        ("YOUTUBE_CLIENT_SECRET", client_secret),
+        ("YOUTUBE_REFRESH_TOKEN", refresh_token),
+    ) if not value]
+    if missing:
+        message = "Missing required GitHub Actions secrets: " + ", ".join(missing)
+        output("upload_status", "failed")
         output("video_url", "")
-        output("thumbnail_status", "not_configured")
-        print("YouTube upload skipped: OAuth secrets are not configured.")
-        return 0
+        output("thumbnail_status", "failed")
+        output("error", message)
+        print("YOUTUBE_UPLOAD_FAILED: " + message, file=sys.stderr)
+        return 1
 
     video = Path("short.mp4")
     if not video.is_file() or video.stat().st_size == 0:
