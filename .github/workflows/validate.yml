@@ -72,7 +72,7 @@ jobs:
           output.unlink(missing_ok=True)
           result = subprocess.run(
               [sys.executable, "renderer/render.py",
-               "--source-url", "https://clips.twitch.tv/CIOnlyFixture",
+               "--source-url", "https://example.com/CIOnlyFixture.mp4",
                "--test-local-source", "silent-fixture.mp4",
                "--title", "GTA 6 Silent Source Test",
                "--output", str(output)],
@@ -81,7 +81,7 @@ jobs:
           )
           print(result.stdout)
           assert result.returncode != 0, "Silent source was incorrectly accepted"
-          assert "Original Twitch clip has no audio stream" in result.stdout, "Renderer failed for an unexpected reason"
+          assert "Source clip has no audio stream" in result.stdout, "Renderer failed for an unexpected reason"
           assert not output.exists() or output.stat().st_size == 0, "A silent MP4 was incorrectly produced"
           print("PASS: silent source rejected without producing an MP4")
           PY
