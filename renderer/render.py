@@ -530,7 +530,7 @@ def main():
         else:
             video_map=overlay_inputs[-1]
             vf+=";" if vf else ""
-        vf+="[0:a:0]anull[aout]"
+        vf+="[0:a:0]aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[aout]"
         render_cmd+=["-filter_complex",vf,"-map",video_map,"-map","[aout]"]
         render_cmd+=["-t",str(duration),"-r","30",
              "-c:v","libx264","-preset","ultrafast","-crf","23",
@@ -546,7 +546,7 @@ def main():
              "-loop","1","-framerate","30","-i",str(cover_path),"-i",str(brand_sting),
              "-t","4.0","-vf",intro_filter,"-map","0:v:0","-map","1:a:0",
              "-c:v","libx264","-preset","ultrafast","-crf","23","-pix_fmt","yuv420p",
-             "-c:a","aac","-b:a","160k","-shortest",str(intro_path)])
+             "-c:a","aac","-b:a","160k","-ar","48000","-ac","2","-shortest",str(intro_path)])
         concat_list=out.parent/"concat-intro-and-gameplay.txt"
         concat_list.write_text(
             "file '"+intro_path.as_posix()+"'\n"+"file '"+main_content.as_posix()+"'\n",
