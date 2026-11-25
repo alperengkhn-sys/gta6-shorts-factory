@@ -15,3 +15,16 @@ enabled = true
 crons = ["0 */3 * * *"]
 
 # Automated public Twitch clip discovery and Shorts publishing runs every three hours.
+
+# Worker Previews require their own binding declarations.
+# Until a dedicated staging D1 database is provisioned, the Preview binding points
+# to the existing D1 resource, but APP_ENV=preview disables all DB-backed routes
+# before any database operation. Replace this ID with a dedicated staging D1 ID
+# before enabling functional Preview traffic.
+[previews.vars]
+APP_ENV = "preview"
+
+[[previews.d1_databases]]
+binding = "DB"
+database_name = "gta6-shorts-db"
+database_id = "3a6b99a0-cfbf-48dd-ad78-68f2cb6432dd"

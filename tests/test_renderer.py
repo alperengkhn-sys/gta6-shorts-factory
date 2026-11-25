@@ -101,6 +101,10 @@ class RendererHelpersTest(unittest.TestCase):
         from renderer.render import select_highlight_window
         self.assertEqual(select_highlight_window(42, [], [10, 20]), (0.0, 42.0, 0.0))
 
+    def test_highlight_selection_preserves_80_second_source(self):
+        from renderer.render import select_highlight_window
+        self.assertEqual(select_highlight_window(80, [], [10, 20]), (0.0, 80.0, 0.0))
+
     def test_silence_trim_preserves_45_second_target(self):
         from pathlib import Path
         silence_log = "[silencedetect] silence_start: 5.0\\n[silencedetect] silence_end: 16.0 | silence_duration: 11.0"
@@ -145,6 +149,9 @@ class RendererHelpersTest(unittest.TestCase):
             "scene_change_count": 14,
             "silence_ratio": 0.03,
             "mean_volume_db": -22.0,
+            "frame_motion_mean": 4.2,
+            "active_motion_ratio": 0.72,
+            "max_static_seconds": 1.0,
         }
         with patch.dict(os.environ, {"OFFLINE_MIN_SCORE": "60"}, clear=False):
             review = vision_review(None, None, metrics=metrics, title="GTA 6 explosive police chase")
@@ -155,9 +162,12 @@ class RendererHelpersTest(unittest.TestCase):
 
     def test_offline_review_rejects_low_activity_clip(self):
         metrics = {
-            "scene_change_count": 0,
+            "scene_change_count": 5,
             "silence_ratio": 0.5,
-            "mean_volume_db": -42.0,
+            "mean_volume_db": -20.0,
+            "frame_motion_mean": 3.0,
+            "active_motion_ratio": 0.45,
+            "max_static_seconds": 1.5,
         }
         with patch.dict(os.environ, {"OFFLINE_MIN_SCORE": "60"}, clear=False):
             with self.assertRaisesRegex(RuntimeError, "Offline quality rules rejected"):

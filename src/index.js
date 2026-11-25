@@ -1,4 +1,5 @@
-const VERSION = "GTA6-FACTORY-5.7-NO-AI-VOICE-ORIGINAL-INTRO";
+const VERSION = "GTA6-FACTORY-5.9-45S-TO-3MIN-MOTION-QUALITY";
+const MAX_AUTOMATIC_RENDERS_PER_CYCLE = 10;
 
 const HTML = String.raw`<!doctype html>
 <html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GTA6 Shorts Factory 5.2</title>
@@ -107,7 +108,7 @@ function scoreClip(title,views,duration){
  const mundane=["just running","running around","walking around","random driving","driving around","nothing happens","testing graphics"];
  const hookCount=strong.reduce((n,w)=>n+(t.includes(w)?1:0),0),mundanePenalty=mundane.some(w=>t.includes(w))?28:0;
  const relevance=25,hook=Math.min(40,hookCount*12),viewScore=v>=100000?20:v>=25000?16:v>=10000?12:v>=3000?8:v>=1000?4:0;
- const format=d>=45&&d<=60?22:d>=25&&d<45?8:d>60&&d<=90?10:d>=15&&d<25?4:0;
+ const format=d>=45?22:0;
  const score=Math.max(0,Math.min(100,relevance+hook+viewScore+format-mundanePenalty));
  return{score,relevance_score:relevance,hook_score:hook,format_score:Math.min(25,format+viewScore),score_reason:"GTA VI category, standout event/mature-scene signals, view traction, Shorts duration and low-value-content penalty."};
 }
@@ -132,7 +133,7 @@ async function accessCounts(db){const r=await db.prepare("SELECT access_status,C
 async function getDownloadStatus(db){const r=await db.prepare(`SELECT a.source_id,a.clip_id,a.broadcaster_id,a.broadcaster_name,a.access_status,a.download_url,a.reason,a.checked_at,s.title,s.creator_name,s.source_url FROM twitch_clip_access a LEFT JOIN sources s ON s.id=a.source_id ORDER BY a.checked_at DESC LIMIT 500`).all();return{items:r.results||[]};}
 async function validateResolvedClipDurations(db,env,limit=500){
  const safe=Math.max(1,Math.min(500,Number(limit)||500));
- const rows=(await db.prepare("SELECT id,twitch_clip_id FROM sources WHERE platform='twitch' AND twitch_clip_id IS NOT NULL AND (twitch_clip_duration IS NULL OR twitch_clip_duration<25) AND relevance_status='relevant' ORDER BY created_at ASC LIMIT ?").bind(safe).all()).results||[];
+ const rows=(await db.prepare("SELECT id,twitch_clip_id FROM sources WHERE platform='twitch' AND twitch_clip_id IS NOT NULL AND (twitch_clip_duration IS NULL OR twitch_clip_duration<45) AND relevance_status='relevant' ORDER BY created_at ASC LIMIT ?").bind(safe).all()).results||[];
  if(!rows.length)return{checked:0,short:0,missing:0};
  const token=await twitchToken(env);let checked=0,short=0,missing=0;
  for(let i=0;i<rows.length;i+=100){
@@ -142,11 +143,11 @@ async function validateResolvedClipDurations(db,env,limit=500){
    const clip=byId.get(row.twitch_clip_id);
    if(!clip){missing++;await db.prepare("UPDATE sources SET relevance_status='irrelevant',twitch_clip_duration=0 WHERE id=?").bind(row.id).run();await db.prepare("UPDATE shorts_drafts SET status='blocked',updated_at=CURRENT_TIMESTAMP WHERE source_id=? AND status NOT IN ('processing','ready')").bind(row.id).run();await db.prepare("UPDATE jobs SET status='blocked',last_error='Twitch clip no longer exists; skipped.',updated_at=CURRENT_TIMESTAMP WHERE source_id=? AND status NOT IN ('processing','ready')").bind(row.id).run();continue;}
    const duration=Number(clip.duration||0);checked++;
-   if(!Number.isFinite(duration)||duration<25){
+   if(!Number.isFinite(duration)||duration<45){
     short++;await db.prepare("UPDATE sources SET twitch_clip_duration=?,relevance_status='irrelevant' WHERE id=?").bind(Number.isFinite(duration)?duration:0,row.id).run();
     await db.prepare("UPDATE shorts_drafts SET status='blocked',updated_at=CURRENT_TIMESTAMP WHERE source_id=? AND status NOT IN ('processing','ready')").bind(row.id).run();
-    await db.prepare("UPDATE jobs SET status='blocked',last_error='Source clip is shorter than 25 seconds; skipped.',updated_at=CURRENT_TIMESTAMP WHERE source_id=? AND status NOT IN ('processing','ready')").bind(row.id).run();
-    await db.prepare("UPDATE twitch_clip_access SET access_status='not_available',reason='Source clip is shorter than 25 seconds; skipped.',checked_at=CURRENT_TIMESTAMP WHERE source_id=?").bind(row.id).run();
+    await db.prepare("UPDATE jobs SET status='blocked',last_error='Source clip is shorter than 45 seconds; skipped.',updated_at=CURRENT_TIMESTAMP WHERE source_id=? AND status NOT IN ('processing','ready')").bind(row.id).run();
+    await db.prepare("UPDATE twitch_clip_access SET access_status='not_available',reason='Source clip is shorter than 45 seconds; skipped.',checked_at=CURRENT_TIMESTAMP WHERE source_id=?").bind(row.id).run();
    }else await db.prepare("UPDATE sources SET twitch_clip_duration=? WHERE id=?").bind(duration,row.id).run();
   }
  }
@@ -207,7 +208,7 @@ async function twitchToken(env){if(!env.TWITCH_CLIENT_ID||!env.TWITCH_CLIENT_SEC
 async function twitchGet(url,env,token){const response=await fetch(url,{headers:{"Client-Id":env.TWITCH_CLIENT_ID,"Authorization":"Bearer "+token}}),data=await response.json();if(!response.ok)throw new Error("Twitch API: "+(data.message||response.status));return data.data||[];}
 async function getGta6GameId(env,token){for(const name of["Grand Theft Auto VI","GTA VI"]){const games=await twitchGet("https://api.twitch.tv/helix/games?name="+encodeURIComponent(name),env,token),exact=games.find(g=>{const n=String(g.name||"").trim().toLowerCase();return n==="grand theft auto vi"||n==="gta vi"});if(exact)return exact.id;}return null;}
 async function discover(db,env){const token=await twitchToken(env),gameId=await getGta6GameId(env,token);let clips=0,saved=0,duplicates=0,filtered=0;const creators=new Map();
-async function saveClip(clip,creatorFallback=null){clips++;const clipDuration=Number(clip.duration||0);if(!Number.isFinite(clipDuration)||clipDuration<25){filtered++;return;}const title=clip.title||"Untitled clip",gameRows=(!gameId&&clip.game_id)?await twitchGet("https://api.twitch.tv/helix/games?id="+encodeURIComponent(clip.game_id),env,token):[],categoryName=String(gameRows[0]?.name||"").toLowerCase(),categoryConfirmed=!!gameId?String(clip.game_id||"")===String(gameId):(categoryName==="grand theft auto vi"||categoryName==="gta vi");if(!categoryConfirmed){filtered++;return;}const quality=scoreClip(title,clip.view_count||0,clipDuration);/* Keep every verified GTA VI clip in the candidate pool; title metadata is only a rough pre-rank, never a hard rejection. Actual footage is judged by vision review before publication. */const exists=await db.prepare("SELECT id FROM sources WHERE source_url=? LIMIT 1").bind(clip.url).first();if(exists){duplicates++;return;}const id=uid(),creatorName=clip.broadcaster_name||creatorFallback?.display_name||creatorFallback?.broadcaster_name||"Unknown";if(clip.broadcaster_id)creators.set(clip.broadcaster_id,{id:clip.broadcaster_id,display_name:creatorName});await db.prepare(`INSERT INTO sources(id,platform,source_url,creator_name,title,rights_status,twitch_game_id,relevance_status,twitch_broadcaster_id,twitch_clip_id,twitch_clip_duration) VALUES(?,?,?,?,?,'pending',?,'relevant',?,?,?)`).bind(id,"twitch",clip.url,creatorName,title,gameId||clip.game_id||null,clip.broadcaster_id||null,clip.id,clipDuration).run();await analyzeSource(db,{id,title},clip.view_count||0,clipDuration);saved++;}
+async function saveClip(clip,creatorFallback=null){clips++;const clipDuration=Number(clip.duration||0);if(!Number.isFinite(clipDuration)||clipDuration<45){filtered++;return;}const title=clip.title||"Untitled clip",gameRows=(!gameId&&clip.game_id)?await twitchGet("https://api.twitch.tv/helix/games?id="+encodeURIComponent(clip.game_id),env,token):[],categoryName=String(gameRows[0]?.name||"").toLowerCase(),categoryConfirmed=!!gameId?String(clip.game_id||"")===String(gameId):(categoryName==="grand theft auto vi"||categoryName==="gta vi");if(!categoryConfirmed){filtered++;return;}const quality=scoreClip(title,clip.view_count||0,clipDuration);/* Keep every verified GTA VI clip in the candidate pool; title metadata is only a rough pre-rank, never a hard rejection. Actual footage is judged by vision review before publication. */const exists=await db.prepare("SELECT id FROM sources WHERE source_url=? LIMIT 1").bind(clip.url).first();if(exists){duplicates++;return;}const id=uid(),creatorName=clip.broadcaster_name||creatorFallback?.display_name||creatorFallback?.broadcaster_name||"Unknown";if(clip.broadcaster_id)creators.set(clip.broadcaster_id,{id:clip.broadcaster_id,display_name:creatorName});await db.prepare(`INSERT INTO sources(id,platform,source_url,creator_name,title,rights_status,twitch_game_id,relevance_status,twitch_broadcaster_id,twitch_clip_id,twitch_clip_duration) VALUES(?,?,?,?,?,'pending',?,'relevant',?,?,?)`).bind(id,"twitch",clip.url,creatorName,title,gameId||clip.game_id||null,clip.broadcaster_id||null,clip.id,clipDuration).run();await analyzeSource(db,{id,title},clip.view_count||0,clipDuration);saved++;}
 if(gameId){const items=await twitchGet("https://api.twitch.tv/helix/clips?game_id="+encodeURIComponent(gameId)+"&first=100",env,token);for(const clip of items)await saveClip(clip)}else{const queries=["GTA VI","GTA 6","Grand Theft Auto VI"],channels=new Map();for(const q of queries){const found=await twitchGet("https://api.twitch.tv/helix/search/channels?query="+encodeURIComponent(q)+"&first=30",env,token);for(const c of found)if(c.id)channels.set(c.id,c);}for(const creator of Array.from(channels.values()).slice(0,30)){const items=await twitchGet("https://api.twitch.tv/helix/clips?broadcaster_id="+encodeURIComponent(creator.id)+"&first=20",env,token);for(const clip of items)await saveClip(clip,creator);}}
 return{creators:creators.size,clips,saved,duplicates,filtered,game_id:gameId||null};}
 function makeEditorialPackage(source){const originalTitle=String(source.title||"GTA VI Moment").trim(),clean=originalTitle.replace(/\s+/g," ").slice(0,110),t=clean.toLowerCase();let angle="moment",hook="This GTA 6 moment deserves a closer look.",narration="The title points to an interesting GTA 6 moment. Watch the sequence closely, notice the details, and decide what stands out most to you.",captions=["A GTA 6 MOMENT WORTH WATCHING","LOOK CLOSELY","WHAT STOOD OUT TO YOU?"],question="What would you have noticed first?";
@@ -327,33 +328,97 @@ async function renderCallback(request,env,db){
  return json({ok:true,status,media_analysis_saved:mediaSaved});
 }
 async function prepareAll(db){const result=await db.prepare(`SELECT s.id,s.title,s.creator_name,s.source_url,s.rights_status,s.relevance_status,s.twitch_game_id,a.score FROM sources s LEFT JOIN clip_analysis a ON a.source_id=s.id ORDER BY s.created_at ASC`).all(),rows=result.results||[];let created=0,updated=0,existing=0,skippedIrrelevant=0;const statements=[];
-for(const source of rows){if(source.relevance_status==="irrelevant"){skippedIrrelevant++;continue;}const categoryConfirmed=!!source.twitch_game_id&&source.relevance_status==="relevant";if(!categoryConfirmed){skippedIrrelevant++;continue;}const pack=makeEditorialPackage(source),found=await db.prepare("SELECT id,status FROM shorts_drafts WHERE source_id=? LIMIT 1").bind(source.id).first();if(found){existing++;await db.prepare("UPDATE shorts_drafts SET title=?,script=?,source_url=?,creator_name=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(pack.title,pack.script,source.source_url,source.creator_name||"Unknown",found.id).run();const existingJob=await db.prepare("SELECT id FROM jobs WHERE source_id=? LIMIT 1").bind(source.id).first();if(!existingJob)await db.prepare("INSERT INTO jobs(id,source_id,status,target_format,editorial_note,output_key) VALUES(?,?,'queued_review','shorts_9_16','Legacy draft migrated to cloud render queue.',NULL)").bind(uid(),source.id).run();updated++;continue;}const draftId=uid();statements.push(db.prepare(`INSERT INTO shorts_drafts(id,source_id,status,title,script,created_at,updated_at,source_url,creator_name) VALUES (?,?,'queued_review',?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,?,?)`).bind(draftId,source.id,pack.title,pack.script,source.source_url,source.creator_name||"Unknown"));statements.push(db.prepare(`INSERT INTO jobs(id,source_id,status,target_format,editorial_note,output_key) VALUES (?,?,'queued_review','shorts_9_16',?,NULL)`).bind(uid(),source.id,"Editorial package prepared. Automatic rendering is enabled for verified GTA VI Twitch clips of 25 seconds or longer."));created++;}
+for(const source of rows){if(source.relevance_status==="irrelevant"){skippedIrrelevant++;continue;}const categoryConfirmed=!!source.twitch_game_id&&source.relevance_status==="relevant";if(!categoryConfirmed){skippedIrrelevant++;continue;}const pack=makeEditorialPackage(source),found=await db.prepare("SELECT id,status FROM shorts_drafts WHERE source_id=? LIMIT 1").bind(source.id).first();if(found){existing++;await db.prepare("UPDATE shorts_drafts SET title=?,script=?,source_url=?,creator_name=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(pack.title,pack.script,source.source_url,source.creator_name||"Unknown",found.id).run();const existingJob=await db.prepare("SELECT id FROM jobs WHERE source_id=? LIMIT 1").bind(source.id).first();if(!existingJob)await db.prepare("INSERT INTO jobs(id,source_id,status,target_format,editorial_note,output_key) VALUES(?,?,'queued_review','shorts_9_16','Legacy draft migrated to cloud render queue.',NULL)").bind(uid(),source.id).run();updated++;continue;}const draftId=uid();statements.push(db.prepare(`INSERT INTO shorts_drafts(id,source_id,status,title,script,created_at,updated_at,source_url,creator_name) VALUES (?,?,'queued_review',?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,?,?)`).bind(draftId,source.id,pack.title,pack.script,source.source_url,source.creator_name||"Unknown"));statements.push(db.prepare(`INSERT INTO jobs(id,source_id,status,target_format,editorial_note,output_key) VALUES (?,?,'queued_review','shorts_9_16',?,NULL)`).bind(uid(),source.id,"Editorial package prepared. Automatic rendering accepts verified GTA VI Twitch clips of at least 45 seconds; exports are capped at 180 seconds including the intro."));created++;}
 for(let i=0;i<statements.length;i+=40)await db.batch(statements.slice(i,i+40));const total=await db.prepare("SELECT COUNT(*) AS n FROM shorts_drafts WHERE status='queued_review'").first();return{checked:rows.length,created,updated,existing,skipped_irrelevant:skippedIrrelevant,total:Number(total?.n||0)};}
-async function dispatchQueuedRenders(db,env,limit=10){
- if(!env.GITHUB_TOKEN)return{dispatched:0,dispatchErrors:1,errors:["GITHUB_TOKEN eksik."]};
- const candidates=await db.prepare(`SELECT d.id AS draft_id FROM shorts_drafts d JOIN sources s ON s.id=d.source_id JOIN jobs j ON j.source_id=s.id LEFT JOIN clip_analysis a ON a.source_id=s.id WHERE s.relevance_status='relevant' AND s.twitch_game_id IS NOT NULL AND s.twitch_clip_duration>=25 AND j.status IN ('queued_review','failed') AND COALESCE(j.render_attempts,0)<10 ORDER BY COALESCE(a.score,0) DESC,j.created_at ASC LIMIT ?`).bind(Math.max(1,Math.min(10,Number(limit)||10))).all();
- const results=await Promise.all((candidates.results||[]).map(row=>dispatchRender(db,env,row.draft_id,"")));
- let dispatched=0,dispatchErrors=0;const errors=[];
- for(const result of results){if(result.ok)dispatched++;else if(result.error){dispatchErrors++;errors.push(result.error);}}
- return{eligible:(candidates.results||[]).length,dispatched,dispatchErrors,errors};
+async function dispatchQueuedRenders(db,env,limit=MAX_AUTOMATIC_RENDERS_PER_CYCLE){
+ if(!env.GITHUB_TOKEN)return{eligible:0,attempted:0,dispatched:0,already_existing:0,dispatchErrors:1,limit:MAX_AUTOMATIC_RENDERS_PER_CYCLE,errors:["GITHUB_TOKEN eksik."]};
+ const maxDispatch=Math.max(1,Math.min(MAX_AUTOMATIC_RENDERS_PER_CYCLE,Number(limit)||MAX_AUTOMATIC_RENDERS_PER_CYCLE));
+ // Read ahead so a failed dispatch does not waste one of the ten available slots.
+ // DISTINCT protects against legacy duplicate job rows for the same draft.
+ const candidates=(await db.prepare(`SELECT DISTINCT d.id AS draft_id
+  FROM shorts_drafts d
+  JOIN sources s ON s.id=d.source_id
+  JOIN jobs j ON j.source_id=s.id
+  LEFT JOIN clip_analysis a ON a.source_id=s.id
+  WHERE s.platform='twitch'
+    AND s.relevance_status='relevant'
+    AND s.twitch_game_id IS NOT NULL
+    AND s.twitch_clip_duration>=45
+    AND j.status IN ('queued_review','failed')
+    AND COALESCE(j.render_attempts,0)<10
+  ORDER BY COALESCE(a.score,0) DESC,j.created_at ASC
+  LIMIT 100`).all()).results||[];
+ let attempted=0,dispatched=0,alreadyExisting=0,dispatchErrors=0;
+ const errors=[];
+ for(const row of candidates){
+  if(dispatched>=maxDispatch)break;
+  attempted++;
+  const result=await dispatchRender(db,env,row.draft_id,"");
+  if(result.ok){
+   if(result.already_exists)alreadyExisting++;
+   else dispatched++;
+  }else if(result.error){
+   dispatchErrors++;
+   errors.push({draft_id:row.draft_id,error:String(result.error).slice(0,500)});
+  }
+ }
+ return{
+  eligible:candidates.length,
+  attempted,
+  dispatched,
+  already_existing:alreadyExisting,
+  dispatchErrors,
+  limit:maxDispatch,
+  not_attempted:Math.max(0,candidates.length-attempted),
+  errors
+ };
 }
 async function getData(db){const sources=await db.prepare(`SELECT s.id,s.platform,s.source_url,s.creator_name,s.title,s.rights_status,s.relevance_status,s.twitch_game_id,a.score,a.media_quality_score,a.media_duration,a.source_width,a.source_height,a.source_fps,a.source_has_audio,a.silence_ratio,a.media_usable,a.scene_change_count,a.mean_volume_db,a.media_analyzed_at FROM sources s LEFT JOIN clip_analysis a ON a.source_id=s.id ORDER BY s.created_at DESC LIMIT 500`).all(),drafts=await db.prepare(`SELECT d.id,d.source_id,d.status,d.title,d.script,d.source_url,d.creator_name,d.created_at,s.rights_status,j.status AS job_status,j.output_key,j.package_url,j.last_error,j.youtube_status,j.youtube_url FROM shorts_drafts d JOIN sources s ON s.id=d.source_id LEFT JOIN jobs j ON j.source_id=d.source_id ORDER BY d.created_at DESC LIMIT 500`).all();return{sources:sources.results||[],drafts:drafts.results||[]};}
-async function runScheduled(env){
- if(!env.DB)return {error:"D1 binding missing"};
- await ensureSchema(env.DB);await ensureTwitchSchema(env.DB);
- let discovery,durationValidation;
- try{discovery=await discover(env.DB,env);}catch(error){discovery={error:String(error&&error.message||error).slice(0,500)};}
- try{durationValidation=await validateResolvedClipDurations(env.DB,env,500);}catch(error){durationValidation={error:String(error&&error.message||error).slice(0,500)};}
- const prepared=await prepareAll(env.DB);
- await env.DB.prepare("UPDATE jobs SET status=CASE WHEN COALESCE(render_attempts,0)>=3 THEN 'failed' ELSE 'failed' END,last_error='Recovered stale dispatch after 45 minutes without callback.',updated_at=CURRENT_TIMESTAMP WHERE status='processing' AND dispatch_started_at IS NOT NULL AND dispatch_started_at<datetime('now','-45 minutes')").run();
- await env.DB.prepare("UPDATE shorts_drafts SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE source_id IN (SELECT source_id FROM jobs WHERE status IN ('failed','failed') AND last_error='Recovered stale dispatch after 45 minutes without callback.')").run();
- const rendering=await dispatchQueuedRenders(env.DB,env,10);
- for(const error of rendering.errors||[])console.error("Scheduled render dispatch:",error);
- return {discovery,duration_validation:durationValidation,prepared,...rendering};
+async function runScheduled(env,event){
+ const started=Date.now();
+ const runContext={scheduled_time:event?.scheduledTime??null,cron:event?.cron??null};
+ console.log(JSON.stringify({type:"scheduled_run_started",...runContext,started_at:new Date(started).toISOString()}));
+ try{
+  if(!env.DB)throw new Error("D1 binding missing");
+  await ensureSchema(env.DB);
+  await ensureTwitchSchema(env.DB);
+  let discovery,durationValidation;
+  try{discovery=await discover(env.DB,env);}catch(error){discovery={error:String(error&&error.message||error).slice(0,500)};}
+  try{durationValidation=await validateResolvedClipDurations(env.DB,env,500);}catch(error){durationValidation={error:String(error&&error.message||error).slice(0,500)};}
+  const prepared=await prepareAll(env.DB);
+  await env.DB.prepare("UPDATE jobs SET status='failed',last_error='Recovered stale dispatch after 45 minutes without callback.',updated_at=CURRENT_TIMESTAMP WHERE status='processing' AND dispatch_started_at IS NOT NULL AND dispatch_started_at<datetime('now','-45 minutes')").run();
+  await env.DB.prepare("UPDATE shorts_drafts SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE source_id IN (SELECT source_id FROM jobs WHERE status='failed' AND last_error='Recovered stale dispatch after 45 minutes without callback.')").run();
+  const rendering=await dispatchQueuedRenders(env.DB,env,MAX_AUTOMATIC_RENDERS_PER_CYCLE);
+  const summary={
+   type:"scheduled_run_completed",
+   ...runContext,
+   duration_ms:Date.now()-started,
+   discovery:discovery||null,
+   duration_validation:durationValidation||null,
+   prepared:prepared||null,
+   render_batch:{
+    target_minimum:5,
+    maximum:MAX_AUTOMATIC_RENDERS_PER_CYCLE,
+    eligible:rendering.eligible||0,
+    attempted:rendering.attempted||0,
+    dispatched:rendering.dispatched||0,
+    already_existing:rendering.already_existing||0,
+    dispatch_errors:rendering.dispatchErrors||0,
+    not_attempted:rendering.not_attempted||0
+   },
+   errors:rendering.errors||[]
+  };
+  console.log(JSON.stringify(summary));
+  return{discovery,duration_validation:durationValidation,prepared,...rendering};
+ }catch(error){
+  const failure={type:"scheduled_run_failed",...runContext,duration_ms:Date.now()-started,error:String(error&&error.message||error).slice(0,1000)};
+  console.error(JSON.stringify(failure));
+  return{error:failure.error};
+ }
 }
 function makeZip(files){const enc=new TextEncoder(),local=[],central=[];let offset=0;const u16=n=>new Uint8Array([n&255,(n>>>8)&255]),u32=n=>new Uint8Array([n&255,(n>>>8)&255,(n>>>16)&255,(n>>>24)&255]),join=parts=>{const out=new Uint8Array(parts.reduce((n,p)=>n+p.length,0));let at=0;for(const p of parts){out.set(p,at);at+=p.length;}return out;},crc32=data=>{let c=0xffffffff;for(const b of data){c^=b;for(let k=0;k<8;k++)c=(c>>>1)^((c&1)?0xedb88320:0);}return(c^0xffffffff)>>>0;};for(const f of files){const name=enc.encode(f.name),data=f.data,crc=crc32(data),lh=join([u32(0x04034b50),u16(20),u16(0x0800),u16(0),u16(0),u16(0),u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),name]);local.push(lh,data);central.push(join([u32(0x02014b50),u16(20),u16(20),u16(0x0800),u16(0),u16(0),u16(0),u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),u16(0),u16(0),u16(0),u32(0),u32(offset),name]));offset+=lh.length+data.length;}const centralBytes=join(central),localBytes=join(local),end=join([u32(0x06054b50),u16(0),u16(0),u16(files.length),u16(files.length),u32(centralBytes.length),u32(localBytes.length),u16(0)]);return join([localBytes,centralBytes,end]);}
 function escHtml(v){return String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
-export default{async fetch(request,env){try{if(!env.DB)return json({error:"D1 DB binding bulunamadı."},500);await ensureSchema(env.DB);await ensureTwitchSchema(env.DB);const url=new URL(request.url),path=url.pathname,method=request.method;
+export default{async fetch(request,env){if(env.APP_ENV==="preview"){const previewPath=new URL(request.url).pathname;if(previewPath==="/__preview_health")return new Response(JSON.stringify({ok:true,environment:"preview",database:"disabled"}),{headers:{"Content-Type":"application/json","Cache-Control":"no-store"}});return new Response("Preview deployment is isolated. Database-backed routes are disabled until a dedicated staging D1 database is configured.",{status:503,headers:{"Content-Type":"text/plain; charset=utf-8","Cache-Control":"no-store"}});}try{if(!env.DB)return json({error:"D1 DB binding bulunamadı."},500);await ensureSchema(env.DB);await ensureTwitchSchema(env.DB);const url=new URL(request.url),path=url.pathname,method=request.method;
 if(path==="/")return new Response(HTML,{headers:{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store"}});
 if(path==="/api/login"&&method==="POST"){const data=await readBody(request);if(!env.APP_PASSWORD||data.password!==env.APP_PASSWORD)return json({error:"Şifre hatalı."},401);const session=await makeSession(env.APP_PASSWORD);return new Response(JSON.stringify({ok:true,version:VERSION}),{headers:{"Content-Type":"application/json","Set-Cookie":"gta6_session="+session+"; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=43200"}});}
 if(path==="/api/logout"&&method==="POST")return new Response(JSON.stringify({ok:true}),{headers:{"Content-Type":"application/json","Set-Cookie":"gta6_session=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0"}});
@@ -382,7 +447,7 @@ if(!clipSlug)return json({error:"Geçerli bir Twitch klip bağlantısı yapışt
 
 const appToken=await twitchToken(env),clipRows=await twitchGet("https://api.twitch.tv/helix/clips?id="+encodeURIComponent(clipSlug),env,appToken),clip=clipRows[0];
 if(!clip)return json({error:"Twitch bu klibi bulamadı veya klip artık erişilebilir değil."},404);
-if(Number(clip.duration||0)<25)return json({error:"Klip 25 saniyeden kısa; Shorts üretimi için atlandı."},400);
+if(Number(clip.duration||0)<45)return json({error:"Klip 45 saniyeden kısa; kanalın minimum video süresi nedeniyle üretim başlatılmadı."},400);
 const gameId=await getGta6GameId(env,appToken),clipGameRows=clip.game_id?await twitchGet("https://api.twitch.tv/helix/games?id="+encodeURIComponent(clip.game_id),env,appToken):[],clipGameName=String(clipGameRows[0]?.name||"").trim().toLowerCase();
 const categoryConfirmed=(!!gameId&&String(clip.game_id||"")===String(gameId))||clipGameName==="grand theft auto vi"||clipGameName==="gta vi";
 if(!categoryConfirmed)return json({error:"Bu klibin Twitch kategorisi GTA VI olarak doğrulanamadı ("+(clipGameRows[0]?.name||"kategori boş")+"). MP4 üretimi başlatılmadı."},400);
@@ -398,4 +463,4 @@ return result.error?json({error:result.error},400):json({ok:true,job_id:result.j
 }
 if(path==="/api/source/manual"&&method==="POST"){const data=await readBody(request);if(!data.url||!/^https?:\/\//i.test(data.url))return json({error:"Geçerli bir kaynak URL gir."},400);const exists=await env.DB.prepare("SELECT id FROM sources WHERE source_url=? LIMIT 1").bind(data.url).first();if(exists)return json({error:"Bu kaynak zaten kayıtlı."},409);const id=uid(),title=data.title||"Untitled",isRelevant=isGta6Relevant(title);await env.DB.prepare(`INSERT INTO sources(id,platform,source_url,creator_name,title,rights_status,relevance_status) VALUES(?,?,?,?,?,'pending',?)`).bind(id,"manual",data.url,data.creator||"Unknown",title,isRelevant?"relevant":"unknown").run();await analyzeSource(env.DB,{id,title});return json({ok:true,id,relevance_status:isRelevant?"relevant":"unknown"});}
 return json({error:"Endpoint bulunamadı.",version:VERSION},404);
-}catch(error){return json({error:error&&error.message?error.message:"Bilinmeyen sunucu hatası.",version:VERSION},500);}},async scheduled(event,env,ctx){const work=runScheduled(env);if(ctx&&typeof ctx.waitUntil==="function")ctx.waitUntil(work);else await work;}};
+}catch(error){return json({error:error&&error.message?error.message:"Bilinmeyen sunucu hatası.",version:VERSION},500);}},async scheduled(event,env,ctx){const work=runScheduled(env,event);if(ctx&&typeof ctx.waitUntil==="function")ctx.waitUntil(work);else await work;}};
