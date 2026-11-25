@@ -1,0 +1,46 @@
+import os
+import sys
+import tempfile
+import unittest
+import wave
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "renderer"))
+import render
+
+
+class RendererPolicyTests(unittest.TestCase):
+    def setUp(self):
+        os.environ.pop("RENDER_TEST_MODE", None)
+        os.environ["OFFLINE_MIN_SCORE"] = "68"
+
+    def test_voiceover_generator_is_removed(self):
+        self.assertFalse(hasattr(render, "create_voiceover"))
+
+    def test_renderer_has_no_subtitle_filter_parameter(self):
+        self.assertNotIn("subtitles_path", render.video_filter.__code__.co_varnames)
+        graph, _ = render.video_filter(45, [])
+        self.assertNotIn("subtitles=", graph)
+
+    def test_low_visual_activity_is_rejected(self):
+        metrics = {"scene_change_count": 2, "silence_ratio": 0.1, "mean_volume_db": -20}
+        with tempfile.TemporaryDirectory() as work:
+            with self.assertRaisesRegex(RuntimeError, "visual scene activity"):
+                render.vision_review("unused.mp4", Path(work), metrics, "GTA VI")
+
+    def test_long_silence_is_rejected(self):
+        metrics = {"scene_change_count": 8, "silence_ratio": 0.7, "mean_volume_db": -20}
+        with tempfile.TemporaryDirectory() as work:
+            with self.assertRaisesRegex(RuntimeError, "silent"):
+                render.vision_review("unused.mp4", Path(work), metrics, "GTA VI")
+
+    def test_original_brand_sting_is_exactly_four_seconds(self):
+        with tempfile.TemporaryDirectory() as work:
+            audio_path = render.create_brand_sting(Path(work), duration=4.0)
+            with wave.open(str(audio_path), "rb") as audio:
+                self.assertEqual(audio.getnframes() / audio.getframerate(), 4.0)
+                self.assertEqual(audio.getnchannels(), 2)
+
+
+if __name__ == "__main__":
+    unittest.main()
