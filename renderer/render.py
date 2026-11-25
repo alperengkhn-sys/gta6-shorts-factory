@@ -102,6 +102,57 @@ def split_caption(text,limit=38):
 def stamp(t):
     ms=int(t*1000); h=ms//3600000; m=(ms%3600000)//60000; s=(ms%60000)//1000
     return f"{h:02}:{m:02}:{s:02},{ms%1000:03}"
+
+def summarize_frame_motion(frame_deltas, duration, sample_rate=2.0):
+    """Summarize real frame-to-frame pixel movement from downsampled grayscale frames."""
+    if not frame_deltas:
+        return {
+            "frame_motion_mean": None,
+            "active_motion_ratio": 0.0,
+            "max_static_seconds": float(duration or 0),
+            "motion_samples": 0
+        }
+    # A mean absolute pixel delta >= 1.2/255 is a conservative movement signal.
+    active = [float(delta) >= 1.2 for delta in frame_deltas]
+    longest = current = 0
+    for is_active in active:
+        if is_active:
+            longest = max(longest, current)
+            current = 0
+        else:
+            current += 1
+    longest = max(longest, current)
+    return {
+        "frame_motion_mean": round(sum(float(x) for x in frame_deltas) / len(frame_deltas), 3),
+        "active_motion_ratio": round(sum(active) / len(active), 3),
+        "max_static_seconds": round(longest / float(sample_rate), 3),
+        "motion_samples": len(frame_deltas)
+    }
+
+
+def measure_frame_motion(media, duration, sample_rate=2):
+    """Decode a tiny grayscale preview and measure pixel changes between adjacent frames."""
+    width, height = 160, 90
+    command = [
+        "ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error", "-i", str(media),
+        "-an", "-vf", f"fps={sample_rate},scale={width}:{height}:flags=area,format=gray",
+        "-f", "rawvideo", "-pix_fmt", "gray", "pipe:1"
+    ]
+    result = subprocess.run(
+        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        stdin=subprocess.DEVNULL, timeout=120
+    )
+    frame_size = width * height
+    usable = len(result.stdout) - (len(result.stdout) % frame_size)
+    frames = [result.stdout[i:i + frame_size] for i in range(0, usable, frame_size)]
+    deltas = []
+    for previous, current in zip(frames, frames[1:]):
+        total = sum(abs(a - b) for a, b in zip(previous, current))
+        deltas.append(total / frame_size)
+    return summarize_frame_motion(deltas, duration, sample_rate=sample_rate)
+
+
+
 def media_analysis(media):
     info=json.loads(run(["ffprobe","-v","error","-show_entries","format=duration:stream=index,codec_type,codec_name,width,height,r_frame_rate,channels,sample_rate","-of","json",str(media)]))
     streams=info.get("streams",[])
@@ -156,6 +207,15 @@ def media_analysis(media):
                     mean_volume_db=float(line.split("mean_volume:",1)[1].split("dB",1)[0].strip())
         except Exception:
             mean_volume_db=None
+    try:
+        motion_metrics=measure_frame_motion(media,duration,sample_rate=2)
+    except (subprocess.TimeoutExpired, OSError, RuntimeError):
+        motion_metrics={
+            "frame_motion_mean":None,
+            "active_motion_ratio":0.0,
+            "max_static_seconds":duration,
+            "motion_samples":0
+        }
     return {
         "duration":round(duration,3),
         "video":{"width":video.get("width"),"height":video.get("height"),"fps":fps_value,"codec":video.get("codec_name")},
@@ -163,6 +223,7 @@ def media_analysis(media):
         "silence_ratio":round(min(1.0,silence_total/duration),3) if duration else 1.0,
         "scene_change_count":scene_changes,
         "mean_volume_db":mean_volume_db,
+        **motion_metrics,
         "usable_for_shorts":bool(video and duration>=25),
         "_silence_intervals":silence_intervals,
         "_scene_change_times":scene_times
@@ -191,6 +252,9 @@ def vision_review(media, workdir, metrics=None, title=""):
     scene_count = metrics.get("scene_change_count")
     silence_ratio = float(metrics.get("silence_ratio") or 0)
     mean_volume = metrics.get("mean_volume_db")
+    active_motion_ratio = metrics.get("active_motion_ratio")
+    max_static_seconds = metrics.get("max_static_seconds")
+    frame_motion_mean = metrics.get("frame_motion_mean")
     score = 50
     reasons = ["Offline media-activity screening; no paid AI service was called."]
     if not isinstance(scene_count, (int, float)):
@@ -201,6 +265,12 @@ def vision_review(media, workdir, metrics=None, title=""):
         raise RuntimeError("Quality gate rejected this clip: more than half the source is silent.")
     if mean_volume is None or float(mean_volume) < -38:
         raise RuntimeError("Quality gate rejected this clip: source audio is missing or too quiet.")
+    if not isinstance(active_motion_ratio, (int, float)) or not isinstance(max_static_seconds, (int, float)) or frame_motion_mean is None:
+        raise RuntimeError("Quality gate rejected this clip: real frame-motion analysis unavailable.")
+    if float(active_motion_ratio) < 0.32:
+        raise RuntimeError("Quality gate rejected this clip: too little actual gameplay movement; likely waiting, loading, menu, or static broadcast footage.")
+    if float(max_static_seconds) >= 4.0:
+        raise RuntimeError("Quality gate rejected this clip: a static or near-static section lasts 4 seconds or longer.")
     if isinstance(scene_count, (int, float)):
         if scene_count >= 12:
             score += 17
