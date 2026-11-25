@@ -549,7 +549,7 @@ def main():
              "-c:a","aac","-b:a","160k","-shortest",str(intro_path)])
         concat_list=out.parent/"concat-intro-and-gameplay.txt"
         concat_list.write_text(
-            "file '"+intro_path.as_posix()+"'\\n"+"file '"+main_content.as_posix()+"'\\n",
+            "file '"+intro_path.as_posix()+"'\n"+"file '"+main_content.as_posix()+"'\n",
             encoding="utf-8"
         )
         run(["ffmpeg","-nostdin","-hide_banner","-loglevel","error","-y",
