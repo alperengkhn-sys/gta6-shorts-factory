@@ -295,7 +295,7 @@ jobs:
                   "video_url": os.environ["VIDEO_URL"],
                   "title": os.environ["TITLE"],
                   "status": os.environ["UPLOAD_STATUS"]
-              }, indent=2) + "\\n", encoding="utf-8")
+              }, indent=2) + "\n", encoding="utf-8")
           PY
             git add .github/published-clips
             if git diff --cached --quiet; then
