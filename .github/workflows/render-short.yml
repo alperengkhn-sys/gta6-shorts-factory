@@ -140,6 +140,7 @@ jobs:
           ORIGINAL_TITLE: ${{ inputs.source_title || steps.task.outputs.source_title }}
           PACKAGE_TEXT: ${{ inputs.package_text || steps.task.outputs.package_text }}
           YOUTUBE_DESCRIPTION: ${{ inputs.description || steps.task.outputs.description }}
+          YOUTUBE_TAGS: ${{ inputs.tags || steps.task.outputs.tags }}
           RUN_NUMBER: ${{ github.run_number }}
         run: |
           python - <<'PY'
@@ -169,7 +170,14 @@ jobs:
               pattern = r"(?m)^" + re.escape(name) + r":\s*\n([\s\S]*?)(?=\n[A-Z][A-Z /_-]+:|\Z)"
               match = re.search(pattern, script)
               return match.group(1).strip() if match else "Review the full editorial package below."
-          tags = "GTA 6, GTA VI, Grand Theft Auto VI, GTA 6 gameplay, GTA 6 clips, GTA 6 moments, GTA 6 shorts, gaming shorts, Vice City, Leonida, Rockstar Games"
+          raw_tags = os.environ.get("YOUTUBE_TAGS", "").strip()
+          try:
+              parsed_tags = json.loads(raw_tags) if raw_tags else []
+          except json.JSONDecodeError:
+              parsed_tags = [tag.strip() for tag in raw_tags.split(",") if tag.strip()]
+          tags = ", ".join(str(tag).strip() for tag in parsed_tags if str(tag).strip())
+          if not tags:
+              tags = "GTA 6, GTA VI, Grand Theft Auto VI, GTA 6 gameplay, GTA 6 clips, GTA 6 shorts, gaming shorts, Shorts"
           lines = [
               f"GTA VI SHORTS — DELIVERY PACKAGE #{number}", "",
               f"SOURCE CLIP: {os.environ.get('SOURCE_URL','')}",
