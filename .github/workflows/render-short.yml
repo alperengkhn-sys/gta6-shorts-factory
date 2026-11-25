@@ -277,10 +277,15 @@ jobs:
           KEY: ${{ steps.dedupe.outputs.key }}
         run: |
           set -euo pipefail
-          git fetch origin main
-          git reset --hard origin/main
-          mkdir -p .github/published-clips
-          python - <<'PY'
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Multiple Shorts can finish together; rebase marker writes safely
+          # instead of failing on another job's concurrent main-branch push.
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            mkdir -p .github/published-clips
+            python - <<'PY'
           import json, os
           from pathlib import Path
           path = Path(".github/published-clips") / (os.environ["KEY"] + ".json")
@@ -292,13 +297,20 @@ jobs:
                   "status": os.environ["UPLOAD_STATUS"]
               }, indent=2) + "\\n", encoding="utf-8")
           PY
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .github/published-clips
-          if ! git diff --cached --quiet; then
+            git add .github/published-clips
+            if git diff --cached --quiet; then
+              echo "Publication marker already recorded."
+              exit 0
+            fi
             git commit -m "Record published GTA6 clip to prevent duplicate uploads"
-            git push origin HEAD:main
-          fi
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "::warning::Concurrent publication-marker push; retrying after fetching main."
+            sleep $((attempt * 2))
+          done
+          echo "::error::Could not record publication marker after five attempts."
+          exit 1
       - name: Report render result to Cloudflare Worker
         if: always() && steps.task.outputs.noop != 'true'
         env:
