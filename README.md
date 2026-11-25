@@ -8,8 +8,8 @@ Automated Twitch-to-YouTube Shorts factory for the **@VIRUSHGTA6** channel.
 2. Resolve clip metadata and verify the GTA VI game category.
 3. Download public Twitch clip media in the GitHub Actions renderer with yt-dlp. **No personal Twitch account OAuth or editor permission is required for public clips.**
 4. Render a vertical 1080x1920 H.264/AAC Short, select an active highlight, trim dead air, preserve source audio, add English AI narration when an editorial script is available, and apply the supplied branding assets.
-5. Run a vision review of sampled clip frames, reject explicit sexual content and low-interest footage, and classify non-explicit mature scenes for a tailored edit and age-review handling. Generate an English title, description, tags, hashtags, cover, editorial TXT and ZIP package.
-6. Upload standard clips publicly to YouTube and report the video URL to the dashboard. Clips flagged for an age gate are uploaded privately because the YouTube Data API does not expose a creator-set age-restriction control; they must not be made public without the appropriate platform age gate.
+5. Score source activity using audio/silence, scene changes and clip-title signals. This is a free offline heuristic, not frame-by-frame AI vision. Generate source-topic English titles, descriptions, creator/source credit, category-specific and source-topic tags, hashtags, cover, editorial TXT and ZIP package.
+6. Upload clips publicly to YouTube and report the video URL to the dashboard. The uploader applies the custom cover after allowing time for YouTube processing; channel eligibility and OAuth permissions still govern thumbnail success.
 
 The system does not broadcast livestreams, use PostMassive, or use YouTube as a source platform.
 
