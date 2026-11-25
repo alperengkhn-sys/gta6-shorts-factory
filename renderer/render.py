@@ -560,8 +560,20 @@ def main():
             video_map = overlay_inputs[-1]
             vf += ";" if vf else ""
         if voiceover:
-            vf += (f"[0:a][{voice_index}:a]sidechaincompress=threshold=0.025:ratio=8:attack=20:release=450[duck];"
-                   f"[duck][{voice_index}:a]amix=inputs=2:duration=longest:dropout_transition=0[aout];")
+            voice_info = json.loads(run([
+                "ffprobe", "-v", "error", "-show_entries", "format=duration",
+                "-of", "json", str(voiceover)
+            ]))
+            voice_duration = float(voice_info.get("format", {}).get("duration") or 0)
+            if voice_duration < 2:
+                raise RuntimeError("Generated editorial voiceover is unexpectedly short.")
+            # Do not use sidechaincompress here: its sidechain EOF can terminate
+            # the processed source stream when narration is shorter than the clip.
+            # Attenuate source audio only while narration is active, then restore
+            # the original level; amix duration=first keeps the complete source track.
+            vf += (f"[0:a:0]volume='if(lt(t,{voice_duration:.3f}),0.28,1.0)'[source_audio];"
+                   f"[source_audio][{voice_index}:a]amix=inputs=2:duration=first:"
+                   "dropout_transition=0[aout];")
         else:
             vf += "[0:a:0]anull[aout];"
         vf += (f"[aout][{sting_index}:a]amix=inputs=2:duration=first:"
@@ -575,7 +587,7 @@ def main():
         run(render_cmd)
         print("RENDER_STAGE: final encode completed",flush=True)
         analysis["ai_voiceover_added"]=bool(voiceover)
-        analysis["audio_editing"]="original source audio ducked under English editorial voiceover" if voiceover else "original source audio preserved; no added voiceover"
+        analysis["audio_editing"]="original source audio attenuated only during English editorial voiceover, then restored" if voiceover else "original source audio preserved; no added voiceover"
         analysis_path.write_text(json.dumps(analysis,indent=2),encoding="utf-8")
         cover_path=out.parent/"short-cover.jpg"
         make_cover(out,title,duration,cover_path)
