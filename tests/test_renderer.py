@@ -160,7 +160,7 @@ class RendererHelpersTest(unittest.TestCase):
         metrics = {
             "scene_change_count": 5,
             "silence_ratio": 0.5,
-            "mean_volume_db": -42.0,
+            "mean_volume_db": -20.0,
             "frame_motion_mean": 3.0,
             "active_motion_ratio": 0.45,
             "max_static_seconds": 1.5,
