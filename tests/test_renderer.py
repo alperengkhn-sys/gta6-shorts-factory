@@ -101,6 +101,10 @@ class RendererHelpersTest(unittest.TestCase):
         from renderer.render import select_highlight_window
         self.assertEqual(select_highlight_window(42, [], [10, 20]), (0.0, 42.0, 0.0))
 
+    def test_highlight_selection_preserves_80_second_source(self):
+        from renderer.render import select_highlight_window
+        self.assertEqual(select_highlight_window(80, [], [10, 20]), (0.0, 80.0, 0.0))
+
     def test_silence_trim_preserves_45_second_target(self):
         from pathlib import Path
         silence_log = "[silencedetect] silence_start: 5.0\\n[silencedetect] silence_end: 16.0 | silence_duration: 11.0"
