@@ -125,7 +125,7 @@ jobs:
           )
           print(result.stdout)
           assert result.returncode != 0, "Short with audio ending early was incorrectly accepted"
-          assert "audio track ends early" in result.stdout or "audio is silent for the final" in result.stdout, "Renderer rejected cut audio for an unexpected reason"
+          assert "audio track is truncated" in result.stdout or "audio track ends early" in result.stdout or "audio is silent for the final" in result.stdout, "Renderer rejected cut audio for an unexpected reason"
           print("PASS: cut-off audio rejected before publish")
           PY
       - name: Verify YouTube OAuth refresh token without uploading
