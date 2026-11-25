@@ -17,6 +17,10 @@ on:
         description: YouTube description and credit
         required: false
         type: string
+      tags:
+        description: Video-specific YouTube tags as a JSON array
+        required: false
+        type: string
       job_id:
         description: Optional originating Worker job ID
         required: false
@@ -60,7 +64,7 @@ jobs:
           from pathlib import Path
           task = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
           print("noop=" + ("true" if task.get("noop") else "false"))
-          for key in ("source_url", "title", "description", "job_id", "render_attempt", "creator_name", "source_title"):
+          for key in ("source_url", "title", "description", "tags", "job_id", "render_attempt", "creator_name", "source_title"):
               print(f"{key}={str(task.get(key, '')).replace(chr(10), ' ')}")
           print("package_text<<GTA6_TASK_EOF")
           print(str(task.get("package_text", "")))
@@ -261,6 +265,7 @@ jobs:
         env:
           SHORT_TITLE: ${{ inputs.title || steps.task.outputs.title }}
           SHORT_DESCRIPTION: ${{ inputs.description || steps.task.outputs.description }}
+          SHORT_TAGS: ${{ inputs.tags || steps.task.outputs.tags }}
           SHORT_PRIVACY_STATUS: ${{ steps.privacy.outputs.privacy }}
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
