@@ -55,13 +55,13 @@ def check_audio_coverage(media, label="Source"):
     return info
 
 def validate_source_quality(duration, video):
-    """Require a 45-60s Short source with HD-class video and at least 30fps."""
+    """Require at least 45s of HD-class source video at 30fps or better."""
     duration = float(duration or 0)
     width = int(video.get("width") or 0)
     height = int(video.get("height") or 0)
     fps = float(video.get("fps") or 0)
     if duration < 45.0:
-        raise RuntimeError(f"Source clip is only {duration:.1f} seconds. The channel standard is 45-60 seconds; clips shorter than 45 seconds are rejected.")
+        raise RuntimeError(f"Source clip is only {duration:.1f} seconds. The channel minimum is 45 seconds; shorter clips are rejected.")
     if min(width, height) < 720:
         raise RuntimeError(f"Source video is only {width}x{height}. Minimum accepted source quality is 720p.")
     if fps < 29.5:
@@ -449,7 +449,7 @@ def make_cover(video, title, duration, destination):
 
 
 
-def select_highlight_window(duration, silence_intervals, scene_times, window=55.0, stride=10.0):
+def select_highlight_window(duration, silence_intervals, scene_times, window=175.0, stride=10.0):
     """Choose an active window using non-silent audio and detected scene changes."""
     duration=float(duration)
     if duration<=window:
@@ -562,7 +562,7 @@ def main():
         streams=source_info.get("streams",[])
         has_source_audio=any(stream.get("codec_type")=="audio" for stream in streams)
         if source_duration < 45:
-            raise RuntimeError(f"Source clip is only {source_duration:.1f} seconds. The channel standard is 45-60 seconds; clips shorter than 45 seconds are rejected.")
+            raise RuntimeError(f"Source clip is only {source_duration:.1f} seconds. The channel minimum is 45 seconds; shorter clips are rejected.")
         if not has_source_audio:
             raise RuntimeError("Source clip has no audio stream; refusing to add synthetic audio.")
         analysis=media_analysis(media)
@@ -583,7 +583,7 @@ def main():
         check_audio_coverage(media_for_render, "Edited Twitch clip")
         if edited_duration < 45.0:
             raise RuntimeError(
-                f"Edited gameplay is only {edited_duration:.1f} seconds. The standard is 45-60 seconds; refusing to publish."
+                f"Edited gameplay is only {edited_duration:.1f} seconds. The minimum is 45 seconds; refusing to publish."
             )
         if highlight_duration >= 45.0 and edited_duration < 45.0:
             raise RuntimeError(
@@ -595,7 +595,7 @@ def main():
         analysis["duration_target_met"]=edited_duration>=preferred_minimum
         analysis_path=out.parent/"render-analysis.json"
         analysis_path.write_text(json.dumps(analysis,indent=2),encoding="utf-8")
-        duration=min(60.0,edited_duration)
+        duration=min(175.0,edited_duration)
         assets=branding_assets()
         brand_sting=create_brand_sting(w,duration=4.0)
         mature_edit=analysis["vision_review"].get("editing_treatment")=="mature_non_explicit"
@@ -657,8 +657,8 @@ def main():
     output_duration=float(check.get("format",{}).get("duration") or 0)
     audio_stream=next((x for x in check["streams"] if x.get("codec_type")=="audio"),{})
     audio_duration=float(audio_stream.get("duration") or output_duration)
-    if output_duration < 45.0 or output_duration > 60.0:
-        raise RuntimeError(f"Output validation failed: final Short duration is {output_duration:.1f}s; required range is 45-60 seconds.")
+    if output_duration < 45.0 or output_duration > 180.0:
+        raise RuntimeError(f"Output validation failed: final vertical video is {output_duration:.1f}s; required range is 45-180 seconds including the 4-second intro.")
     if audio_duration < output_duration - 0.5:
         raise RuntimeError(f"Output validation failed: audio track ends early ({audio_duration:.1f}s of {output_duration:.1f}s).")
     silence_log=run(["ffmpeg","-nostdin","-hide_banner","-i",str(out),"-vn","-af","silencedetect=noise=-45dB:d=3","-f","null","-"])
