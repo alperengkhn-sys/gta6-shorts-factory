@@ -41,12 +41,12 @@ permissions:
   contents: write
   actions: read
 concurrency:
-  group: gta6-shorts-youtube-publish-${{ inputs.job_id || github.run_id }}
-  cancel-in-progress: false
+  group: gta6-shorts-youtube-publish
+  cancel-in-progress: true
 jobs:
   render:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
       - name: Load queued render task
