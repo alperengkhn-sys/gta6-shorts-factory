@@ -58,7 +58,7 @@ class RendererPolicyTests(unittest.TestCase):
         self.assertEqual(summary["max_static_seconds"], 1.0)
 
     def test_source_shorter_than_45_seconds_is_rejected(self):
-        with self.assertRaisesRegex(RuntimeError, "45-60 seconds"):
+        with self.assertRaisesRegex(RuntimeError, "45 seconds"):
             render.validate_source_quality(44.9, {"width": 1920, "height": 1080, "fps": 60})
 
     def test_source_below_720p_is_rejected(self):
@@ -69,8 +69,8 @@ class RendererPolicyTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "30 fps"):
             render.validate_source_quality(50, {"width": 1920, "height": 1080, "fps": 25})
 
-    def test_hd_45_to_60_second_source_passes(self):
-        result = render.validate_source_quality(55, {"width": 1920, "height": 1080, "fps": 60})
+    def test_hd_80_second_source_passes(self):
+        result = render.validate_source_quality(80, {"width": 1920, "height": 1080, "fps": 60})
         self.assertTrue(result["source_quality_passed"])
 
     def test_original_brand_sting_is_exactly_four_seconds(self):
