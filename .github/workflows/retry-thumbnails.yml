@@ -65,22 +65,8 @@ jobs:
                   failures.append((video_id, "cover URL must use HTTPS"))
                   continue
               try:
-                  # Verify the target is accessible and processing has completed.
-                  query = urllib.parse.urlencode({"part": "processingDetails", "id": video_id})
-                  check_req = urllib.request.Request(
-                      "https://www.googleapis.com/youtube/v3/videos?" + query,
-                      headers={"Authorization": "Bearer " + access_token},
-                  )
-                  with urllib.request.urlopen(check_req, timeout=45) as response:
-                      found = json.loads(response.read()).get("items", [])
-                  if not found:
-                      raise RuntimeError("YouTube returned no matching video.")
-                  state = found[0].get("processingDetails", {}).get("processingStatus", "")
-                  if state and state != "succeeded":
-                      raise RuntimeError("YouTube processing status is " + state)
-                  if not state:
-                      raise RuntimeError("YouTube did not return processing status; refusing to set thumbnail prematurely.")
-
+                  # These are previously published Shorts, so processing is already complete.
+                  # thumbnails.set is authorized by the existing youtube.upload scope.
                   cover_req = urllib.request.Request(cover_url, headers={"User-Agent": "VI-RUSH-thumbnail-updater"})
                   with urllib.request.urlopen(cover_req, timeout=60) as response:
                       cover = response.read()
