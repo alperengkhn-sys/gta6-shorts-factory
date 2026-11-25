@@ -70,11 +70,31 @@ def main():
     privacy = os.environ.get("SHORT_PRIVACY_STATUS", "public").strip().lower()
     if privacy not in ("public", "private", "unlisted"):
         raise RuntimeError("SHORT_PRIVACY_STATUS must be public, private, or unlisted.")
+    raw_tags = os.environ.get("SHORT_TAGS", "").strip()
+    tags = []
+    if raw_tags:
+        try:
+            parsed_tags = json.loads(raw_tags)
+            if isinstance(parsed_tags, list):
+                tags = [str(tag).strip() for tag in parsed_tags if str(tag).strip()]
+        except json.JSONDecodeError:
+            tags = [tag.strip() for tag in raw_tags.split(",") if tag.strip()]
+    if not tags:
+        tags = ["GTA 6", "GTA VI", "Grand Theft Auto VI", "GTA 6 gameplay", "GTA 6 clips", "gaming shorts", "Shorts"]
+    # YouTube's combined tag text is limited; keep the most relevant tags first.
+    limited_tags = []
+    tag_chars = 0
+    for tag in tags:
+        if tag_chars + len(tag) + 1 > 480:
+            continue
+        if tag.lower() not in {existing.lower() for existing in limited_tags}:
+            limited_tags.append(tag)
+            tag_chars += len(tag) + 1
     metadata = {
         "snippet": {
             "title": title,
             "description": description,
-            "tags": ["GTA 6", "GTA VI", "Grand Theft Auto VI", "GTA 6 gameplay", "GTA 6 clips", "gaming shorts", "Shorts"],
+            "tags": limited_tags,
             "categoryId": "20",
         },
         "status": {
