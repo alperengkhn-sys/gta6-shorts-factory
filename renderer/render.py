@@ -4,6 +4,13 @@ import argparse, json, math, os, shutil, struct, subprocess, sys, tempfile, wave
 from pathlib import Path
 from urllib.parse import urlsplit
 
+ACTION_TERMS = (
+    "gta", "police chase", "car chase", "chase", "explosion", "explosive",
+    "shootout", "gunfight", "combat", "crash", "drift", "stunt", "escape",
+    "robbery", "heist", "pursuit", "wanted", "cops", "mission", "rocket",
+    "shooting", "gameplay", "action"
+)
+
 def run(cmd):
     try:
         p=subprocess.run(cmd,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,
@@ -181,7 +188,7 @@ def vision_review(media, workdir, metrics=None, title=""):
         elif float(mean_volume) < -38:
             score -= 8
             reasons.append("Very quiet source audio.")
-    matched = [term for term in action_terms if term in title_text]
+    matched = [term for term in ACTION_TERMS if term in title_text]
     if matched:
         score += 8
         reasons.append("Gameplay/action title signal: " + ", ".join(matched[:3]) + ".")

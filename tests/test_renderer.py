@@ -1,36 +1,17 @@
-import json
+import os
 import unittest
 from unittest.mock import patch
-from urllib.error import HTTPError
-from renderer.render import clean, request_vision_completion, split_caption, stamp, validate_source_url
+
+from renderer.render import (
+    clean,
+    split_caption,
+    stamp,
+    validate_source_url,
+    vision_review,
+)
+
 
 class RendererHelpersTest(unittest.TestCase):
-
-    def test_vision_request_retries_transient_rate_limit(self):
-        class Response:
-            def __enter__(self): return self
-            def __exit__(self, *args): return False
-            def read(self): return b'{"choices": []}'
-
-        error = HTTPError("https://api.openai.com", 429, "rate limited",
-                          {"Retry-After": "1"}, None)
-        with patch("urllib.request.urlopen", side_effect=[error, Response()]) as request:
-            with patch("time.sleep") as sleep:
-                result = request_vision_completion(object())
-        self.assertEqual(result, {"choices": []})
-        self.assertEqual(request.call_count, 2)
-        sleep.assert_called_once_with(1)
-
-    def test_vision_request_reports_exhausted_quota_without_retry(self):
-        body = b'{"error":{"code":"insufficient_quota","message":"You exceeded your quota."}}'
-        error = HTTPError("https://api.openai.com", 429, "quota", {}, None)
-        error.read = lambda: body
-        with patch("urllib.request.urlopen", side_effect=error) as request:
-            with patch("time.sleep") as sleep:
-                with self.assertRaisesRegex(RuntimeError, "quota/billing is exhausted"):
-                    request_vision_completion(object())
-        request.assert_called_once()
-        sleep.assert_not_called()
 
     def test_clean_collapses_whitespace(self):
         self.assertEqual(clean("  GTA6\n  moment  "), "GTA6 moment")
@@ -45,8 +26,7 @@ class RendererHelpersTest(unittest.TestCase):
 
     def test_trailing_silence_detects_cut_off_audio(self):
         from renderer.render import trailing_silence_seconds
-        log = "[silencedetect] silence_start: 8.0"
-        self.assertEqual(trailing_silence_seconds(log, 55.0), 47.0)
+        self.assertEqual(trailing_silence_seconds("[silencedetect] silence_start: 8.0", 55.0), 47.0)
 
     def test_trailing_silence_allows_audio_to_resume(self):
         from renderer.render import trailing_silence_seconds
@@ -68,7 +48,6 @@ class RendererHelpersTest(unittest.TestCase):
         self.assertFalse(validate_source_url("http://www.twitch.tv/example/clip/ExampleClip"))
         self.assertFalse(validate_source_url("https://user:pass@www.twitch.tv/example/clip/ExampleClip"))
         self.assertFalse(validate_source_url("file:///etc/passwd"))
-
 
     def test_highlight_selection_prefers_active_scene_dense_window(self):
         from renderer.render import select_highlight_window
@@ -93,6 +72,30 @@ class RendererHelpersTest(unittest.TestCase):
         ):
             with self.subTest(url=url):
                 self.assertFalse(validate_source_url(url))
+
+    def test_offline_review_scores_using_local_media_metadata(self):
+        metrics = {
+            "scene_change_count": 14,
+            "silence_ratio": 0.03,
+            "mean_volume_db": -22.0,
+        }
+        with patch.dict(os.environ, {"OFFLINE_MIN_SCORE": "60"}, clear=False):
+            review = vision_review(None, None, metrics=metrics, title="GTA 6 explosive police chase")
+        self.assertGreaterEqual(review["score"], 60)
+        self.assertEqual(review["provider"], "local_rules")
+        self.assertEqual(review["frames_sampled"], 0)
+        self.assertTrue(any("no paid AI service" in reason for reason in review["reasons"]))
+
+    def test_offline_review_rejects_low_activity_clip(self):
+        metrics = {
+            "scene_change_count": 0,
+            "silence_ratio": 0.5,
+            "mean_volume_db": -42.0,
+        }
+        with patch.dict(os.environ, {"OFFLINE_MIN_SCORE": "60"}, clear=False):
+            with self.assertRaisesRegex(RuntimeError, "Offline quality rules rejected"):
+                vision_review(None, None, metrics=metrics, title="GTA 6 loading screen")
+
 
 if __name__ == "__main__":
     unittest.main()
