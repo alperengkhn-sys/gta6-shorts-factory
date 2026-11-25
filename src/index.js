@@ -1,4 +1,4 @@
-const VERSION = "GTA6-FACTORY-5.8-45-60S-HD-MOTION-QUALITY";
+const VERSION = "GTA6-FACTORY-5.9-45S-TO-3MIN-MOTION-QUALITY";
 const MAX_AUTOMATIC_RENDERS_PER_CYCLE = 10;
 
 const HTML = String.raw`<!doctype html>
@@ -108,7 +108,7 @@ function scoreClip(title,views,duration){
  const mundane=["just running","running around","walking around","random driving","driving around","nothing happens","testing graphics"];
  const hookCount=strong.reduce((n,w)=>n+(t.includes(w)?1:0),0),mundanePenalty=mundane.some(w=>t.includes(w))?28:0;
  const relevance=25,hook=Math.min(40,hookCount*12),viewScore=v>=100000?20:v>=25000?16:v>=10000?12:v>=3000?8:v>=1000?4:0;
- const format=d>=45&&d<=60?22:0;
+ const format=d>=45?22:0;
  const score=Math.max(0,Math.min(100,relevance+hook+viewScore+format-mundanePenalty));
  return{score,relevance_score:relevance,hook_score:hook,format_score:Math.min(25,format+viewScore),score_reason:"GTA VI category, standout event/mature-scene signals, view traction, Shorts duration and low-value-content penalty."};
 }
@@ -133,7 +133,7 @@ async function accessCounts(db){const r=await db.prepare("SELECT access_status,C
 async function getDownloadStatus(db){const r=await db.prepare(`SELECT a.source_id,a.clip_id,a.broadcaster_id,a.broadcaster_name,a.access_status,a.download_url,a.reason,a.checked_at,s.title,s.creator_name,s.source_url FROM twitch_clip_access a LEFT JOIN sources s ON s.id=a.source_id ORDER BY a.checked_at DESC LIMIT 500`).all();return{items:r.results||[]};}
 async function validateResolvedClipDurations(db,env,limit=500){
  const safe=Math.max(1,Math.min(500,Number(limit)||500));
- const rows=(await db.prepare("SELECT id,twitch_clip_id FROM sources WHERE platform='twitch' AND twitch_clip_id IS NOT NULL AND (twitch_clip_duration IS NULL OR twitch_clip_duration<45 OR twitch_clip_duration>60) AND relevance_status='relevant' ORDER BY created_at ASC LIMIT ?").bind(safe).all()).results||[];
+ const rows=(await db.prepare("SELECT id,twitch_clip_id FROM sources WHERE platform='twitch' AND twitch_clip_id IS NOT NULL AND (twitch_clip_duration IS NULL OR twitch_clip_duration<45) AND relevance_status='relevant' ORDER BY created_at ASC LIMIT ?").bind(safe).all()).results||[];
  if(!rows.length)return{checked:0,short:0,missing:0};
  const token=await twitchToken(env);let checked=0,short=0,missing=0;
  for(let i=0;i<rows.length;i+=100){
@@ -143,11 +143,11 @@ async function validateResolvedClipDurations(db,env,limit=500){
    const clip=byId.get(row.twitch_clip_id);
    if(!clip){missing++;await db.prepare("UPDATE sources SET relevance_status='irrelevant',twitch_clip_duration=0 WHERE id=?").bind(row.id).run();await db.prepare("UPDATE shorts_drafts SET status='blocked',updated_at=CURRENT_TIMESTAMP WHERE source_id=? AND status NOT IN ('processing','ready')").bind(row.id).run();await db.prepare("UPDATE jobs SET status='blocked',last_error='Twitch clip no longer exists; skipped.',updated_at=CURRENT_TIMESTAMP WHERE source_id=? AND status NOT IN ('processing','ready')").bind(row.id).run();continue;}
    const duration=Number(clip.duration||0);checked++;
-   if(!Number.isFinite(duration)||duration<45||duration>60){
+   if(!Number.isFinite(duration)||duration<45){
     short++;await db.prepare("UPDATE sources SET twitch_clip_duration=?,relevance_status='irrelevant' WHERE id=?").bind(Number.isFinite(duration)?duration:0,row.id).run();
     await db.prepare("UPDATE shorts_drafts SET status='blocked',updated_at=CURRENT_TIMESTAMP WHERE source_id=? AND status NOT IN ('processing','ready')").bind(row.id).run();
-    await db.prepare("UPDATE jobs SET status='blocked',last_error='Source clip is outside the 45-60 second channel standard; skipped.',updated_at=CURRENT_TIMESTAMP WHERE source_id=? AND status NOT IN ('processing','ready')").bind(row.id).run();
-    await db.prepare("UPDATE twitch_clip_access SET access_status='not_available',reason='Source clip is outside the 45-60 second channel standard; skipped.',checked_at=CURRENT_TIMESTAMP WHERE source_id=?").bind(row.id).run();
+    await db.prepare("UPDATE jobs SET status='blocked',last_error='Source clip is shorter than 45 seconds; skipped.',updated_at=CURRENT_TIMESTAMP WHERE source_id=? AND status NOT IN ('processing','ready')").bind(row.id).run();
+    await db.prepare("UPDATE twitch_clip_access SET access_status='not_available',reason='Source clip is shorter than 45 seconds; skipped.',checked_at=CURRENT_TIMESTAMP WHERE source_id=?").bind(row.id).run();
    }else await db.prepare("UPDATE sources SET twitch_clip_duration=? WHERE id=?").bind(duration,row.id).run();
   }
  }
@@ -208,7 +208,7 @@ async function twitchToken(env){if(!env.TWITCH_CLIENT_ID||!env.TWITCH_CLIENT_SEC
 async function twitchGet(url,env,token){const response=await fetch(url,{headers:{"Client-Id":env.TWITCH_CLIENT_ID,"Authorization":"Bearer "+token}}),data=await response.json();if(!response.ok)throw new Error("Twitch API: "+(data.message||response.status));return data.data||[];}
 async function getGta6GameId(env,token){for(const name of["Grand Theft Auto VI","GTA VI"]){const games=await twitchGet("https://api.twitch.tv/helix/games?name="+encodeURIComponent(name),env,token),exact=games.find(g=>{const n=String(g.name||"").trim().toLowerCase();return n==="grand theft auto vi"||n==="gta vi"});if(exact)return exact.id;}return null;}
 async function discover(db,env){const token=await twitchToken(env),gameId=await getGta6GameId(env,token);let clips=0,saved=0,duplicates=0,filtered=0;const creators=new Map();
-async function saveClip(clip,creatorFallback=null){clips++;const clipDuration=Number(clip.duration||0);if(!Number.isFinite(clipDuration)||clipDuration<45||clipDuration>60){filtered++;return;}const title=clip.title||"Untitled clip",gameRows=(!gameId&&clip.game_id)?await twitchGet("https://api.twitch.tv/helix/games?id="+encodeURIComponent(clip.game_id),env,token):[],categoryName=String(gameRows[0]?.name||"").toLowerCase(),categoryConfirmed=!!gameId?String(clip.game_id||"")===String(gameId):(categoryName==="grand theft auto vi"||categoryName==="gta vi");if(!categoryConfirmed){filtered++;return;}const quality=scoreClip(title,clip.view_count||0,clipDuration);/* Keep every verified GTA VI clip in the candidate pool; title metadata is only a rough pre-rank, never a hard rejection. Actual footage is judged by vision review before publication. */const exists=await db.prepare("SELECT id FROM sources WHERE source_url=? LIMIT 1").bind(clip.url).first();if(exists){duplicates++;return;}const id=uid(),creatorName=clip.broadcaster_name||creatorFallback?.display_name||creatorFallback?.broadcaster_name||"Unknown";if(clip.broadcaster_id)creators.set(clip.broadcaster_id,{id:clip.broadcaster_id,display_name:creatorName});await db.prepare(`INSERT INTO sources(id,platform,source_url,creator_name,title,rights_status,twitch_game_id,relevance_status,twitch_broadcaster_id,twitch_clip_id,twitch_clip_duration) VALUES(?,?,?,?,?,'pending',?,'relevant',?,?,?)`).bind(id,"twitch",clip.url,creatorName,title,gameId||clip.game_id||null,clip.broadcaster_id||null,clip.id,clipDuration).run();await analyzeSource(db,{id,title},clip.view_count||0,clipDuration);saved++;}
+async function saveClip(clip,creatorFallback=null){clips++;const clipDuration=Number(clip.duration||0);if(!Number.isFinite(clipDuration)||clipDuration<45){filtered++;return;}const title=clip.title||"Untitled clip",gameRows=(!gameId&&clip.game_id)?await twitchGet("https://api.twitch.tv/helix/games?id="+encodeURIComponent(clip.game_id),env,token):[],categoryName=String(gameRows[0]?.name||"").toLowerCase(),categoryConfirmed=!!gameId?String(clip.game_id||"")===String(gameId):(categoryName==="grand theft auto vi"||categoryName==="gta vi");if(!categoryConfirmed){filtered++;return;}const quality=scoreClip(title,clip.view_count||0,clipDuration);/* Keep every verified GTA VI clip in the candidate pool; title metadata is only a rough pre-rank, never a hard rejection. Actual footage is judged by vision review before publication. */const exists=await db.prepare("SELECT id FROM sources WHERE source_url=? LIMIT 1").bind(clip.url).first();if(exists){duplicates++;return;}const id=uid(),creatorName=clip.broadcaster_name||creatorFallback?.display_name||creatorFallback?.broadcaster_name||"Unknown";if(clip.broadcaster_id)creators.set(clip.broadcaster_id,{id:clip.broadcaster_id,display_name:creatorName});await db.prepare(`INSERT INTO sources(id,platform,source_url,creator_name,title,rights_status,twitch_game_id,relevance_status,twitch_broadcaster_id,twitch_clip_id,twitch_clip_duration) VALUES(?,?,?,?,?,'pending',?,'relevant',?,?,?)`).bind(id,"twitch",clip.url,creatorName,title,gameId||clip.game_id||null,clip.broadcaster_id||null,clip.id,clipDuration).run();await analyzeSource(db,{id,title},clip.view_count||0,clipDuration);saved++;}
 if(gameId){const items=await twitchGet("https://api.twitch.tv/helix/clips?game_id="+encodeURIComponent(gameId)+"&first=100",env,token);for(const clip of items)await saveClip(clip)}else{const queries=["GTA VI","GTA 6","Grand Theft Auto VI"],channels=new Map();for(const q of queries){const found=await twitchGet("https://api.twitch.tv/helix/search/channels?query="+encodeURIComponent(q)+"&first=30",env,token);for(const c of found)if(c.id)channels.set(c.id,c);}for(const creator of Array.from(channels.values()).slice(0,30)){const items=await twitchGet("https://api.twitch.tv/helix/clips?broadcaster_id="+encodeURIComponent(creator.id)+"&first=20",env,token);for(const clip of items)await saveClip(clip,creator);}}
 return{creators:creators.size,clips,saved,duplicates,filtered,game_id:gameId||null};}
 function makeEditorialPackage(source){const originalTitle=String(source.title||"GTA VI Moment").trim(),clean=originalTitle.replace(/\s+/g," ").slice(0,110),t=clean.toLowerCase();let angle="moment",hook="This GTA 6 moment deserves a closer look.",narration="The title points to an interesting GTA 6 moment. Watch the sequence closely, notice the details, and decide what stands out most to you.",captions=["A GTA 6 MOMENT WORTH WATCHING","LOOK CLOSELY","WHAT STOOD OUT TO YOU?"],question="What would you have noticed first?";
@@ -344,7 +344,6 @@ async function dispatchQueuedRenders(db,env,limit=MAX_AUTOMATIC_RENDERS_PER_CYCL
     AND s.relevance_status='relevant'
     AND s.twitch_game_id IS NOT NULL
     AND s.twitch_clip_duration>=45
-    AND s.twitch_clip_duration<=60
     AND j.status IN ('queued_review','failed')
     AND COALESCE(j.render_attempts,0)<10
   ORDER BY COALESCE(a.score,0) DESC,j.created_at ASC
@@ -448,7 +447,7 @@ if(!clipSlug)return json({error:"Geçerli bir Twitch klip bağlantısı yapışt
 
 const appToken=await twitchToken(env),clipRows=await twitchGet("https://api.twitch.tv/helix/clips?id="+encodeURIComponent(clipSlug),env,appToken),clip=clipRows[0];
 if(!clip)return json({error:"Twitch bu klibi bulamadı veya klip artık erişilebilir değil."},404);
-if(Number(clip.duration||0)<45||Number(clip.duration||0)>60)return json({error:"Klip 45-60 saniye aralığında değil; kanalın standart video süresi nedeniyle üretim başlatılmadı."},400);
+if(Number(clip.duration||0)<45)return json({error:"Klip 45 saniyeden kısa; kanalın minimum video süresi nedeniyle üretim başlatılmadı."},400);
 const gameId=await getGta6GameId(env,appToken),clipGameRows=clip.game_id?await twitchGet("https://api.twitch.tv/helix/games?id="+encodeURIComponent(clip.game_id),env,appToken):[],clipGameName=String(clipGameRows[0]?.name||"").trim().toLowerCase();
 const categoryConfirmed=(!!gameId&&String(clip.game_id||"")===String(gameId))||clipGameName==="grand theft auto vi"||clipGameName==="gta vi";
 if(!categoryConfirmed)return json({error:"Bu klibin Twitch kategorisi GTA VI olarak doğrulanamadı ("+(clipGameRows[0]?.name||"kategori boş")+"). MP4 üretimi başlatılmadı."},400);
