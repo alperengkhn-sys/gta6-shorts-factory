@@ -223,7 +223,7 @@ async function dispatchRender(db,env,draftId,evidenceReference,authorizationConf
  if(!extractClipSlug(String(row.source_url||"")))return {error:"Yalnızca gerçek Twitch klip bağlantıları işlenebilir."};
  if(!row.job_id)return {error:"Bu paket için üretim işi kaydı bulunamadı. Önce paketleri güncelle."};
  if(["processing","ready"].includes(row.job_status))return {ok:true,already_exists:true,job_id:row.job_id,status:row.job_status,output_key:row.output_key||null,last_error:row.last_error||null,message:row.job_status==="ready"?"Bu klibin MP4 üretimi tamamlanmış. İndirme bağlantısı hazır.":"Bu klip zaten render kuyruğunda. İşlem tamamlanınca indirme bağlantısı görünecek."};
- if(Number(row.render_attempts||0)>=10)return {error:"Bu iş için üç render denemesi tamamlandı. Otomatik tekrar durduruldu."};
+ if(Number(row.render_attempts||0)>=10)return {error:"Bu iş için 10 render denemesi tamamlandı. Otomatik tekrar durduruldu."};
  // User-triggered render; no evidence URL prompt and no automatic rights-record mutation.
 
  const title=String(row.draft_title||row.source_title||"GTA 6 Short").slice(0,90);

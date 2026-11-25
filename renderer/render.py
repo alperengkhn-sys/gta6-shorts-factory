@@ -22,6 +22,37 @@ def run(cmd):
     if p.returncode: raise RuntimeError(p.stdout[-5000:])
     return p.stdout
 
+
+def build_twitch_download_command(source_url, destination):
+    """Use FFmpeg for Twitch HLS; yt-dlp's native HLS path can truncate audio."""
+    return [
+        "yt-dlp", "--no-playlist",
+        "--downloader", "m3u8:ffmpeg",
+        "--downloader-args", "ffmpeg_i:-analyzeduration 20000000 -probesize 50000000",
+        "--merge-output-format", "mp4",
+        "-o", str(destination), source_url
+    ]
+
+
+def check_audio_coverage(media, label="Source"):
+    info = json.loads(run([
+        "ffprobe", "-v", "error",
+        "-show_entries", "format=duration:stream=codec_type,duration",
+        "-of", "json", str(media)
+    ]))
+    duration = float(info.get("format", {}).get("duration") or 0)
+    streams = info.get("streams", [])
+    video = next((s for s in streams if s.get("codec_type") == "video"), {})
+    audio = next((s for s in streams if s.get("codec_type") == "audio"), {})
+    video_duration = float(video.get("duration") or duration or 0)
+    audio_duration = float(audio.get("duration") or 0)
+    if audio_duration > 0 and video_duration > 0 and audio_duration < video_duration - 0.75:
+        raise RuntimeError(
+            f"{label} audio track is truncated ({audio_duration:.1f}s of {video_duration:.1f}s); "
+            "skipping this source rather than publishing silent footage."
+        )
+    return info
+
 def clean(s): return " ".join((s or "").split())
 
 def validate_source_url(value):
@@ -471,12 +502,12 @@ def main():
         if a.test_local_source:
             shutil.copyfile(a.test_local_source, media)
         else:
-            run(["yt-dlp","--no-playlist","--merge-output-format","mp4","-o",str(media),a.source_url])
+            run(build_twitch_download_command(a.source_url, media))
             if not media.exists():
                 found=list(w.glob("source.*"))
                 if not found: raise RuntimeError("Source download produced no media file.")
                 media=found[0]
-        source_info=json.loads(run(["ffprobe","-v","error","-show_entries","format=duration:stream=codec_type","-of","json",str(media)]))
+        source_info=check_audio_coverage(media, "Downloaded Twitch clip")
         source_duration=float(source_info.get("format",{}).get("duration") or 0)
         streams=source_info.get("streams",[])
         has_source_audio=any(stream.get("codec_type")=="audio" for stream in streams)
@@ -495,6 +526,7 @@ def main():
             run(["ffmpeg","-nostdin","-hide_banner","-loglevel","error","-y","-ss",str(highlight_start),"-i",str(media),"-t",str(highlight_duration),"-map","0:v:0","-map","0:a:0","-c:v","libx264","-preset","ultrafast","-crf","23","-pix_fmt","yuv420p","-c:a","aac","-b:a","160k",str(selected_source)])
         analysis["highlight_selection"]={"start_seconds":highlight_start,"duration_seconds":highlight_duration,"activity_score":highlight_score,"method":"non-silent audio + scene-change density"}
         media_for_render,edited_duration,removed_silence=auto_trim_silence(selected_source,w)
+        check_audio_coverage(media_for_render, "Edited Twitch clip")
         analysis["silence_removed_seconds"]=removed_silence
         analysis["automatic_dead_air_trim"]=removed_silence>0
         analysis_path=out.parent/"render-analysis.json"

@@ -3,6 +3,8 @@ import unittest
 from unittest.mock import patch
 
 from renderer.render import (
+    build_twitch_download_command,
+    check_audio_coverage,
     clean,
     split_caption,
     stamp,
@@ -12,6 +14,39 @@ from renderer.render import (
 
 
 class RendererHelpersTest(unittest.TestCase):
+
+    def test_twitch_download_uses_ffmpeg_for_hls_and_expanded_probe(self):
+        command = build_twitch_download_command(
+            "https://www.twitch.tv/example/clip/ExampleClip", "/tmp/source.mp4"
+        )
+        self.assertIn("--downloader", command)
+        self.assertEqual(command[command.index("--downloader") + 1], "m3u8:ffmpeg")
+        self.assertIn("-analyzeduration 20000000 -probesize 50000000",
+                      command[command.index("--downloader-args") + 1])
+
+    def test_audio_coverage_rejects_truncated_source_before_render(self):
+        fake_probe = json.dumps({
+            "format": {"duration": "30.0"},
+            "streams": [
+                {"codec_type": "video", "duration": "30.0"},
+                {"codec_type": "audio", "duration": "8.9"},
+            ],
+        })
+        with patch("renderer.render.run", return_value=fake_probe):
+            with self.assertRaisesRegex(RuntimeError, "audio track is truncated"):
+                check_audio_coverage("/tmp/source.mp4", "Test clip")
+
+    def test_audio_coverage_accepts_full_length_source(self):
+        fake_probe = json.dumps({
+            "format": {"duration": "30.0"},
+            "streams": [
+                {"codec_type": "video", "duration": "30.0"},
+                {"codec_type": "audio", "duration": "29.8"},
+            ],
+        })
+        with patch("renderer.render.run", return_value=fake_probe):
+            info = check_audio_coverage("/tmp/source.mp4", "Test clip")
+        self.assertEqual(info["format"]["duration"], "30.0")
 
     def test_clean_collapses_whitespace(self):
         self.assertEqual(clean("  GTA6\n  moment  "), "GTA6 moment")
