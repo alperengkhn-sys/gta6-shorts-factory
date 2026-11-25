@@ -72,17 +72,19 @@ jobs:
           ffmpeg -nostdin -hide_banner -loglevel error -y -f lavfi -i "color=c=green@0.65:s=390x120:d=1,format=rgba" -frames:v 1 branding/subscribe.png
           ffmpeg -nostdin -hide_banner -loglevel error -y -f lavfi -i "color=c=red@0.65:s=125x125:d=1,format=rgba" -frames:v 1 branding/notification.png
           ffmpeg -nostdin -hide_banner -loglevel error -y -f lavfi -i "color=c=black@0.65:s=1080x1920:d=1,format=rgba" -frames:v 1 branding/outro.png
-          ffmpeg -nostdin -hide_banner -loglevel error -y -f lavfi -i testsrc2=size=720x1280:rate=30 -f lavfi -i sine=frequency=440:duration=55 -t 55 -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac fixture.mp4
+          ffmpeg -nostdin -hide_banner -loglevel error -y -f lavfi -i testsrc2=size=720x1280:rate=30 -f lavfi -i sine=frequency=440:duration=80 -t 80 -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac fixture.mp4
           python renderer/render.py --source-url https://example.com/CIOnlyFixture --test-local-source fixture.mp4 --title "GTA 6 CI Render Test" --output ci-short.mp4
           python - <<'PY'
           import json, subprocess
           info = json.loads(subprocess.check_output([
               "ffprobe", "-v", "error", "-select_streams", "v:0",
-              "-show_entries", "stream=width,height,codec_name",
+              "-show_entries", "stream=width,height,codec_name:format=duration",
               "-of", "json", "ci-short.mp4"
           ], text=True))
           video = info["streams"][0]
           assert (video["width"], video["height"], video["codec_name"]) == (1080, 1920, "h264"), video
+          duration = float(info["format"]["duration"])
+          assert 60.0 < duration <= 180.0, duration
           PY
           test -s render-analysis.json
           test -s short-cover.jpg
