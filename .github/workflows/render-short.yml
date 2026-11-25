@@ -126,7 +126,7 @@ jobs:
           SOURCE_URL: ${{ inputs.source_url || steps.task.outputs.source_url }}
           SHORT_TITLE: ${{ inputs.title || steps.task.outputs.title }}
           PACKAGE_TEXT: ${{ inputs.package_text || steps.task.outputs.package_text }}
-          OFFLINE_MIN_SCORE: "60"
+          OFFLINE_MIN_SCORE: "68"
         run: |
           python renderer/render.py \
             --source-url "$SOURCE_URL" \
