@@ -223,7 +223,7 @@ async function dispatchRender(db,env,draftId,evidenceReference,authorizationConf
  if(!extractClipSlug(String(row.source_url||"")))return {error:"Yalnızca gerçek Twitch klip bağlantıları işlenebilir."};
  if(!row.job_id)return {error:"Bu paket için üretim işi kaydı bulunamadı. Önce paketleri güncelle."};
  if(["processing","ready"].includes(row.job_status))return {ok:true,already_exists:true,job_id:row.job_id,status:row.job_status,output_key:row.output_key||null,last_error:row.last_error||null,message:row.job_status==="ready"?"Bu klibin MP4 üretimi tamamlanmış. İndirme bağlantısı hazır.":"Bu klip zaten render kuyruğunda. İşlem tamamlanınca indirme bağlantısı görünecek."};
- if(Number(row.render_attempts||0)>=3)return {error:"Bu iş için üç render denemesi tamamlandı. Otomatik tekrar durduruldu."};
+ if(Number(row.render_attempts||0)>=10)return {error:"Bu iş için üç render denemesi tamamlandı. Otomatik tekrar durduruldu."};
  // User-triggered render; no evidence URL prompt and no automatic rights-record mutation.
 
  const title=String(row.draft_title||row.source_title||"GTA 6 Short").slice(0,90);
@@ -285,7 +285,7 @@ for(const source of rows){if(source.relevance_status==="irrelevant"){skippedIrre
 for(let i=0;i<statements.length;i+=40)await db.batch(statements.slice(i,i+40));const total=await db.prepare("SELECT COUNT(*) AS n FROM shorts_drafts WHERE status='queued_review'").first();return{checked:rows.length,created,updated,existing,skipped_irrelevant:skippedIrrelevant,total:Number(total?.n||0)};}
 async function dispatchQueuedRenders(db,env,limit=10){
  if(!env.GITHUB_TOKEN)return{dispatched:0,dispatchErrors:1,errors:["GITHUB_TOKEN eksik."]};
- const candidates=await db.prepare(`SELECT d.id AS draft_id FROM shorts_drafts d JOIN sources s ON s.id=d.source_id JOIN jobs j ON j.source_id=s.id LEFT JOIN clip_analysis a ON a.source_id=s.id WHERE s.relevance_status='relevant' AND s.twitch_game_id IS NOT NULL AND s.twitch_clip_duration>=25 AND j.status IN ('queued_review','failed') AND COALESCE(j.render_attempts,0)<3 ORDER BY COALESCE(a.score,0) DESC,j.created_at ASC LIMIT ?`).bind(Math.max(1,Math.min(10,Number(limit)||10))).all();
+ const candidates=await db.prepare(`SELECT d.id AS draft_id FROM shorts_drafts d JOIN sources s ON s.id=d.source_id JOIN jobs j ON j.source_id=s.id LEFT JOIN clip_analysis a ON a.source_id=s.id WHERE s.relevance_status='relevant' AND s.twitch_game_id IS NOT NULL AND s.twitch_clip_duration>=25 AND j.status IN ('queued_review','failed') AND COALESCE(j.render_attempts,0)<10 ORDER BY COALESCE(a.score,0) DESC,j.created_at ASC LIMIT ?`).bind(Math.max(1,Math.min(10,Number(limit)||10))).all();
  const results=await Promise.all((candidates.results||[]).map(row=>dispatchRender(db,env,row.draft_id,"")));
  let dispatched=0,dispatchErrors=0;const errors=[];
  for(const result of results){if(result.ok)dispatched++;else if(result.error){dispatchErrors++;errors.push(result.error);}}
@@ -301,7 +301,7 @@ async function runScheduled(env){
  const prepared=await prepareAll(env.DB);
  await env.DB.prepare("UPDATE jobs SET status=CASE WHEN COALESCE(render_attempts,0)>=3 THEN 'failed' ELSE 'failed' END,last_error='Recovered stale dispatch after 45 minutes without callback.',updated_at=CURRENT_TIMESTAMP WHERE status='processing' AND dispatch_started_at IS NOT NULL AND dispatch_started_at<datetime('now','-45 minutes')").run();
  await env.DB.prepare("UPDATE shorts_drafts SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE source_id IN (SELECT source_id FROM jobs WHERE status IN ('failed','failed') AND last_error='Recovered stale dispatch after 45 minutes without callback.')").run();
- const rendering=await dispatchQueuedRenders(env.DB,env,2);
+ const rendering=await dispatchQueuedRenders(env.DB,env,10);
  for(const error of rendering.errors||[])console.error("Scheduled render dispatch:",error);
  return {discovery,duration_validation:durationValidation,prepared,...rendering};
 }
