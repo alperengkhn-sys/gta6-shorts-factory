@@ -4,12 +4,14 @@ import unittest
 from unittest.mock import patch
 
 from renderer.render import (
+    auto_trim_silence,
     build_twitch_download_command,
     check_audio_coverage,
     clean,
     split_caption,
     stamp,
     validate_source_url,
+    video_filter,
     vision_review,
 )
 
@@ -98,6 +100,35 @@ class RendererHelpersTest(unittest.TestCase):
     def test_highlight_selection_keeps_short_sources_whole(self):
         from renderer.render import select_highlight_window
         self.assertEqual(select_highlight_window(42, [], [10, 20]), (0.0, 42.0, 0.0))
+
+    def test_silence_trim_preserves_45_second_target(self):
+        from pathlib import Path
+        silence_log = "[silencedetect] silence_start: 5.0\\n[silencedetect] silence_end: 16.0 | silence_duration: 11.0"
+        probe = json.dumps({"format": {"duration": "55.0"}})
+        source = Path("/tmp/source-55.mp4")
+        with patch("renderer.render.run", side_effect=[silence_log, probe]):
+            result, duration, removed = auto_trim_silence(source, Path("/tmp"), minimum_remaining=45)
+        self.assertEqual(result, source)
+        self.assertEqual(duration, 55.0)
+        self.assertEqual(removed, 0)
+
+    def test_silence_trim_never_reduces_valid_short_below_25_seconds(self):
+        from pathlib import Path
+        silence_log = "[silencedetect] silence_start: 4.0\\n[silencedetect] silence_end: 9.2 | silence_duration: 5.2"
+        probe = json.dumps({"format": {"duration": "30.0"}})
+        source = Path("/tmp/source-30.mp4")
+        with patch("renderer.render.run", side_effect=[silence_log, probe]):
+            result, duration, removed = auto_trim_silence(source, Path("/tmp"), minimum_remaining=25)
+        self.assertEqual(result, source)
+        self.assertEqual(duration, 30.0)
+        self.assertEqual(removed, 0)
+
+    def test_video_filter_adds_like_subscribe_notification_cta_on_last_five_seconds(self):
+        from pathlib import Path
+        assets = [(Path("subscribe.png"), "390:-1", "0", "0", "ending")]
+        filter_graph, _ = video_filter(50, assets)
+        self.assertIn("LIKE  •  SUBSCRIBE  •  TURN ON NOTIFICATIONS", filter_graph)
+        self.assertIn("between(t,45.000,50.000)", filter_graph)
 
     def test_rejects_local_and_private_network_hosts(self):
         for url in (
