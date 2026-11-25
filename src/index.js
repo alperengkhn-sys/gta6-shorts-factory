@@ -261,8 +261,8 @@ async function renderCallback(request,env,db){
  if(data.render_attempt!==undefined&&data.render_attempt!==null&&data.render_attempt!==""&&Number(data.render_attempt)!==Number(job.render_attempts))return json({error:"Stale render callback rejected."},409);
  if(job.status==="ready")return json({ok:true,status:"ready",duplicate:true});
  if(!["processing","processing","failed","failed"].includes(job.status))return json({error:"Callback rejected for job state: "+job.status},409);
- const ok=(data.render_conclusion||data.conclusion)==="success",status=ok?"ready":"failed",output=String(data.artifact_url||data.run_url||"").slice(0,2000),packageUrl=String(data.package_url||"").slice(0,2000),youtubeStatus=String(data.youtube_status||"not_run").slice(0,40),youtubeUrl=String(data.youtube_url||"").slice(0,1000);
- const note=[ok?"Render completed.":"Render failed.", "YouTube: "+youtubeStatus, data.error||""].filter(Boolean).join(" ").slice(0,1500);
+ const renderOk=(data.render_conclusion||data.conclusion)==="success",youtubeStatus=String(data.youtube_status||"not_run").slice(0,40),youtubeUrl=String(data.youtube_url||"").slice(0,1000),youtubeOk=youtubeStatus.startsWith("uploaded_")&&/^https:\/\/www\.youtube\.com\/watch\?v=[A-Za-z0-9_-]{11}$/.test(youtubeUrl),ok=renderOk&&youtubeOk,status=ok?"ready":"failed",output=String(data.artifact_url||data.run_url||"").slice(0,2000),packageUrl=String(data.package_url||"").slice(0,2000);
+ const note=[ok?"Render and YouTube upload completed.":(renderOk?"Render completed but YouTube upload was not confirmed.":"Render failed."), "YouTube: "+youtubeStatus, data.error||""].filter(Boolean).join(" ").slice(0,1500);
  let mediaSaved=false;
  const m=data.media_analysis&&typeof data.media_analysis==="object"?data.media_analysis:null;
  if(ok&&m){
