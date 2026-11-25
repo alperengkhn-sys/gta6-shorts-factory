@@ -218,7 +218,7 @@ const titleLeads={mature:"GTA 6 After Dark",relationship:"GTA 6 Relationships",v
 const topic=clean.replace(/\b(grand theft auto|gta)\s*(vi|6)?\b/gi," ").replace(/[|:!?]+/g," ").replace(/\s+/g," ").trim();
 const title=(topic?((titleLeads[angle]||"GTA 6 Gameplay")+": "+topic+" | GTA 6 #Shorts"):(englishTitles[angle]||englishTitles.moment)).slice(0,100),captionText=captions.join("\n"),script="SHORTS EDITORIAL PRODUCTION PACKAGE · 3.6\n\nSOURCE: "+(source.source_url||"")+"\nCREATOR: "+(source.creator_name||"Unknown")+"\nORIGINAL CLIP TITLE: "+originalTitle+"\nEDITORIAL ANGLE: "+angle+"\n\nPROPOSED TITLE:\n"+title+"\n\nHOOK / OPENING:\n"+hook+"\n\nORIGINAL VOICEOVER DRAFT:\n"+narration+"\n\nCAPTION TEXT DRAFT:\n"+captionText+"\n\nENDING QUESTION:\n"+question+"\n\n9:16 EDITING PLAN:\n1. Create a vertical 1080x1920 sequence.\n2. Start with the strongest visually verified moment; do not invent an event from the title.\n3. Keep the main subject inside the central safe area.\n4. Use the hook in the first 1-2 seconds.\n5. Add the voiceover as original commentary, not as a claim about unseen footage.\n6. Synchronize short captions with the actual footage.\n7. Remove dead time while preserving the context of the clip.\n8. Finish with the question above and a clean final frame.\n\nEDITORIAL NOTE:\nThis package is tailored to the source title and its detected topic. The actual clip has not been visually or audibly analyzed by this Worker. Verify every statement against the footage before editing.\n\nPRODUCTION STATUS:\nEditorial package ready. This draft can be sent to the cloud MP4 renderer from the dashboard.\nThe Worker has not visually or audibly analyzed the actual clip; verify all claims against the footage before publication.";return{title,script};}
 function extractNarration(script){const m=String(script||"").match(/ORIGINAL VOICEOVER DRAFT:\s*([\s\S]*?)\n\nCAPTION TEXT DRAFT:/);return m?m[1].trim():"";}
-async function buildYouTubeTags(sourceTitle,creatorName,angle){
+function buildYouTubeTags(sourceTitle,creatorName,angle){
  const base=["GTA 6","GTA VI","Grand Theft Auto VI","GTA 6 gameplay","GTA 6 clips","GTA 6 moments","GTA 6 shorts","gaming shorts","Vice City","Leonida","Rockstar Games"];
  const byAngle={
   police:["GTA 6 police chase","GTA 6 cops","GTA 6 wanted level"],
@@ -249,7 +249,7 @@ async function buildYouTubeTags(sourceTitle,creatorName,angle){
  }
  return result;
 }
-function dispatchRender(db,env,draftId,evidenceReference,authorizationConfirmation){
+async function dispatchRender(db,env,draftId,evidenceReference,authorizationConfirmation){
  if(!env.GITHUB_TOKEN)return {error:"Cloudflare Worker'da GITHUB_TOKEN secret eksik. GitHub Actions workflow_dispatch yetkili token eklenmeli."};
  const row=await db.prepare(`SELECT d.id AS draft_id,d.source_id,d.title AS draft_title,d.script,d.status AS draft_status,s.source_url,s.title AS source_title,s.creator_name,s.rights_status,s.relevance_status,s.twitch_game_id,j.id AS job_id,j.status AS job_status,j.output_key,j.last_error,j.render_attempts FROM shorts_drafts d JOIN sources s ON s.id=d.source_id LEFT JOIN jobs j ON j.source_id=s.id WHERE d.id=? ORDER BY j.created_at DESC LIMIT 1`).bind(draftId).first();
  if(!row)return {error:"Üretim paketi bulunamadı."};
