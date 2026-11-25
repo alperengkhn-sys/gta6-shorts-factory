@@ -112,8 +112,8 @@ def summarize_frame_motion(frame_deltas, duration, sample_rate=2.0):
             "max_static_seconds": float(duration or 0),
             "motion_samples": 0
         }
-    # A mean absolute pixel delta >= 1.2/255 is a conservative movement signal.
-    active = [float(delta) >= 1.2 for delta in frame_deltas]
+    # A mean absolute pixel delta >= 2.0/255 is a conservative movement signal.
+    active = [float(delta) >= 2.0 for delta in frame_deltas]
     longest = current = 0
     for is_active in active:
         if is_active:
