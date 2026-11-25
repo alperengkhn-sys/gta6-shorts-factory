@@ -249,16 +249,15 @@ jobs:
           from pathlib import Path
           analysis = json.loads(Path("render-analysis.json").read_text(encoding="utf-8"))
           review = analysis.get("vision_review", {})
-          # The YouTube Data API cannot set an age gate. Keep clips flagged for
-          # age review private rather than publishing them publicly without it.
-          privacy = "private" if review.get("status") != "passed" or review.get("age_restriction_recommended") else "public"
+          # Channel owner requires automatic public Shorts publishing.
+          # YouTube Data API cannot set an age gate; never silently switch to private.
+          privacy = "public"
           print("privacy=" + privacy)
-          print("reason=" + ("manual_review_required" if review.get("status") != "passed" else ("age_review_required" if privacy == "private" else "standard_public")))
+          print("reason=automatic_publication")
           PY
       - name: Automatically publish YouTube Short
         id: youtube
         if: steps.task.outputs.noop != 'true' && steps.dedupe.outputs.already_published != 'true' && success()
-        continue-on-error: true
         env:
           SHORT_TITLE: ${{ inputs.title || steps.task.outputs.title }}
           SHORT_DESCRIPTION: ${{ inputs.description || steps.task.outputs.description }}
