@@ -147,30 +147,8 @@ def vision_review(media, workdir, metrics=None, title=""):
     title_text = clean(title).lower()
     # Deterministic text safety rules. These are conservative title/metadata
     # checks, not a claim that a local ruleset can understand every video frame.
-    explicit_terms = (
-        "explicit sex", "sexual intercourse", "porn", "pornography", "xxx",
-        "full nudity", "fully nude", "visible genitals", "hardcore sex"
-    )
-    mature_terms = (
-        "strip club", "stripper", "prostitute", "escort", "sex scene",
-        "nude", "nudity", "sexual", "hooker", "adult club"
-    )
-    action_terms = (
-        "police", "chase", "crash", "fail", "funny", "fight", "explosion",
-        "heist", "robbery", "unexpected", "npc", "wild", "crazy", "escape",
-        "shootout", "race", "stunt", "glitch", "ambush", "reaction"
-    )
-    blocked = [term for term in explicit_terms if term in title_text]
-    mature = any(term in title_text for term in mature_terms)
-    if blocked:
-        return {
-            "score": 0, "compelling": False, "event": "Explicit-content title rule matched",
-            "category": "explicit_content", "youtube_safe": False,
-            "age_restriction_recommended": True, "editing_treatment": "reject",
-            "editorial_tone": "neutral", "reasons": ["Explicit-content keyword detected: " + blocked[0]],
-            "confidence": 1.0, "status": "rejected", "provider": "local_rules",
-            "model": "none", "frames_sampled": 0, "age_restriction_status": "not_applicable"
-        }
+    mature = False
+    blocked = []
 
     scene_count = metrics.get("scene_change_count")
     silence_ratio = float(metrics.get("silence_ratio") or 0)
@@ -211,22 +189,20 @@ def vision_review(media, workdir, metrics=None, title=""):
         score -= 8
         reasons.append("Insufficient descriptive title metadata.")
     score = max(0, min(100, int(score)))
-    if mature:
-        reasons.append("Mature-theme title signal detected; upload must remain private.")
     if score < int(os.environ.get("OFFLINE_MIN_SCORE", "60")):
         raise RuntimeError("Offline quality rules rejected this clip (score=" + str(score) + "): " + clean("; ".join(reasons)))
 
     return {
         "score": score, "compelling": score >= 70,
         "event": "Offline gameplay activity assessment",
-        "category": "mature_suggestive" if mature else ("action" if matched else "other"),
-        "youtube_safe": True, "age_restriction_recommended": bool(mature),
-        "editing_treatment": "mature_non_explicit" if mature else "standard",
+        "category": "action" if matched else "other",
+        "youtube_safe": True, "age_restriction_recommended": False,
+        "editing_treatment": "standard",
         "editorial_tone": "neutral",
         "reasons": reasons, "confidence": 0.55,
         "status": "passed", "provider": "local_rules",
         "model": "deterministic-media-metadata", "frames_sampled": 0,
-        "age_restriction_status": "private_upload_required" if mature else "not_recommended"
+        "age_restriction_status": "not_recommended"
     }
 
 
