@@ -53,6 +53,22 @@ def check_audio_coverage(media, label="Source"):
         )
     return info
 
+def validate_source_quality(duration, video):
+    """Require a 45-60s Short source with HD-class video and at least 30fps."""
+    duration = float(duration or 0)
+    width = int(video.get("width") or 0)
+    height = int(video.get("height") or 0)
+    fps = float(video.get("fps") or 0)
+    if duration < 45.0:
+        raise RuntimeError(f"Source clip is only {duration:.1f} seconds. The channel standard is 45-60 seconds; clips shorter than 45 seconds are rejected.")
+    if min(width, height) < 720:
+        raise RuntimeError(f"Source video is only {width}x{height}. Minimum accepted source quality is 720p.")
+    if fps < 30.0:
+        raise RuntimeError(f"Source video is {fps:.2f} fps. Minimum accepted source frame rate is 30 fps.")
+    return {"source_duration_seconds": round(duration, 3), "source_width": width,
+            "source_height": height, "source_fps": fps, "source_quality_passed": True}
+
+
 def clean(s): return " ".join((s or "").split())
 
 def validate_source_url(value):
@@ -376,7 +392,7 @@ def branding_assets():
 
 
 def video_filter(duration, assets, mature=False):
-    base = "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1"
+    base = "scale=1080:1920:force_original_aspect_ratio=increase:flags=lanczos,crop=1080:1920,setsar=1,unsharp=5:5:0.30:3:3:0.0"
     if not assets:
         return base, []
     parts = [f"[0:v]{base}[base]"]
@@ -544,11 +560,12 @@ def main():
         source_duration=float(source_info.get("format",{}).get("duration") or 0)
         streams=source_info.get("streams",[])
         has_source_audio=any(stream.get("codec_type")=="audio" for stream in streams)
-        if source_duration < 25:
-            raise RuntimeError(f"Source clip is only {source_duration:.1f} seconds. A Short requires a source clip of at least 25 seconds; the source will not be looped or padded.")
+        if source_duration < 45:
+            raise RuntimeError(f"Source clip is only {source_duration:.1f} seconds. The channel standard is 45-60 seconds; clips shorter than 45 seconds are rejected.")
         if not has_source_audio:
             raise RuntimeError("Source clip has no audio stream; refusing to add synthetic audio.")
         analysis=media_analysis(media)
+        analysis["source_quality"] = validate_source_quality(source_duration, analysis.get("video", {}))
         analysis["vision_review"]=vision_review(media,w,analysis,title)
         silence_intervals=analysis.pop("_silence_intervals",[])
         scene_times=analysis.pop("_scene_change_times",[])
@@ -556,16 +573,16 @@ def main():
         selected_source=media
         if source_duration>highlight_duration:
             selected_source=w/"selected-highlight.mp4"
-            run(["ffmpeg","-nostdin","-hide_banner","-loglevel","error","-y","-ss",str(highlight_start),"-i",str(media),"-t",str(highlight_duration),"-map","0:v:0","-map","0:a:0","-c:v","libx264","-preset","ultrafast","-crf","23","-pix_fmt","yuv420p","-c:a","aac","-b:a","160k",str(selected_source)])
+            run(["ffmpeg","-nostdin","-hide_banner","-loglevel","error","-y","-ss",str(highlight_start),"-i",str(media),"-t",str(highlight_duration),"-map","0:v:0","-map","0:a:0","-c:v","libx264","-preset","medium","-crf","19","-profile:v","high","-pix_fmt","yuv420p","-c:a","aac","-b:a","192k",str(selected_source)])
         analysis["highlight_selection"]={"start_seconds":highlight_start,"duration_seconds":highlight_duration,"activity_score":highlight_score,"method":"non-silent audio + scene-change density"}
-        preferred_minimum = 45.0 if highlight_duration >= 45.0 else 25.0
+        preferred_minimum = 45.0
         media_for_render,edited_duration,removed_silence=auto_trim_silence(
             selected_source,w,minimum_remaining=preferred_minimum
         )
         check_audio_coverage(media_for_render, "Edited Twitch clip")
-        if edited_duration < 25.0:
+        if edited_duration < 45.0:
             raise RuntimeError(
-                f"Output would be shorter than 25 seconds ({edited_duration:.1f}s); refusing to publish."
+                f"Edited gameplay is only {edited_duration:.1f} seconds. The standard is 45-60 seconds; refusing to publish."
             )
         if highlight_duration >= 45.0 and edited_duration < 45.0:
             raise RuntimeError(
@@ -603,8 +620,8 @@ def main():
         vf+="[0:a:0]aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[aout]"
         render_cmd+=["-filter_complex",vf,"-map",video_map,"-map","[aout]"]
         render_cmd+=["-t",str(duration),"-r","30",
-             "-c:v","libx264","-preset","ultrafast","-crf","23",
-             "-pix_fmt","yuv420p","-c:a","aac","-b:a","160k","-movflags","+faststart",str(main_content)]
+             "-c:v","libx264","-preset","medium","-crf","19","-profile:v","high",
+             "-pix_fmt","yuv420p","-c:a","aac","-b:a","192k","-movflags","+faststart",str(main_content)]
         print(f"RENDER_STAGE: encoding original gameplay audio with {len(assets)} channel overlays",flush=True)
         run(render_cmd)
 
@@ -615,8 +632,8 @@ def main():
         run(["ffmpeg","-nostdin","-hide_banner","-loglevel","error","-y",
              "-loop","1","-framerate","30","-i",str(cover_path),"-i",str(brand_sting),
              "-t","4.0","-vf",intro_filter,"-map","0:v:0","-map","1:a:0",
-             "-c:v","libx264","-preset","ultrafast","-crf","23","-pix_fmt","yuv420p",
-             "-c:a","aac","-b:a","160k","-ar","48000","-ac","2","-shortest",str(intro_path)])
+             "-c:v","libx264","-preset","medium","-crf","19","-profile:v","high","-pix_fmt","yuv420p",
+             "-c:a","aac","-b:a","192k","-ar","48000","-ac","2","-shortest",str(intro_path)])
         concat_list=out.parent/"concat-intro-and-gameplay.txt"
         concat_list.write_text(
             "file '"+intro_path.as_posix()+"'\n"+"file '"+main_content.as_posix()+"'\n",
@@ -639,6 +656,8 @@ def main():
     output_duration=float(check.get("format",{}).get("duration") or 0)
     audio_stream=next((x for x in check["streams"] if x.get("codec_type")=="audio"),{})
     audio_duration=float(audio_stream.get("duration") or output_duration)
+    if output_duration < 45.0 or output_duration > 60.0:
+        raise RuntimeError(f"Output validation failed: final Short duration is {output_duration:.1f}s; required range is 45-60 seconds.")
     if audio_duration < output_duration - 0.5:
         raise RuntimeError(f"Output validation failed: audio track ends early ({audio_duration:.1f}s of {output_duration:.1f}s).")
     silence_log=run(["ffmpeg","-nostdin","-hide_banner","-i",str(out),"-vn","-af","silencedetect=noise=-45dB:d=3","-f","null","-"])
