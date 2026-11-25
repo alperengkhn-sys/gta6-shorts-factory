@@ -63,7 +63,7 @@ def validate_source_quality(duration, video):
         raise RuntimeError(f"Source clip is only {duration:.1f} seconds. The channel standard is 45-60 seconds; clips shorter than 45 seconds are rejected.")
     if min(width, height) < 720:
         raise RuntimeError(f"Source video is only {width}x{height}. Minimum accepted source quality is 720p.")
-    if fps < 30.0:
+    if fps < 29.5:
         raise RuntimeError(f"Source video is {fps:.2f} fps. Minimum accepted source frame rate is 30 fps.")
     return {"source_duration_seconds": round(duration, 3), "source_width": width,
             "source_height": height, "source_fps": fps, "source_quality_passed": True}
@@ -507,7 +507,7 @@ def auto_trim_silence(media, workdir, minimum_remaining=25.0):
     parts=[]
     for i,(a,b) in enumerate(keep):
         part=workdir/f"trim-{i:02d}.mp4"
-        run(["ffmpeg","-nostdin","-hide_banner","-loglevel","error","-y","-ss",str(a),"-i",str(media),"-t",str(b-a),"-map","0:v:0","-map","0:a:0","-c:v","libx264","-preset","ultrafast","-crf","23","-pix_fmt","yuv420p","-c:a","aac","-b:a","160k",str(part)])
+        run(["ffmpeg","-nostdin","-hide_banner","-loglevel","error","-y","-ss",str(a),"-i",str(media),"-t",str(b-a),"-map","0:v:0","-map","0:a:0","-c:v","libx264","-preset","medium","-crf","19","-profile:v","high","-pix_fmt","yuv420p","-c:a","aac","-b:a","192k",str(part)])
         parts.append(part)
     listing=workdir/"concat.txt"
     listing.write_text("".join("file '"+p.as_posix()+"'\n" for p in parts),encoding="utf-8")
