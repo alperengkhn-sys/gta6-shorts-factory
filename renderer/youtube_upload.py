@@ -3,6 +3,7 @@
 import json
 import os
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -24,6 +25,27 @@ def request(url, data=None, headers=None, method=None):
             return e.code, dict(e.headers), e.read()
         detail = e.read().decode("utf-8", "replace")[:2500]
         raise RuntimeError(f"HTTP {e.code}: {detail}") from e
+
+def wait_for_video_processing(access_token, video_id, timeout=600):
+    """Wait until YouTube finishes processing a Short before setting its thumbnail."""
+    deadline = time.monotonic() + timeout
+    url = "https://www.googleapis.com/youtube/v3/videos?" + urllib.parse.urlencode({
+        "part": "processingDetails",
+        "id": video_id,
+    })
+    while time.monotonic() < deadline:
+        _, _, raw = request(url, headers={"Authorization": "Bearer " + access_token}, method="GET")
+        items = json.loads(raw).get("items", [])
+        if not items:
+            raise RuntimeError("YouTube could not find the newly uploaded video while checking processing.")
+        state = items[0].get("processingDetails", {}).get("processingStatus", "")
+        print("YOUTUBE_PROCESSING_STATUS: " + (state or "not_returned"), flush=True)
+        if state == "succeeded":
+            return
+        if state in ("failed", "terminated"):
+            raise RuntimeError("YouTube video processing ended with status: " + state)
+        time.sleep(10)
+    raise RuntimeError("YouTube video processing did not finish within 10 minutes; thumbnail will be retried on a later upload.")
 
 def main():
     client_id = os.environ.get("YOUTUBE_CLIENT_ID", "").strip()
@@ -139,6 +161,8 @@ def main():
     cover = Path("short-cover.jpg")
     if cover.is_file() and cover.stat().st_size:
         try:
+            # YouTube requires Shorts processing to be complete before thumbnails.set.
+            wait_for_video_processing(access_token, video_id)
             thumb_status, _, _ = request(
                 "https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId=" + urllib.parse.quote(video_id),
                 cover.read_bytes(),
