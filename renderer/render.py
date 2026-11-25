@@ -27,6 +27,7 @@ def build_twitch_download_command(source_url, destination):
     """Use FFmpeg for Twitch HLS; yt-dlp's native HLS path can truncate audio."""
     return [
         "yt-dlp", "--no-playlist",
+        "-f", "bv*+ba/b",
         "--downloader", "m3u8:ffmpeg",
         "--downloader-args", "ffmpeg_i:-analyzeduration 20000000 -probesize 50000000",
         "--merge-output-format", "mp4",
