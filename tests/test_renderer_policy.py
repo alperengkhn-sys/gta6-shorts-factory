@@ -34,6 +34,29 @@ class RendererPolicyTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "silent"):
                 render.vision_review("unused.mp4", Path(work), metrics, "GTA VI")
 
+    def test_static_loading_screen_is_rejected(self):
+        metrics = {
+            "scene_change_count": 8, "silence_ratio": 0.1, "mean_volume_db": -20,
+            "frame_motion_mean": 0.0, "active_motion_ratio": 0.0, "max_static_seconds": 30.0
+        }
+        with tempfile.TemporaryDirectory() as work:
+            with self.assertRaisesRegex(RuntimeError, "actual gameplay movement"):
+                render.vision_review("unused.mp4", Path(work), metrics, "GTA VI")
+
+    def test_long_static_broadcast_segment_is_rejected(self):
+        metrics = {
+            "scene_change_count": 8, "silence_ratio": 0.1, "mean_volume_db": -20,
+            "frame_motion_mean": 3.2, "active_motion_ratio": 0.55, "max_static_seconds": 4.0
+        }
+        with tempfile.TemporaryDirectory() as work:
+            with self.assertRaisesRegex(RuntimeError, "4 seconds or longer"):
+                render.vision_review("unused.mp4", Path(work), metrics, "GTA VI")
+
+    def test_frame_motion_summary_distinguishes_active_gameplay(self):
+        summary = render.summarize_frame_motion([0.0, 0.0, 4.0, 5.0, 3.5, 4.2, 0.0, 3.0], 4.0)
+        self.assertGreaterEqual(summary["active_motion_ratio"], 0.5)
+        self.assertEqual(summary["max_static_seconds"], 1.0)
+
     def test_original_brand_sting_is_exactly_four_seconds(self):
         with tempfile.TemporaryDirectory() as work:
             audio_path = render.create_brand_sting(Path(work), duration=4.0)
