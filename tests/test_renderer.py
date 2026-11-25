@@ -145,6 +145,9 @@ class RendererHelpersTest(unittest.TestCase):
             "scene_change_count": 14,
             "silence_ratio": 0.03,
             "mean_volume_db": -22.0,
+            "frame_motion_mean": 4.2,
+            "active_motion_ratio": 0.72,
+            "max_static_seconds": 1.0,
         }
         with patch.dict(os.environ, {"OFFLINE_MIN_SCORE": "60"}, clear=False):
             review = vision_review(None, None, metrics=metrics, title="GTA 6 explosive police chase")
@@ -155,9 +158,12 @@ class RendererHelpersTest(unittest.TestCase):
 
     def test_offline_review_rejects_low_activity_clip(self):
         metrics = {
-            "scene_change_count": 0,
+            "scene_change_count": 5,
             "silence_ratio": 0.5,
             "mean_volume_db": -42.0,
+            "frame_motion_mean": 3.0,
+            "active_motion_ratio": 0.45,
+            "max_static_seconds": 1.5,
         }
         with patch.dict(os.environ, {"OFFLINE_MIN_SCORE": "60"}, clear=False):
             with self.assertRaisesRegex(RuntimeError, "Offline quality rules rejected"):
