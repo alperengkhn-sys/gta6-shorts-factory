@@ -3,6 +3,7 @@ on:
   push:
     paths:
       - "render-queue/*.json"
+      - ".github/workflows/render-short.yml"
   workflow_dispatch:
     inputs:
       source_url:
