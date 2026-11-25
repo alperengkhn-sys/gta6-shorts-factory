@@ -1,0 +1,113 @@
+name: Reapply YouTube thumbnails
+
+on:
+  push:
+    paths:
+      - ".github/thumbnail-retry.json"
+
+permissions:
+  contents: read
+
+jobs:
+  thumbnails:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reapply stored cover images to existing Shorts
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import re
+          import sys
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+          from pathlib import Path
+
+          required = ("YOUTUBE_CLIENT_ID", "YOUTUBE_CLIENT_SECRET", "YOUTUBE_REFRESH_TOKEN")
+          missing = [name for name in required if not os.environ.get(name, "").strip()]
+          if missing:
+              raise SystemExit("Missing YouTube secrets: " + ", ".join(missing))
+
+          token_body = urllib.parse.urlencode({
+              "client_id": os.environ["YOUTUBE_CLIENT_ID"],
+              "client_secret": os.environ["YOUTUBE_CLIENT_SECRET"],
+              "refresh_token": os.environ["YOUTUBE_REFRESH_TOKEN"],
+              "grant_type": "refresh_token",
+          }).encode()
+          token_req = urllib.request.Request(
+              "https://oauth2.googleapis.com/token",
+              data=token_body,
+              headers={"Content-Type": "application/x-www-form-urlencoded"},
+              method="POST",
+          )
+          with urllib.request.urlopen(token_req, timeout=45) as response:
+              access_token = json.loads(response.read())["access_token"]
+
+          records = json.loads(Path(".github/thumbnail-retry.json").read_text(encoding="utf-8"))
+          if not isinstance(records, list) or not records:
+              raise SystemExit("Thumbnail retry list is empty or invalid.")
+
+          failures = []
+          for item in records:
+              video_id = str(item.get("video_id", "")).strip()
+              cover_url = str(item.get("cover_url", "")).strip()
+              if not re.fullmatch(r"[A-Za-z0-9_-]{11}", video_id):
+                  failures.append((video_id or "(missing)", "invalid YouTube video ID"))
+                  continue
+              if not cover_url.startswith("https://"):
+                  failures.append((video_id, "cover URL must use HTTPS"))
+                  continue
+              try:
+                  # Verify the target is accessible and processing has completed.
+                  query = urllib.parse.urlencode({"part": "processingDetails", "id": video_id})
+                  check_req = urllib.request.Request(
+                      "https://www.googleapis.com/youtube/v3/videos?" + query,
+                      headers={"Authorization": "Bearer " + access_token},
+                  )
+                  with urllib.request.urlopen(check_req, timeout=45) as response:
+                      found = json.loads(response.read()).get("items", [])
+                  if not found:
+                      raise RuntimeError("YouTube returned no matching video.")
+                  state = found[0].get("processingDetails", {}).get("processingStatus", "")
+                  if state and state != "succeeded":
+                      raise RuntimeError("YouTube processing status is " + state)
+                  if not state:
+                      raise RuntimeError("YouTube did not return processing status; refusing to set thumbnail prematurely.")
+
+                  cover_req = urllib.request.Request(cover_url, headers={"User-Agent": "VI-RUSH-thumbnail-updater"})
+                  with urllib.request.urlopen(cover_req, timeout=60) as response:
+                      cover = response.read()
+                  if len(cover) < 1000 or not cover.startswith(b"\xff\xd8\xff"):
+                      raise RuntimeError("Stored cover is not a valid JPEG image.")
+
+                  thumb_req = urllib.request.Request(
+                      "https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId=" + urllib.parse.quote(video_id),
+                      data=cover,
+                      headers={"Authorization": "Bearer " + access_token, "Content-Type": "image/jpeg"},
+                      method="POST",
+                  )
+                  with urllib.request.urlopen(thumb_req, timeout=90) as response:
+                      result = json.loads(response.read())
+                  print("THUMBNAIL_UPLOADED: https://www.youtube.com/watch?v=" + video_id)
+                  print("THUMBNAIL_RESULT: " + json.dumps(result, separators=(",", ":")))
+              except urllib.error.HTTPError as exc:
+                  detail = exc.read().decode("utf-8", "replace")[:1200]
+                  failures.append((video_id, "HTTP " + str(exc.code) + ": " + detail))
+                  print("THUMBNAIL_FAILED: " + video_id + " HTTP " + str(exc.code) + " " + detail, file=sys.stderr)
+              except Exception as exc:
+                  failures.append((video_id, str(exc)[:1200]))
+                  print("THUMBNAIL_FAILED: " + video_id + " " + str(exc)[:1200], file=sys.stderr)
+
+          print("THUMBNAIL_TOTAL: " + str(len(records)))
+          print("THUMBNAIL_SUCCESS: " + str(len(records) - len(failures)))
+          print("THUMBNAIL_FAILURE: " + str(len(failures)))
+          if failures:
+              raise SystemExit("One or more thumbnail updates failed.")
+          PY
