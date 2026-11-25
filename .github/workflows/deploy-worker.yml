@@ -37,5 +37,5 @@ jobs:
           RENDER_WEBHOOK_SECRET: ${{ secrets.RENDER_WEBHOOK_SECRET }}
         run: |
           set -euo pipefail
-          RESPONSE="$(curl --fail-with-body --silent --show-error --max-time 600 -X POST "https://gta6-shorts-engine.alperen-gkhn.workers.dev/api/prepare" -H "Content-Type: application/json" -H "X-Render-Secret: $RENDER_WEBHOOK_SECRET" --data '{}')"
+          RESPONSE="$(curl --retry 3 --retry-all-errors --retry-delay 2 --fail-with-body --silent --show-error --max-time 600 -X POST "https://gta6-shorts-engine.alperen-gkhn.workers.dev/api/prepare" -H "Content-Type: application/json" -H "X-Render-Secret: $RENDER_WEBHOOK_SECRET" --data '{}')"
           printf '%s' "$RESPONSE" | python -c 'import json,sys; d=json.load(sys.stdin); r=d.get("rendering",{}); a=d.get("access",{}); p=d.get("prepared",{}); print("Prepared:",p.get("created",0),"updated:",p.get("updated",0),"existing:",p.get("existing",0)); print("Twitch downloadable:",a.get("downloadable",0),"unauthorized:",a.get("unauthorized",0),"not_available:",a.get("not_available",0),"errors:",a.get("errors",0)); print("API error details:",json.dumps(a.get("error_details",[]),ensure_ascii=False)); print("Eligible:",r.get("eligible",0),"Dispatched:",r.get("dispatched",0),"Dispatch errors:",r.get("dispatchErrors",0)); sys.exit(1 if r.get("dispatchErrors",0) else 0)'
