@@ -72,7 +72,7 @@ jobs:
           ffmpeg -nostdin -hide_banner -loglevel error -y -f lavfi -i "color=c=green@0.65:s=390x120:d=1,format=rgba" -frames:v 1 branding/subscribe.png
           ffmpeg -nostdin -hide_banner -loglevel error -y -f lavfi -i "color=c=red@0.65:s=125x125:d=1,format=rgba" -frames:v 1 branding/notification.png
           ffmpeg -nostdin -hide_banner -loglevel error -y -f lavfi -i "color=c=black@0.65:s=1080x1920:d=1,format=rgba" -frames:v 1 branding/outro.png
-          ffmpeg -nostdin -hide_banner -loglevel error -y -f lavfi -i testsrc2=size=320x180:rate=10 -f lavfi -i sine=frequency=440:duration=26 -t 26 -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac fixture.mp4
+          ffmpeg -nostdin -hide_banner -loglevel error -y -f lavfi -i testsrc2=size=720x1280:rate=30 -f lavfi -i sine=frequency=440:duration=55 -t 55 -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac fixture.mp4
           python renderer/render.py --source-url https://example.com/CIOnlyFixture --test-local-source fixture.mp4 --title "GTA 6 CI Render Test" --output ci-short.mp4
           python - <<'PY'
           import json, subprocess
@@ -87,7 +87,7 @@ jobs:
           test -s render-analysis.json
           test -s short-cover.jpg
           python -c "import json; a=json.load(open('render-analysis.json')); assert a['audio']['present'] is True and a['usable_for_shorts'] is True"
-          ffmpeg -nostdin -hide_banner -loglevel error -y -f lavfi -i testsrc2=size=320x180:rate=10 -t 26 -map 0:v:0 -an -c:v libx264 -preset ultrafast -pix_fmt yuv420p silent-fixture.mp4
+          ffmpeg -nostdin -hide_banner -loglevel error -y -f lavfi -i testsrc2=size=720x1280:rate=30 -t 55 -map 0:v:0 -an -c:v libx264 -preset ultrafast -pix_fmt yuv420p silent-fixture.mp4
           python - <<'PY'
           import os, subprocess, sys
           from pathlib import Path
@@ -108,7 +108,7 @@ jobs:
           assert not output.exists() or output.stat().st_size == 0, "A silent MP4 was incorrectly produced"
           print("PASS: silent source rejected without producing an MP4")
           PY
-          ffmpeg -nostdin -hide_banner -loglevel error -y -f lavfi -i testsrc2=size=320x180:rate=10 -f lavfi -i sine=frequency=520:duration=8 -t 26 -map 0:v:0 -map 1:a:0 -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -b:a 160k cut-audio-fixture.mp4
+          ffmpeg -nostdin -hide_banner -loglevel error -y -f lavfi -i testsrc2=size=720x1280:rate=30 -f lavfi -i sine=frequency=520:duration=8 -t 55 -map 0:v:0 -map 1:a:0 -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -b:a 160k cut-audio-fixture.mp4
           python - <<'PY'
           import os, subprocess, sys
           from pathlib import Path
