@@ -289,14 +289,13 @@ def create_brand_sting(workdir, duration=4.0):
 def branding_assets():
     root = Path("branding")
     specs = [
-        ("banner.png", "1080:-1", "(W-w)/2", "0", "always"),
+        # Full-frame channel cards go behind all CTA overlays so they cannot
+        # hide the supplied subscribe and notification artwork at the ending.
+        ("image_50843161.jpg", "1080:1920", "0", "0", "intro"),
+        ("image_50843161.jpg", "1080:1920", "0", "0", "outro"),
         ("logo.png", "190:-1", "40", "40", "always"),
         ("subscribe.png", "390:-1", "(W-w)/2", "H-h-130", "ending"),
         ("notification.png", "460:-1", "(W-w)/2", "H-h-420", "ending"),
-        # Supplied VI RUSH / Leonida Loop artwork is used as a short branded
-        # opening bumper and closing end card, not merely archived in the ZIP.
-        ("image_50843161.jpg", "1080:1920", "0", "0", "intro"),
-        ("image_50843161.jpg", "1080:1920", "0", "0", "outro"),
     ]
     return [(root / name, scale, x, y, timing) for name, scale, x, y, timing in specs if (root / name).is_file()]
 
@@ -341,6 +340,17 @@ def video_filter(duration, assets, subtitles_path=None, mature=False):
             "enable='between(t,0,5)'[mature]"
         )
         current = "mature"
+    # Add a readable like/subscribe/bell reminder on top of the supplied
+    # artwork during the final five seconds. Subscribe and bell images remain
+    # visible because the full-frame outro is placed earlier in the overlay stack.
+    parts.append(
+        f"[{current}]drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:"
+        "text='LIKE  •  SUBSCRIBE  •  TURN ON NOTIFICATIONS':fontcolor=white:fontsize=38:"
+        "borderw=2:bordercolor=black:box=1:boxcolor=black@0.68:boxborderw=18:"
+        "x=(w-text_w)/2:y=1160:"
+        f"enable='between(t,{max(0,duration-5):.3f},{duration:.3f})'[engagement]"
+    )
+    current = "engagement"
     return ";".join(parts), inputs + ["-map", f"[{current}]"]
 
 
@@ -429,7 +439,7 @@ def select_highlight_window(duration, silence_intervals, scene_times, window=55.
     return round(best[0],2),round(window,2),round(best[1],2)
 
 
-def auto_trim_silence(media, workdir):
+def auto_trim_silence(media, workdir, minimum_remaining=25.0):
     log=run(["ffmpeg","-nostdin","-hide_banner","-i",str(media),"-af","silencedetect=noise=-35dB:d=0.8","-f","null","-"])
     meta=json.loads(run(["ffprobe","-v","error","-show_entries","format=duration","-of","json",str(media)]))
     duration=float(meta.get("format",{}).get("duration") or 0)
@@ -454,7 +464,9 @@ def auto_trim_silence(media, workdir):
         cursor=max(cursor,right)
     if duration-cursor>0.25: keep.append((cursor,duration))
     kept=sum(b-a for a,b in keep)
-    if len(keep)<2 or kept<15 or duration-kept<1.5: return media,duration,0
+    # Never cut a preferred 45-second Short below the requested floor.
+    # For shorter valid Twitch clips, retain at least 25 seconds.
+    if len(keep)<2 or kept<float(minimum_remaining) or duration-kept<1.5: return media,duration,0
     parts=[]
     for i,(a,b) in enumerate(keep):
         part=workdir/f"trim-{i:02d}.mp4"
@@ -525,10 +537,23 @@ def main():
             selected_source=w/"selected-highlight.mp4"
             run(["ffmpeg","-nostdin","-hide_banner","-loglevel","error","-y","-ss",str(highlight_start),"-i",str(media),"-t",str(highlight_duration),"-map","0:v:0","-map","0:a:0","-c:v","libx264","-preset","ultrafast","-crf","23","-pix_fmt","yuv420p","-c:a","aac","-b:a","160k",str(selected_source)])
         analysis["highlight_selection"]={"start_seconds":highlight_start,"duration_seconds":highlight_duration,"activity_score":highlight_score,"method":"non-silent audio + scene-change density"}
-        media_for_render,edited_duration,removed_silence=auto_trim_silence(selected_source,w)
+        preferred_minimum = 45.0 if highlight_duration >= 45.0 else 25.0
+        media_for_render,edited_duration,removed_silence=auto_trim_silence(
+            selected_source,w,minimum_remaining=preferred_minimum
+        )
         check_audio_coverage(media_for_render, "Edited Twitch clip")
+        if edited_duration < 25.0:
+            raise RuntimeError(
+                f"Output would be shorter than 25 seconds ({edited_duration:.1f}s); refusing to publish."
+            )
+        if highlight_duration >= 45.0 and edited_duration < 45.0:
+            raise RuntimeError(
+                f"Available source was at least 45 seconds, but edited output is only {edited_duration:.1f}s."
+            )
         analysis["silence_removed_seconds"]=removed_silence
         analysis["automatic_dead_air_trim"]=removed_silence>0
+        analysis["preferred_minimum_duration_seconds"]=preferred_minimum
+        analysis["duration_target_met"]=edited_duration>=preferred_minimum
         analysis_path=out.parent/"render-analysis.json"
         analysis_path.write_text(json.dumps(analysis,indent=2),encoding="utf-8")
         duration=min(60.0,edited_duration)
