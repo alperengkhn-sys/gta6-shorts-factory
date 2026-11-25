@@ -191,8 +191,16 @@ def vision_review(media, workdir, metrics=None, title=""):
     scene_count = metrics.get("scene_change_count")
     silence_ratio = float(metrics.get("silence_ratio") or 0)
     mean_volume = metrics.get("mean_volume_db")
-    score = 58
-    reasons = ["Free offline ruleset; no paid AI service was called."]
+    score = 50
+    reasons = ["Offline media-activity screening; no paid AI service was called."]
+    if not isinstance(scene_count, (int, float)):
+        raise RuntimeError("Quality gate rejected this clip: scene-change analysis unavailable.")
+    if scene_count < 4:
+        raise RuntimeError("Quality gate rejected this clip: too little visual scene activity.")
+    if silence_ratio > 0.50:
+        raise RuntimeError("Quality gate rejected this clip: more than half the source is silent.")
+    if mean_volume is None or float(mean_volume) < -38:
+        raise RuntimeError("Quality gate rejected this clip: source audio is missing or too quiet.")
     if isinstance(scene_count, (int, float)):
         if scene_count >= 12:
             score += 17
@@ -227,7 +235,7 @@ def vision_review(media, workdir, metrics=None, title=""):
         score -= 8
         reasons.append("Insufficient descriptive title metadata.")
     score = max(0, min(100, int(score)))
-    if score < int(os.environ.get("OFFLINE_MIN_SCORE", "60")):
+    if score < int(os.environ.get("OFFLINE_MIN_SCORE", "68")):
         raise RuntimeError("Offline quality rules rejected this clip (score=" + str(score) + "): " + clean("; ".join(reasons)))
 
     return {
@@ -289,9 +297,6 @@ def create_brand_sting(workdir, duration=4.0):
 def branding_assets():
     root = Path("branding")
     specs = [
-        # Full-frame channel cards go behind all CTA overlays so they cannot
-        # hide the supplied subscribe and notification artwork at the ending.
-        ("image_50843161.jpg", "1080:1920", "0", "0", "intro"),
         ("image_50843161.jpg", "1080:1920", "0", "0", "outro"),
         ("logo.png", "190:-1", "40", "40", "always"),
         ("subscribe.png", "390:-1", "(W-w)/2", "H-h-130", "ending"),
@@ -299,14 +304,9 @@ def branding_assets():
     ]
     return [(root / name, scale, x, y, timing) for name, scale, x, y, timing in specs if (root / name).is_file()]
 
-def video_filter(duration, assets, subtitles_path=None, mature=False):
+
+def video_filter(duration, assets, mature=False):
     base = "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1"
-    if subtitles_path:
-        subtitle_file = str(subtitles_path).replace("\\", "\\\\").replace(":", "\\:")
-        base += (f",subtitles='{subtitle_file}':force_style="
-                 "'FontName=DejaVu Sans,FontSize=18,PrimaryColour=&H00FFFFFF,"
-                 "OutlineColour=&H00000000,BorderStyle=1,Outline=3,Shadow=1,"
-                 "Alignment=2,MarginV=330'")
     if not assets:
         return base, []
     parts = [f"[0:v]{base}[base]"]
@@ -315,16 +315,13 @@ def video_filter(duration, assets, subtitles_path=None, mature=False):
     for index, (_, scale, x, y, timing) in enumerate(assets, start=1):
         label = f"ov{index}"
         next_label = f"v{index}"
-        if timing in ("intro", "outro"):
-            # Full-frame vertical branded bumper/end card.
+        if timing == "outro":
             image_filter = "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,format=rgba"
         else:
             image_filter = f"scale={scale}:force_original_aspect_ratio=decrease,format=rgba"
         parts.append(f"[{index}:v]{image_filter}[{label}]")
         if timing == "always":
             enable = f"between(t,0,{duration:.3f})"
-        elif timing == "intro":
-            enable = f"between(t,0,{min(2.5,duration):.3f})"
         elif timing == "ending":
             enable = f"between(t,{max(0,duration-5):.3f},{duration:.3f})"
         else:
@@ -340,9 +337,6 @@ def video_filter(duration, assets, subtitles_path=None, mature=False):
             "enable='between(t,0,5)'[mature]"
         )
         current = "mature"
-    # Add a readable like/subscribe/bell reminder on top of the supplied
-    # artwork during the final five seconds. Subscribe and bell images remain
-    # visible because the full-frame outro is placed earlier in the overlay stack.
     parts.append(
         f"[{current}]drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:"
         "text='LIKE  •  SUBSCRIBE  •  TURN ON NOTIFICATIONS':fontcolor=white:fontsize=38:"
@@ -350,51 +344,8 @@ def video_filter(duration, assets, subtitles_path=None, mature=False):
         "x=(w-text_w)/2:y=1160:"
         f"enable='between(t,{max(0,duration-5):.3f},{duration:.3f})'[engagement]"
     )
-    current = "engagement"
-    return ";".join(parts), inputs + ["-map", f"[{current}]"]
+    return ";".join(parts), inputs + ["-map", "[engagement]"]
 
-
-def create_voiceover(package_text, workdir):
-    import re
-    match = re.search(r"ORIGINAL VOICEOVER DRAFT:\s*([\s\S]*?)(?=\n\n[A-Z][A-Z /_-]+:|\Z)", package_text or "")
-    narration = clean(match.group(1)) if match else ""
-    if len(narration) < 35:
-        return None, None
-    audio = workdir / "editorial-voiceover.mp3"
-    result = subprocess.run(
-        ["edge-tts", "--voice", "en-US-GuyNeural", "--rate=+5%", "--text", narration, "--write-media", str(audio)],
-        text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-        stdin=subprocess.DEVNULL, timeout=120
-    )
-    if result.returncode or not audio.is_file() or audio.stat().st_size < 1000:
-        raise RuntimeError("English editorial voiceover generation failed: " + (result.stdout or "")[-1200:])
-    info = json.loads(run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "json", str(audio)]))
-    voice_duration = float(info.get("format", {}).get("duration") or 0)
-    if voice_duration < 2:
-        raise RuntimeError("Generated editorial voiceover is unexpectedly short.")
-    sentences = [clean(x) for x in re.split(r"(?<=[.!?])\s+", narration) if clean(x)]
-    chunks = []
-    for sentence in sentences:
-        words = sentence.split()
-        while words:
-            chunks.append(" ".join(words[:7]))
-            words = words[7:]
-    if not chunks:
-        chunks = [narration]
-    weights = [max(1, len(x.split())) for x in chunks]
-    total = sum(weights)
-    cursor = 0.0
-    srt = []
-    def stamp(seconds):
-        ms = int(seconds * 1000)
-        return f"{ms//3600000:02}:{(ms%3600000)//60000:02}:{(ms%60000)//1000:02},{ms%1000:03}"
-    for index, (chunk, weight) in enumerate(zip(chunks, weights), 1):
-        start = cursor
-        cursor += voice_duration * weight / total
-        srt.append(f"{index}\n{stamp(start)} --> {stamp(cursor)}\n{chunk}\n")
-    subtitles = workdir / "editorial-captions.srt"
-    subtitles.write_text("\n".join(srt), encoding="utf-8")
-    return audio, subtitles
 
 def make_cover(video, title, duration, destination):
     safe = (clean(title)[:52].replace("\\", "\\\\").replace(":", "\\:")
@@ -558,65 +509,56 @@ def main():
         analysis_path.write_text(json.dumps(analysis,indent=2),encoding="utf-8")
         duration=min(60.0,edited_duration)
         assets=branding_assets()
-        voiceover, subtitles = create_voiceover(os.environ.get("PACKAGE_TEXT", ""), w)
-        brand_sting = create_brand_sting(w, duration=4.0)
-        mature_edit = analysis["vision_review"].get("editing_treatment") == "mature_non_explicit"
-        vf, overlay_inputs=video_filter(duration,assets,subtitles,mature=mature_edit)
-        analysis["mature_content_editing"] = {
-            "applied": mature_edit,
-            "opening_notice": "MATURE THEMES" if mature_edit else None,
-            "narration_tone": analysis["vision_review"].get("editorial_tone", "neutral"),
-            "age_restriction_recommended": analysis["vision_review"].get("age_restriction_recommended", False),
-            "age_restriction_status": analysis["vision_review"].get("age_restriction_status", "not_recommended")
+        brand_sting=create_brand_sting(w,duration=4.0)
+        mature_edit=analysis["vision_review"].get("editing_treatment")=="mature_non_explicit"
+        vf,overlay_inputs=video_filter(duration,assets,mature=mature_edit)
+        analysis["mature_content_editing"]={
+            "applied":mature_edit,
+            "opening_notice":"MATURE THEMES" if mature_edit else None,
+            "narration_tone":analysis["vision_review"].get("editorial_tone","neutral"),
+            "age_restriction_recommended":analysis["vision_review"].get("age_restriction_recommended",False),
+            "age_restriction_status":analysis["vision_review"].get("age_restriction_status","not_recommended")
         }
+        main_content=out.parent/"main-content.mp4"
         render_cmd=["ffmpeg","-nostdin","-hide_banner","-loglevel","info","-stats_period","1",
              "-filter_threads","1","-threads","2","-y","-i",str(media_for_render)]
         if assets:
-            render_cmd += overlay_inputs[:-2]
-        voice_index = 1 + len(assets)
-        if voiceover:
-            render_cmd += ["-i", str(voiceover)]
-        sting_index = voice_index + (1 if voiceover else 0)
-        render_cmd += ["-i", str(brand_sting)]
+            render_cmd+=overlay_inputs[:-2]
         if not assets:
-            vf = f"[0:v]{vf}[vout]"
-            video_map = "[vout]"
+            vf=f"[0:v]{vf}[vout]"
+            video_map="[vout]"
         else:
-            video_map = overlay_inputs[-1]
-            vf += ";" if vf else ""
-        if voiceover:
-            voice_info = json.loads(run([
-                "ffprobe", "-v", "error", "-show_entries", "format=duration",
-                "-of", "json", str(voiceover)
-            ]))
-            voice_duration = float(voice_info.get("format", {}).get("duration") or 0)
-            if voice_duration < 2:
-                raise RuntimeError("Generated editorial voiceover is unexpectedly short.")
-            # Do not use sidechaincompress here: its sidechain EOF can terminate
-            # the processed source stream when narration is shorter than the clip.
-            # Attenuate source audio only while narration is active, then restore
-            # the original level; amix duration=first keeps the complete source track.
-            vf += (f"[0:a:0]volume='if(lt(t,{voice_duration:.3f}),0.28,1.0)'[source_audio];"
-                   f"[source_audio][{voice_index}:a]amix=inputs=2:duration=first:"
-                   "dropout_transition=0[aout];")
-        else:
-            vf += "[0:a:0]anull[aout];"
-        vf += (f"[aout][{sting_index}:a]amix=inputs=2:duration=first:"
-               "dropout_transition=0:weights='1 0.28'[finala]")
-        audio_map = "[finala]"
-        render_cmd += ["-filter_complex",vf,"-map",video_map,"-map",audio_map]
-        render_cmd += ["-t",str(duration),"-r","30",
+            video_map=overlay_inputs[-1]
+            vf+=";" if vf else ""
+        vf+="[0:a:0]anull[aout]"
+        render_cmd+=["-filter_complex",vf,"-map",video_map,"-map","[aout]"]
+        render_cmd+=["-t",str(duration),"-r","30",
              "-c:v","libx264","-preset","ultrafast","-crf","23",
-             "-pix_fmt","yuv420p","-c:a","aac","-b:a","160k","-movflags","+faststart",str(out)]
-        print(f"RENDER_STAGE: encoding source video and audio with {len(assets)} branding overlays",flush=True)
+             "-pix_fmt","yuv420p","-c:a","aac","-b:a","160k","-movflags","+faststart",str(main_content)]
+        print(f"RENDER_STAGE: encoding original gameplay audio with {len(assets)} channel overlays",flush=True)
         run(render_cmd)
-        print("RENDER_STAGE: final encode completed",flush=True)
-        analysis["ai_voiceover_added"]=bool(voiceover)
-        analysis["audio_editing"]="original source audio attenuated only during English editorial voiceover, then restored" if voiceover else "original source audio preserved; no added voiceover"
-        analysis_path.write_text(json.dumps(analysis,indent=2),encoding="utf-8")
+
         cover_path=out.parent/"short-cover.jpg"
-        make_cover(out,title,duration,cover_path)
-        print(f"RENDER_STAGE: generated cover {cover_path}",flush=True)
+        make_cover(media_for_render,title,duration,cover_path)
+        intro_path=out.parent/"brand-intro.mp4"
+        intro_filter="scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,format=yuv420p"
+        run(["ffmpeg","-nostdin","-hide_banner","-loglevel","error","-y",
+             "-loop","1","-framerate","30","-i",str(cover_path),"-i",str(brand_sting),
+             "-t","4.0","-vf",intro_filter,"-map","0:v:0","-map","1:a:0",
+             "-c:v","libx264","-preset","ultrafast","-crf","23","-pix_fmt","yuv420p",
+             "-c:a","aac","-b:a","160k","-shortest",str(intro_path)])
+        concat_list=out.parent/"concat-intro-and-gameplay.txt"
+        concat_list.write_text(
+            "file '"+intro_path.as_posix()+"'\n"+"file '"+main_content.as_posix()+"'\n",
+            encoding="utf-8"
+        )
+        run(["ffmpeg","-nostdin","-hide_banner","-loglevel","error","-y",
+             "-f","concat","-safe","0","-i",str(concat_list),"-c","copy",str(out)])
+        analysis["ai_voiceover_added"]=False
+        analysis["generated_subtitles_added"]=False
+        analysis["audio_editing"]="Original source audio preserved; original synthesized 4-second VI RUSH sting plays only on the generated cover intro."
+        analysis_path.write_text(json.dumps(analysis,indent=2),encoding="utf-8")
+        print(f"RENDER_STAGE: generated cover intro + original 4-second soundtrack {cover_path}",flush=True)
     check=json.loads(run(["ffprobe","-v","error","-show_entries","stream=codec_type,codec_name,width,height,duration",
                           "-show_entries","format=duration","-of","json",str(out)]))
     video=next((x for x in check["streams"] if x["codec_type"]=="video"),{})

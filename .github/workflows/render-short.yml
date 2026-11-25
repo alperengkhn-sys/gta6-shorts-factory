@@ -115,7 +115,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg fonts-dejavu-core
           python -m pip install --upgrade pip
-          pip install yt-dlp edge-tts pillow
+          pip install yt-dlp pillow
       - name: Prepare transparent channel overlays
         if: steps.task.outputs.noop != 'true'
         run: python renderer/prepare_branding.py
@@ -126,7 +126,7 @@ jobs:
           SOURCE_URL: ${{ inputs.source_url || steps.task.outputs.source_url }}
           SHORT_TITLE: ${{ inputs.title || steps.task.outputs.title }}
           PACKAGE_TEXT: ${{ inputs.package_text || steps.task.outputs.package_text }}
-          OFFLINE_MIN_SCORE: "60"
+          OFFLINE_MIN_SCORE: "68"
         run: |
           python renderer/render.py \
             --source-url "$SOURCE_URL" \
@@ -185,8 +185,8 @@ jobs:
               f"ORIGINAL CLIP TITLE: {os.environ.get('ORIGINAL_TITLE','')}", "",
               "SUGGESTED SHORTS TITLE:", section("PROPOSED TITLE"), "",
               "HOOK / OPENING:", section("HOOK / OPENING"), "",
-              "VOICEOVER DRAFT:", section("ORIGINAL VOICEOVER DRAFT"), "",
-              "CAPTION DRAFT:", section("CAPTION TEXT DRAFT"), "",
+              "VOICEOVER:", "Disabled — original clip audio only.", "",
+              "CAPTIONS:", "No generated subtitle layer is added by the renderer.", "",
               "9:16 EDIT PLAN:", section("9:16 EDITING PLAN"), "",
               "YOUTUBE DESCRIPTION:", description, "",
               "YOUTUBE TAGS:", tags, "",
