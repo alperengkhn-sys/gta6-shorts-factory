@@ -22,12 +22,24 @@ on:
         required: false
         type: string
       job_id:
-        description: Optional originating Worker job ID
-        required: false
+        description: Permission-attested originating Worker job ID
+        required: true
         type: string
       render_attempt:
         description: Worker render attempt number for stale-callback protection
+        required: true
+        type: string
+      broadcaster_id:
+        description: Twitch broadcaster ID covered by the creator permission
+        required: true
+        type: string
+      permission_expires_at:
+        description: Creator permission expiry timestamp, or blank for no expiry
         required: false
+        type: string
+      permission_attestation:
+        description: HMAC attestation produced by the Cloudflare Worker
+        required: true
         type: string
       creator_name:
         description: Original creator / source channel
@@ -43,7 +55,7 @@ on:
         type: string
       max_source_seconds:
         description: Creator-authorized maximum seconds of source footage
-        required: false
+        required: true
         type: string
 permissions:
   contents: write
@@ -69,11 +81,55 @@ jobs:
           task = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
           print("noop=" + ("true" if task.get("noop") else "false"))
           print("test_quality_rejection=" + ("true" if task.get("test_quality_rejection") else "false"))
-          for key in ("source_url", "title", "description", "tags", "job_id", "render_attempt", "creator_name", "source_title", "max_source_seconds"):
+          for key in ("source_url", "title", "description", "tags", "job_id", "render_attempt", "creator_name", "source_title", "max_source_seconds", "broadcaster_id", "permission_expires_at", "permission_attestation"):
               print(f"{key}={str(task.get(key, '')).replace(chr(10), ' ')}")
           print("package_text<<GTA6_TASK_EOF")
           print(str(task.get("package_text", "")))
           print("GTA6_TASK_EOF")
+          PY
+      - name: Verify creator-use permission attestation
+        if: steps.task.outputs.noop != 'true'
+        env:
+          PERMISSION_SECRET: ${{ secrets.RENDER_WEBHOOK_SECRET }}
+          SOURCE_URL: ${{ inputs.source_url || steps.task.outputs.source_url }}
+          JOB_ID: ${{ inputs.job_id || steps.task.outputs.job_id }}
+          RENDER_ATTEMPT: ${{ inputs.render_attempt || steps.task.outputs.render_attempt }}
+          BROADCASTER_ID: ${{ inputs.broadcaster_id || steps.task.outputs.broadcaster_id }}
+          PERMISSION_EXPIRES_AT: ${{ inputs.permission_expires_at || steps.task.outputs.permission_expires_at }}
+          MAX_SOURCE_SECONDS: ${{ inputs.max_source_seconds || steps.task.outputs.max_source_seconds }}
+          PERMISSION_ATTESTATION: ${{ inputs.permission_attestation || steps.task.outputs.permission_attestation }}
+        run: |
+          python - <<'PY'
+          import base64, datetime, hashlib, hmac, os, sys
+          secret = os.environ.get("PERMISSION_SECRET", "")
+          fields = [
+              os.environ.get("JOB_ID", ""),
+              os.environ.get("SOURCE_URL", ""),
+              os.environ.get("BROADCASTER_ID", ""),
+              os.environ.get("MAX_SOURCE_SECONDS", ""),
+              os.environ.get("PERMISSION_EXPIRES_AT", ""),
+          ]
+          signature = os.environ.get("PERMISSION_ATTESTATION", "")
+          if not secret or not all(fields[:4]) or not signature:
+              raise SystemExit("Permission attestation is missing; publishing is blocked.")
+          try:
+              maximum = float(fields[3])
+          except ValueError:
+              raise SystemExit("Permission time limit is invalid.")
+          if not 45 <= maximum <= 175:
+              raise SystemExit("Permission time limit is outside the allowed 45–175 second range.")
+          if fields[4]:
+              expiry = datetime.datetime.fromisoformat(fields[4].replace("Z", "+00:00"))
+              if expiry.tzinfo is None:
+                  expiry = expiry.replace(tzinfo=datetime.timezone.utc)
+              if expiry <= datetime.datetime.now(datetime.timezone.utc):
+                  raise SystemExit("Creator permission has expired; publishing is blocked.")
+          message = "\\n".join(fields).encode("utf-8")
+          digest = hmac.new(secret.encode("utf-8"), message, hashlib.sha256).digest()
+          expected = base64.urlsafe_b64encode(digest).decode("ascii").rstrip("=")
+          if not hmac.compare_digest(expected, signature):
+              raise SystemExit("Permission attestation is invalid; publishing is blocked.")
+          print("PASS: creator-use permission, platform and source-duration attestation verified.")
           PY
       - name: Check whether this Twitch clip was already published
         id: dedupe
