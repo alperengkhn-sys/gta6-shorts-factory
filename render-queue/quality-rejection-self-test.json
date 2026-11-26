@@ -1,7 +1,7 @@
 {
-  "noop": false,
-  "test_quality_rejection": true,
-  "title": "Synthetic quality rejection self-test v2",
+  "noop": true,
+  "test_quality_rejection": false,
+  "title": "Disabled quality-rejection self-test fixture",
   "source_url": "",
   "job_id": ""
 }
