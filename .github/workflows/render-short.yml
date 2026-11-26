@@ -143,10 +143,16 @@ jobs:
               printf '%s\n' "$ERROR_LINE"
               echo "GTA6_RENDER_ERROR"
             } >> "$GITHUB_OUTPUT"
+            if printf '%s' "$ERROR_LINE" | grep -Eqi 'Quality gate rejected|Offline quality rules rejected'; then
+              echo "rejected=true" >> "$GITHUB_OUTPUT"
+              echo "::notice::Source clip rejected by editorial quality rules; this is a normal skip and will be replaced by the Worker batch."
+              exit 0
+            fi
             exit "$RENDER_EXIT"
           fi
+          echo "rejected=false" >> "$GITHUB_OUTPUT"
       - name: Build numbered delivery package
-        if: steps.task.outputs.noop != 'true'
+        if: steps.task.outputs.noop != 'true' && steps.render.outputs.rejected != 'true'
         env:
           SOURCE_URL: ${{ inputs.source_url || steps.task.outputs.source_url }}
           CREATOR_NAME: ${{ inputs.creator_name || steps.task.outputs.creator_name }}
@@ -213,7 +219,7 @@ jobs:
           Path(f"GTA6-Short-{number}-cover.jpg").write_bytes(Path("short-cover.jpg").read_bytes())
           PY
       - name: Build combined ZIP package
-        if: steps.task.outputs.noop != 'true'
+        if: steps.task.outputs.noop != 'true' && steps.render.outputs.rejected != 'true'
         env:
           RUN_NUMBER: ${{ github.run_number }}
         run: |
@@ -234,7 +240,7 @@ jobs:
                           archive.write(path, str(Path("branding") / path.relative_to(branding)))
           PY
       - name: Publish direct MP4 and package ZIP
-        if: steps.task.outputs.noop != 'true'
+        if: steps.task.outputs.noop != 'true' && steps.render.outputs.rejected != 'true'
         id: release
         continue-on-error: true
         env:
@@ -252,7 +258,7 @@ jobs:
           echo "mp4_url=${BASE}/${MP4}" >> "$GITHUB_OUTPUT"
           echo "package_url=${BASE}/${ZIP}" >> "$GITHUB_OUTPUT"
       - name: Upload MP4, ZIP, cover, and media analysis
-        if: steps.task.outputs.noop != 'true'
+        if: steps.task.outputs.noop != 'true' && steps.render.outputs.rejected != 'true'
         id: upload
         uses: actions/upload-artifact@v4
         with:
@@ -267,7 +273,7 @@ jobs:
           retention-days: 7
       - name: Choose YouTube privacy based on content review
         id: privacy
-        if: steps.task.outputs.noop != 'true' && steps.dedupe.outputs.already_published != 'true' && success()
+        if: steps.task.outputs.noop != 'true' && steps.render.outputs.rejected != 'true' && steps.dedupe.outputs.already_published != 'true' && success()
         run: |
           python - <<'PY' >> "$GITHUB_OUTPUT"
           import json
@@ -282,7 +288,7 @@ jobs:
           PY
       - name: Automatically publish YouTube Short
         id: youtube
-        if: steps.task.outputs.noop != 'true' && steps.dedupe.outputs.already_published != 'true' && success()
+        if: steps.task.outputs.noop != 'true' && steps.render.outputs.rejected != 'true' && steps.dedupe.outputs.already_published != 'true' && success()
         env:
           SHORT_TITLE: ${{ inputs.title || steps.task.outputs.title }}
           SHORT_DESCRIPTION: ${{ inputs.description || steps.task.outputs.description }}
@@ -293,7 +299,7 @@ jobs:
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
         run: python renderer/youtube_upload.py
       - name: Record successful YouTube upload to prevent duplicates
-        if: startsWith(steps.youtube.outputs.upload_status, 'uploaded_')
+        if: startsWith(steps.youtube.outputs.upload_status, 'uploaded_') && steps.render.outputs.rejected != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           SOURCE_URL: ${{ inputs.source_url || steps.task.outputs.source_url }}
@@ -345,6 +351,7 @@ jobs:
           RENDER_ATTEMPT: ${{ inputs.render_attempt || steps.task.outputs.render_attempt }}
           CONCLUSION: ${{ job.status }}
           RENDER_CONCLUSION: ${{ steps.render.outcome }}
+          RENDER_REJECTED: ${{ steps.render.outputs.rejected }}
           RENDER_ERROR: ${{ steps.render.outputs.error }}
           YOUTUBE_STATUS: ${{ steps.youtube.outputs.upload_status }}
           YOUTUBE_URL: ${{ steps.youtube.outputs.video_url }}
@@ -364,7 +371,7 @@ jobs:
             "job_id": os.environ["JOB_ID"],
             "render_attempt": int(os.environ["RENDER_ATTEMPT"]) if os.environ.get("RENDER_ATTEMPT", "").isdigit() else None,
             "conclusion": os.environ["CONCLUSION"],
-            "render_conclusion": os.environ.get("RENDER_CONCLUSION", ""),
+            "render_conclusion": "failure" if os.environ.get("RENDER_REJECTED") == "true" else os.environ.get("RENDER_CONCLUSION", ""),
             "youtube_status": os.environ.get("YOUTUBE_STATUS", "") or "not_configured",
             "youtube_url": os.environ.get("YOUTUBE_URL", ""),
             "thumbnail_status": os.environ.get("THUMBNAIL_STATUS", "") or "not_available",
