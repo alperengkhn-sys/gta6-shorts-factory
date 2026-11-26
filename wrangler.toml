@@ -15,7 +15,7 @@ enabled = true
 crons = ["0 */3 * * *"]
 
 # [initial-production] Verify successful-publish target and automatic replacement batch in production.
-# Trigger an audited first production discovery after the Worker deployment.
+# [initial-production] Verify post-discovery batch handling after the Worker deployment.
 
 # Automated public Twitch clip discovery and Shorts publishing runs every three hours.
 
