@@ -144,7 +144,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg fonts-dejavu-core
           python -m pip install --upgrade pip
-          pip install yt-dlp pillow opencv-python-headless numpy
+          pip install yt-dlp pillow opencv-python-headless==4.10.0.84 numpy==1.26.4
       - name: Prepare transparent channel overlays
         if: steps.task.outputs.noop != 'true' && steps.task.outputs.test_quality_rejection != 'true'
         run: python renderer/prepare_branding.py
