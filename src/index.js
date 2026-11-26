@@ -1,7 +1,15 @@
-const VERSION = "GTA6-FACTORY-6.0-SUCCESS-TARGET-QUALITY-REPAIR";
-const MIN_AUTOMATIC_PUBLISHES_PER_CYCLE = 5;
-const MAX_AUTOMATIC_RENDERS_PER_CYCLE = 10;
-const MAX_AUTOMATIC_ATTEMPTS_PER_CYCLE = 50;
+import {
+  MIN_BATCH_PUBLISHES,
+  MAX_BATCH_PUBLISHES,
+  MAX_BATCH_ATTEMPTS,
+  shouldFillBatch,
+  batchCompletionStatus
+} from "./render-batch-policy.mjs";
+
+const VERSION = "GTA6-FACTORY-6.1-REPLACEMENT-BATCH";
+const MIN_AUTOMATIC_PUBLISHES_PER_CYCLE = MIN_BATCH_PUBLISHES;
+const MAX_AUTOMATIC_RENDERS_PER_CYCLE = MAX_BATCH_PUBLISHES;
+const MAX_AUTOMATIC_ATTEMPTS_PER_CYCLE = MAX_BATCH_ATTEMPTS;
 
 const HTML = String.raw`<!doctype html>
 <html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GTA6 Shorts Factory 5.2</title>
@@ -351,16 +359,19 @@ async function fillRenderBatch(db,env,batchId){
  while(attempted<MAX_AUTOMATIC_ATTEMPTS_PER_CYCLE){
   const batch=await db.prepare("SELECT id,status,target_min,target_max,max_attempts,attempts,pending,published,failed,eligible FROM render_batches WHERE id=?").bind(batchId).first();
   if(!batch||batch.status!=="active")break;
-  if(Number(batch.published)+Number(batch.pending)>=Number(batch.target_max))break;
-  if(Number(batch.attempts)>=Number(batch.max_attempts)){
-   if(Number(batch.pending)===0)await db.prepare("UPDATE render_batches SET status=CASE WHEN published>=target_min THEN 'completed' ELSE 'underfilled' END,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='active'").bind(batchId).run();
+  if(!shouldFillBatch(batch)){
+   if(Number(batch.pending)===0&&(Number(batch.published)>=Number(batch.target_max)||Number(batch.attempts)>=Number(batch.max_attempts))){
+    await db.prepare("UPDATE render_batches SET status=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='active'").bind(batchCompletionStatus(batch),batchId).run();
+   }
    break;
   }
   const reservation=await db.prepare("UPDATE render_batches SET pending=pending+1,attempts=attempts+1,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='active' AND published+pending<target_max AND attempts<max_attempts RETURNING id").bind(batchId).first();
   if(!reservation)break;
   const candidate=await db.prepare("SELECT DISTINCT d.id AS draft_id FROM shorts_drafts d JOIN sources s ON s.id=d.source_id JOIN jobs j ON j.id=(SELECT j2.id FROM jobs j2 WHERE j2.source_id=s.id ORDER BY j2.created_at DESC LIMIT 1) LEFT JOIN clip_analysis a ON a.source_id=s.id WHERE s.platform='twitch' AND s.relevance_status='relevant' AND s.twitch_game_id IS NOT NULL AND s.twitch_clip_duration>=45 AND j.status IN ('queued_review','failed') AND COALESCE(j.render_attempts,0)<10 AND COALESCE(j.batch_id,'')<>? AND COALESCE(j.last_error,'') NOT LIKE '%Quality gate rejected%' AND COALESCE(j.last_error,'') NOT LIKE '%Offline quality rules rejected%' ORDER BY CASE WHEN j.status='queued_review' THEN 0 ELSE 1 END,COALESCE(a.score,0) DESC,j.created_at ASC LIMIT 1").bind(batchId).first();
   if(!candidate){
-   await db.prepare("UPDATE render_batches SET pending=MAX(0,pending-1),status=CASE WHEN pending<=1 THEN CASE WHEN published>=target_min THEN 'completed' ELSE 'underfilled' END ELSE status END,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='active'").bind(batchId).run();
+   await db.prepare("UPDATE render_batches SET pending=MAX(0,pending-1),updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='active'").bind(batchId).run();
+   const afterEmpty=await db.prepare("SELECT id,status,target_min,target_max,max_attempts,attempts,pending,published,failed,eligible FROM render_batches WHERE id=?").bind(batchId).first();
+   if(afterEmpty&&Number(afterEmpty.pending)===0)await db.prepare("UPDATE render_batches SET status=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='active'").bind(batchCompletionStatus(afterEmpty),batchId).run();
    break;
   }
   attempted++;
@@ -378,7 +389,7 @@ async function fillRenderBatch(db,env,batchId){
  }
  let finalBatch=await db.prepare("SELECT id,status,target_min,target_max,max_attempts,attempts,pending,published,failed,eligible FROM render_batches WHERE id=?").bind(batchId).first();
  if(finalBatch&&finalBatch.status==="active"&&Number(finalBatch.pending)===0&&(Number(finalBatch.published)>=Number(finalBatch.target_max)||Number(finalBatch.attempts)>=Number(finalBatch.max_attempts))){
-  await db.prepare("UPDATE render_batches SET status=CASE WHEN published>=target_min THEN 'completed' ELSE 'underfilled' END,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='active'").bind(batchId).run();
+  await db.prepare("UPDATE render_batches SET status=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='active'").bind(batchCompletionStatus(finalBatch),batchId).run();
   finalBatch=await db.prepare("SELECT id,status,target_min,target_max,max_attempts,attempts,pending,published,failed,eligible FROM render_batches WHERE id=?").bind(batchId).first();
  }
  return{batch:finalBatch,attempted,dispatched,already_existing:alreadyExisting,dispatchErrors,errors};
