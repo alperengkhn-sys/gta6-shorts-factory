@@ -139,19 +139,6 @@ def main():
     token_info = json.loads(token_raw)
     access_token = token_info["access_token"]
     granted_scopes = set(str(token_info.get("scope", "")).split())
-    processing_read_scopes = {
-        "https://www.googleapis.com/auth/youtube.readonly",
-        "https://www.googleapis.com/auth/youtube.force-ssl",
-        "https://www.googleapis.com/auth/youtube",
-    }
-    thumbnail_upload_scopes = {
-        "https://www.googleapis.com/auth/youtube.upload",
-        "https://www.googleapis.com/auth/youtube.force-ssl",
-        "https://www.googleapis.com/auth/youtube",
-        "https://www.googleapis.com/auth/youtubepartner",
-    }
-    can_check_processing = bool(granted_scopes & processing_read_scopes)
-    can_upload_thumbnail = (not granted_scopes) or bool(granted_scopes & thumbnail_upload_scopes)
 
     title = os.environ.get("SHORT_TITLE", "GTA 6 Short").strip()[:100]
     description = os.environ.get(
