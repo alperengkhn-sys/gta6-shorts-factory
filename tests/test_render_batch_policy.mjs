@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {
+import { MAX_IN_FLIGHT_BATCH_RENDERS,
   MIN_BATCH_PUBLISHES,
   MAX_BATCH_PUBLISHES,
   MAX_BATCH_ATTEMPTS,
@@ -44,4 +44,8 @@ test("five uploads satisfy the minimum; fewer are reported underfilled", () => {
 test("production targets remain five minimum and ten maximum", () => {
   assert.equal(MIN_BATCH_PUBLISHES, 5);
   assert.equal(MAX_BATCH_PUBLISHES, 10);
+});
+
+test("cross-source fingerprint checks run one publication at a time", () => {
+  assert.equal(MAX_IN_FLIGHT_BATCH_RENDERS, 1);
 });
