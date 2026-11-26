@@ -1,5 +1,7 @@
-const VERSION = "GTA6-FACTORY-5.9-45S-TO-3MIN-MOTION-QUALITY";
+const VERSION = "GTA6-FACTORY-6.0-SUCCESS-TARGET-QUALITY-REPAIR";
+const MIN_AUTOMATIC_PUBLISHES_PER_CYCLE = 5;
 const MAX_AUTOMATIC_RENDERS_PER_CYCLE = 10;
+const MAX_AUTOMATIC_ATTEMPTS_PER_CYCLE = 50;
 
 const HTML = String.raw`<!doctype html>
 <html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GTA6 Shorts Factory 5.2</title>
@@ -87,6 +89,8 @@ async function ensureSchema(db){
  for(const [c,d] of [["status","TEXT DEFAULT 'draft'"],["title","TEXT"],["script","TEXT"],["created_at","TEXT"],["updated_at","TEXT"],["source_url","TEXT"],["creator_name","TEXT"]])await ensureColumn(db,"shorts_drafts",c,d);
  await db.prepare(`CREATE TABLE IF NOT EXISTS permission_requests (id TEXT PRIMARY KEY,source_id TEXT NOT NULL,contact_method TEXT NOT NULL DEFAULT 'manual',contact_address TEXT,request_message TEXT NOT NULL,request_status TEXT NOT NULL DEFAULT 'draft',response_notes TEXT,evidence_reference TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
  await db.prepare(`CREATE TABLE IF NOT EXISTS jobs (id TEXT PRIMARY KEY,source_id TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'queued_review',target_format TEXT,editorial_note TEXT,output_key TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
+ await ensureColumn(db,"jobs","batch_id","TEXT");
+ await db.prepare(`CREATE TABLE IF NOT EXISTS render_batches (id TEXT PRIMARY KEY,status TEXT NOT NULL DEFAULT 'active',target_min INTEGER NOT NULL DEFAULT 5,target_max INTEGER NOT NULL DEFAULT 10,max_attempts INTEGER NOT NULL DEFAULT 50,attempts INTEGER NOT NULL DEFAULT 0,pending INTEGER NOT NULL DEFAULT 0,published INTEGER NOT NULL DEFAULT 0,failed INTEGER NOT NULL DEFAULT 0,eligible INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
  await ensureColumn(db,"jobs","youtube_url","TEXT");
  await ensureColumn(db,"jobs","youtube_status","TEXT DEFAULT 'not_configured'");
  await ensureColumn(db,"jobs","render_attempts","INTEGER NOT NULL DEFAULT 0");
@@ -250,7 +254,7 @@ function buildYouTubeTags(sourceTitle,creatorName,angle){
  }
  return result;
 }
-async function dispatchRender(db,env,draftId,evidenceReference,authorizationConfirmation){
+async function dispatchRender(db,env,draftId,evidenceReference,authorizationConfirmation,batchId=null){
  if(!env.GITHUB_TOKEN)return {error:"Cloudflare Worker'da GITHUB_TOKEN secret eksik. GitHub Actions workflow_dispatch yetkili token eklenmeli."};
  const row=await db.prepare(`SELECT d.id AS draft_id,d.source_id,d.title AS draft_title,d.script,d.status AS draft_status,s.source_url,s.title AS source_title,s.creator_name,s.rights_status,s.relevance_status,s.twitch_game_id,j.id AS job_id,j.status AS job_status,j.output_key,j.last_error,j.render_attempts FROM shorts_drafts d JOIN sources s ON s.id=d.source_id LEFT JOIN jobs j ON j.source_id=s.id WHERE d.id=? ORDER BY j.created_at DESC LIMIT 1`).bind(draftId).first();
  if(!row)return {error:"Üretim paketi bulunamadı."};
@@ -277,7 +281,12 @@ async function dispatchRender(db,env,draftId,evidenceReference,authorizationConf
   "#GTA6 #GTAVI #GTA6Gameplay "+angleHashtag+" #GamingShorts #Shorts"
  ].join("\n\n").slice(0,5000);
  const tags=buildYouTubeTags(original,row.creator_name,angle);
- await db.prepare("UPDATE jobs SET status='processing',render_attempts=COALESCE(render_attempts,0)+1,last_error=NULL,dispatch_started_at=CURRENT_TIMESTAMP,editorial_note='Authorized render dispatched to GitHub Actions.',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.job_id).run();
+ const claim=await db.prepare("UPDATE jobs SET status='processing',batch_id=?,render_attempts=COALESCE(render_attempts,0)+1,last_error=NULL,dispatch_started_at=CURRENT_TIMESTAMP,editorial_note='Authorized render dispatched to GitHub Actions.',updated_at=CURRENT_TIMESTAMP WHERE id=? AND status IN ('queued_review','failed')").bind(batchId,row.job_id).run();
+ if(Number(claim?.meta?.changes||0)===0){
+  const current=await db.prepare("SELECT status FROM jobs WHERE id=?").bind(row.job_id).first();
+  if(["processing","ready"].includes(current?.status))return{ok:true,already_exists:true,job_id:row.job_id,status:current.status};
+  return{error:"Üretim işi başka bir işlem tarafından değiştirildi; bu deneme güvenli şekilde atlandı."};
+ }
  await db.prepare("UPDATE shorts_drafts SET status='processing',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.draft_id).run();
  let response;
  try{response=await fetch("https://api.github.com/repos/alperengkhn-sys/gta6-shorts-factory/actions/workflows/render-short.yml/dispatches",{method:"POST",headers:{"Authorization":"Bearer "+env.GITHUB_TOKEN,"Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28","Content-Type":"application/json","User-Agent":"GTA6-Shorts-Factory"},body:JSON.stringify({ref:"main",inputs:{source_url:row.source_url,title,description,creator_name:String(row.creator_name||"Unknown"),source_title:String(row.source_title||title),package_text:String(row.script||""),tags:JSON.stringify(tags),job_id:row.job_id,render_attempt:String(Number(row.render_attempts||0)+1)}})});}
@@ -303,11 +312,11 @@ async function renderCallback(request,env,db){
  if(!env.RENDER_WEBHOOK_SECRET||request.headers.get("X-Render-Secret")!==env.RENDER_WEBHOOK_SECRET)return json({error:"Webhook authentication failed."},401);
  const data=await readBody(request),jobId=String(data.job_id||"");
  if(!jobId)return json({error:"job_id required."},400);
- const job=await db.prepare("SELECT id,source_id,status,render_attempts FROM jobs WHERE id=?").bind(jobId).first();
+ const job=await db.prepare("SELECT id,source_id,status,render_attempts,batch_id FROM jobs WHERE id=?").bind(jobId).first();
  if(!job)return json({error:"Job not found."},404);
  if(data.render_attempt!==undefined&&data.render_attempt!==null&&data.render_attempt!==""&&Number(data.render_attempt)!==Number(job.render_attempts))return json({error:"Stale render callback rejected."},409);
  if(job.status==="ready")return json({ok:true,status:"ready",duplicate:true});
- if(!["processing","processing","failed","failed"].includes(job.status))return json({error:"Callback rejected for job state: "+job.status},409);
+ if(job.status!=="processing")return json({ok:true,status:job.status,duplicate:true});
  const renderOk=(data.render_conclusion||data.conclusion)==="success",youtubeStatus=String(data.youtube_status||"not_run").slice(0,40),youtubeUrl=String(data.youtube_url||"").slice(0,1000),youtubeOk=youtubeStatus.startsWith("uploaded_")&&/^https:\/\/www\.youtube\.com\/watch\?v=[A-Za-z0-9_-]{11}$/.test(youtubeUrl),ok=renderOk&&youtubeOk,status=ok?"ready":"failed",output=String(data.artifact_url||data.run_url||"").slice(0,2000),packageUrl=String(data.package_url||"").slice(0,2000);
  const note=[ok?"Render and YouTube upload completed.":(renderOk?"Render completed but YouTube upload was not confirmed.":"Render failed."), "YouTube: "+youtubeStatus, data.error||""].filter(Boolean).join(" ").slice(0,1500);
  let mediaSaved=false;
@@ -325,53 +334,65 @@ async function renderCallback(request,env,db){
  }
  await db.prepare("UPDATE jobs SET status=?,output_key=?,package_url=?,youtube_url=?,youtube_status=?,editorial_note=?,last_error=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(status,output,packageUrl,youtubeUrl,youtubeStatus,note,ok?null:note,jobId).run();
  await db.prepare("UPDATE shorts_drafts SET status=?,updated_at=CURRENT_TIMESTAMP WHERE source_id=?").bind(status,job.source_id).run();
- return json({ok:true,status,media_analysis_saved:mediaSaved});
+ let batch=null;
+ if(job.batch_id){
+  await db.prepare("UPDATE render_batches SET pending=MAX(0,pending-1),published=published+?,failed=failed+?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='active'").bind(ok?1:0,ok?0:1,job.batch_id).run();
+  await fillRenderBatch(db,env,job.batch_id);
+  batch=await db.prepare("SELECT id,status,target_min,target_max,attempts,pending,published,failed,eligible FROM render_batches WHERE id=?").bind(job.batch_id).first();
+ }
+ return json({ok:true,status,media_analysis_saved:mediaSaved,batch:batch||null});
 }
 async function prepareAll(db){const result=await db.prepare(`SELECT s.id,s.title,s.creator_name,s.source_url,s.rights_status,s.relevance_status,s.twitch_game_id,a.score FROM sources s LEFT JOIN clip_analysis a ON a.source_id=s.id ORDER BY s.created_at ASC`).all(),rows=result.results||[];let created=0,updated=0,existing=0,skippedIrrelevant=0;const statements=[];
 for(const source of rows){if(source.relevance_status==="irrelevant"){skippedIrrelevant++;continue;}const categoryConfirmed=!!source.twitch_game_id&&source.relevance_status==="relevant";if(!categoryConfirmed){skippedIrrelevant++;continue;}const pack=makeEditorialPackage(source),found=await db.prepare("SELECT id,status FROM shorts_drafts WHERE source_id=? LIMIT 1").bind(source.id).first();if(found){existing++;await db.prepare("UPDATE shorts_drafts SET title=?,script=?,source_url=?,creator_name=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(pack.title,pack.script,source.source_url,source.creator_name||"Unknown",found.id).run();const existingJob=await db.prepare("SELECT id FROM jobs WHERE source_id=? LIMIT 1").bind(source.id).first();if(!existingJob)await db.prepare("INSERT INTO jobs(id,source_id,status,target_format,editorial_note,output_key) VALUES(?,?,'queued_review','shorts_9_16','Legacy draft migrated to cloud render queue.',NULL)").bind(uid(),source.id).run();updated++;continue;}const draftId=uid();statements.push(db.prepare(`INSERT INTO shorts_drafts(id,source_id,status,title,script,created_at,updated_at,source_url,creator_name) VALUES (?,?,'queued_review',?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,?,?)`).bind(draftId,source.id,pack.title,pack.script,source.source_url,source.creator_name||"Unknown"));statements.push(db.prepare(`INSERT INTO jobs(id,source_id,status,target_format,editorial_note,output_key) VALUES (?,?,'queued_review','shorts_9_16',?,NULL)`).bind(uid(),source.id,"Editorial package prepared. Automatic rendering accepts verified GTA VI Twitch clips of at least 45 seconds; exports are capped at 180 seconds including the intro."));created++;}
 for(let i=0;i<statements.length;i+=40)await db.batch(statements.slice(i,i+40));const total=await db.prepare("SELECT COUNT(*) AS n FROM shorts_drafts WHERE status='queued_review'").first();return{checked:rows.length,created,updated,existing,skipped_irrelevant:skippedIrrelevant,total:Number(total?.n||0)};}
-async function dispatchQueuedRenders(db,env,limit=MAX_AUTOMATIC_RENDERS_PER_CYCLE){
- if(!env.GITHUB_TOKEN)return{eligible:0,attempted:0,dispatched:0,already_existing:0,dispatchErrors:1,limit:MAX_AUTOMATIC_RENDERS_PER_CYCLE,errors:["GITHUB_TOKEN eksik."]};
- const maxDispatch=Math.max(1,Math.min(MAX_AUTOMATIC_RENDERS_PER_CYCLE,Number(limit)||MAX_AUTOMATIC_RENDERS_PER_CYCLE));
- // Read ahead so a failed dispatch does not waste one of the ten available slots.
- // DISTINCT protects against legacy duplicate job rows for the same draft.
- const candidates=(await db.prepare(`SELECT DISTINCT d.id AS draft_id
-  FROM shorts_drafts d
-  JOIN sources s ON s.id=d.source_id
-  JOIN jobs j ON j.source_id=s.id
-  LEFT JOIN clip_analysis a ON a.source_id=s.id
-  WHERE s.platform='twitch'
-    AND s.relevance_status='relevant'
-    AND s.twitch_game_id IS NOT NULL
-    AND s.twitch_clip_duration>=45
-    AND j.status IN ('queued_review','failed')
-    AND COALESCE(j.render_attempts,0)<10
-  ORDER BY COALESCE(a.score,0) DESC,j.created_at ASC
-  LIMIT 100`).all()).results||[];
+async function fillRenderBatch(db,env,batchId){
  let attempted=0,dispatched=0,alreadyExisting=0,dispatchErrors=0;
  const errors=[];
- for(const row of candidates){
-  if(dispatched>=maxDispatch)break;
+ while(attempted<MAX_AUTOMATIC_RENDERS_PER_CYCLE){
+  const batch=await db.prepare("SELECT id,status,target_min,target_max,max_attempts,attempts,pending,published,failed,eligible FROM render_batches WHERE id=?").bind(batchId).first();
+  if(!batch||batch.status!=="active")break;
+  if(Number(batch.published)+Number(batch.pending)>=Number(batch.target_max))break;
+  if(Number(batch.attempts)>=Number(batch.max_attempts)){
+   if(Number(batch.pending)===0)await db.prepare("UPDATE render_batches SET status=CASE WHEN published>=target_min THEN 'completed' ELSE 'underfilled' END,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='active'").bind(batchId).run();
+   break;
+  }
+  const reservation=await db.prepare("UPDATE render_batches SET pending=pending+1,attempts=attempts+1,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='active' AND published+pending<target_max AND attempts<max_attempts RETURNING id").bind(batchId).first();
+  if(!reservation)break;
+  const candidate=await db.prepare("SELECT DISTINCT d.id AS draft_id FROM shorts_drafts d JOIN sources s ON s.id=d.source_id JOIN jobs j ON j.source_id=s.id LEFT JOIN clip_analysis a ON a.source_id=s.id WHERE s.platform='twitch' AND s.relevance_status='relevant' AND s.twitch_game_id IS NOT NULL AND s.twitch_clip_duration>=45 AND j.status IN ('queued_review','failed') AND COALESCE(j.render_attempts,0)<10 AND COALESCE(j.batch_id,'')<>? AND COALESCE(j.last_error,'') NOT LIKE '%Quality gate rejected%' AND COALESCE(j.last_error,'') NOT LIKE '%Offline quality rules rejected%' ORDER BY CASE WHEN j.status='queued_review' THEN 0 ELSE 1 END,COALESCE(a.score,0) DESC,j.created_at ASC LIMIT 1").bind(batchId).first();
+  if(!candidate){
+   await db.prepare("UPDATE render_batches SET pending=MAX(0,pending-1),status=CASE WHEN pending<=1 THEN CASE WHEN published>=target_min THEN 'completed' ELSE 'underfilled' END ELSE status END,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='active'").bind(batchId).run();
+   break;
+  }
   attempted++;
-  const result=await dispatchRender(db,env,row.draft_id,"");
-  if(result.ok){
-   if(result.already_exists)alreadyExisting++;
-   else dispatched++;
-  }else if(result.error){
+  const result=await dispatchRender(db,env,candidate.draft_id,"",null,batchId);
+  if(result.ok&&!result.already_exists){
+   dispatched++;
+   continue;
+  }
+  await db.prepare("UPDATE render_batches SET pending=MAX(0,pending-1),failed=failed+1,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='active'").bind(batchId).run();
+  if(result.already_exists)alreadyExisting++;
+  else if(result.error){
    dispatchErrors++;
-   errors.push({draft_id:row.draft_id,error:String(result.error).slice(0,500)});
+   errors.push({draft_id:candidate.draft_id,error:String(result.error).slice(0,500)});
   }
  }
- return{
-  eligible:candidates.length,
-  attempted,
-  dispatched,
-  already_existing:alreadyExisting,
-  dispatchErrors,
-  limit:maxDispatch,
-  not_attempted:Math.max(0,candidates.length-attempted),
-  errors
- };
+ let finalBatch=await db.prepare("SELECT id,status,target_min,target_max,max_attempts,attempts,pending,published,failed,eligible FROM render_batches WHERE id=?").bind(batchId).first();
+ if(finalBatch&&finalBatch.status==="active"&&Number(finalBatch.pending)===0&&(Number(finalBatch.published)>=Number(finalBatch.target_max)||Number(finalBatch.attempts)>=Number(finalBatch.max_attempts))){
+  await db.prepare("UPDATE render_batches SET status=CASE WHEN published>=target_min THEN 'completed' ELSE 'underfilled' END,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='active'").bind(batchId).run();
+  finalBatch=await db.prepare("SELECT id,status,target_min,target_max,max_attempts,attempts,pending,published,failed,eligible FROM render_batches WHERE id=?").bind(batchId).first();
+ }
+ return{batch:finalBatch,attempted,dispatched,already_existing:alreadyExisting,dispatchErrors,errors};
+}
+async function dispatchQueuedRenders(db,env,limit=MAX_AUTOMATIC_RENDERS_PER_CYCLE){
+ if(!env.GITHUB_TOKEN)return{batch_id:null,eligible:0,attempted:0,dispatched:0,already_existing:0,dispatchErrors:1,limit:MAX_AUTOMATIC_RENDERS_PER_CYCLE,errors:["GITHUB_TOKEN eksik."]};
+ const maxSuccesses=Math.max(1,Math.min(MAX_AUTOMATIC_RENDERS_PER_CYCLE,Number(limit)||MAX_AUTOMATIC_RENDERS_PER_CYCLE));
+ const eligibleRow=await db.prepare("SELECT COUNT(DISTINCT d.id) AS n FROM shorts_drafts d JOIN sources s ON s.id=d.source_id JOIN jobs j ON j.source_id=s.id WHERE s.platform='twitch' AND s.relevance_status='relevant' AND s.twitch_game_id IS NOT NULL AND s.twitch_clip_duration>=45 AND j.status IN ('queued_review','failed') AND COALESCE(j.render_attempts,0)<10 AND COALESCE(j.last_error,'') NOT LIKE '%Quality gate rejected%' AND COALESCE(j.last_error,'') NOT LIKE '%Offline quality rules rejected%'").first();
+ const eligible=Number(eligibleRow?.n||0);
+ const batchId=uid();
+ await db.prepare("INSERT INTO render_batches(id,status,target_min,target_max,max_attempts,attempts,pending,published,failed,eligible) VALUES(?,'active',?,?,?,?,0,0,0,?)").bind(batchId,Math.min(MIN_AUTOMATIC_PUBLISHES_PER_CYCLE,maxSuccesses),maxSuccesses,MAX_AUTOMATIC_ATTEMPTS_PER_CYCLE,eligible).run();
+ const result=await fillRenderBatch(db,env,batchId);
+ const batch=result.batch||await db.prepare("SELECT id,status,target_min,target_max,max_attempts,attempts,pending,published,failed,eligible FROM render_batches WHERE id=?").bind(batchId).first();
+ return{batch_id:batchId,batch_status:batch?.status||"unknown",target_minimum:batch?.target_min||Math.min(MIN_AUTOMATIC_PUBLISHES_PER_CYCLE,maxSuccesses),maximum_successes:batch?.target_max||maxSuccesses,eligible,attempted:result.attempted,dispatched:result.dispatched,already_existing:result.already_existing,dispatchErrors:result.dispatchErrors,not_attempted:Math.max(0,eligible-result.attempted),attempts_total:Number(batch?.attempts||0),pending:Number(batch?.pending||0),published:Number(batch?.published||0),failed:Number(batch?.failed||0),errors:result.errors};
 }
 async function getData(db){const sources=await db.prepare(`SELECT s.id,s.platform,s.source_url,s.creator_name,s.title,s.rights_status,s.relevance_status,s.twitch_game_id,a.score,a.media_quality_score,a.media_duration,a.source_width,a.source_height,a.source_fps,a.source_has_audio,a.silence_ratio,a.media_usable,a.scene_change_count,a.mean_volume_db,a.media_analyzed_at FROM sources s LEFT JOIN clip_analysis a ON a.source_id=s.id ORDER BY s.created_at DESC LIMIT 500`).all(),drafts=await db.prepare(`SELECT d.id,d.source_id,d.status,d.title,d.script,d.source_url,d.creator_name,d.created_at,s.rights_status,j.status AS job_status,j.output_key,j.package_url,j.last_error,j.youtube_status,j.youtube_url FROM shorts_drafts d JOIN sources s ON s.id=d.source_id LEFT JOIN jobs j ON j.source_id=d.source_id ORDER BY d.created_at DESC LIMIT 500`).all();return{sources:sources.results||[],drafts:drafts.results||[]};}
 async function runScheduled(env,event){
@@ -397,8 +418,14 @@ async function runScheduled(env,event){
    duration_validation:durationValidation||null,
    prepared:prepared||null,
    render_batch:{
-    target_minimum:5,
-    maximum:MAX_AUTOMATIC_RENDERS_PER_CYCLE,
+    target_minimum:rendering.target_minimum||MIN_AUTOMATIC_PUBLISHES_PER_CYCLE,
+    maximum:rendering.maximum_successes||MAX_AUTOMATIC_RENDERS_PER_CYCLE,
+    batch_id:rendering.batch_id||null,
+    batch_status:rendering.batch_status||null,
+    attempts_total:rendering.attempts_total||0,
+    pending:rendering.pending||0,
+    published:rendering.published||0,
+    failed:rendering.failed||0,
     eligible:rendering.eligible||0,
     attempted:rendering.attempted||0,
     dispatched:rendering.dispatched||0,
