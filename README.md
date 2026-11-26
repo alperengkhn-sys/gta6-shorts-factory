@@ -37,8 +37,8 @@ The Worker runs every three hours (`0 */3 * * *` UTC). Each batch targets **5–
 - Titles are generated from each source's clip title/topic and editorial angle; generic repeated title templates are avoided.
 - Descriptions open with two lines that describe the actual clip and include source credit, a question and a VI RUSH subscription prompt.
 - Tags include GTA VI terms plus relevant topic-specific search phrases. YouTube says title, thumbnail and description are more important for discovery than tags; tags play a minimal role except for common misspellings.
-- The cover is selected from a sharp early gameplay frame. The final uploader's thumbnail API step waits until processing is complete, but it needs YouTube read permission in the OAuth token.
-- Shorts custom thumbnail availability also depends on the channel/account's eligibility and the current YouTube workflow.
+- The cover is selected from a sharp early gameplay frame. YouTube's `thumbnails.set` accepts the existing `youtube.upload` scope; when read scope is unavailable, the uploader keeps the 120-second processing buffer and then calls the thumbnail API instead of skipping the cover.
+- Shorts custom thumbnail availability also depends on channel verification/eligibility and YouTube's current account workflow.
 
 ## Required configuration
 
@@ -56,13 +56,13 @@ The Worker runs every three hours (`0 */3 * * *` UTC). Each batch targets **5–
 - `RENDER_WEBHOOK_SECRET`
 - `OPENAI_API_KEY` (used only where the configured editorial/visual review actually calls it)
 
-The current YouTube refresh-token test confirmed `youtube.upload`, but did **not** confirm `youtube.readonly`/`youtube.force-ssl` or `yt-analytics.readonly`. Those additional scopes are required for processing-status polling, existing-video metadata edits and channel Analytics API reports. Re-authorize the @VIRUSHGTA6 channel with the intended scopes and update the GitHub secret; never paste OAuth tokens into chat or commit them.
+The current YouTube refresh-token test confirmed `youtube.upload`. That scope is sufficient for new video uploads and `thumbnails.set`; a missing `youtube.readonly` scope must not disable the new video's cover. Without read scope, the uploader waits 120 seconds before setting the cover; read scope enables exact processing-status polling. `youtube.force-ssl` and `yt-analytics.readonly` are optional for existing-video metadata edits and Analytics API reports and are not required for the new-video publishing flow.
 
 ## Existing channel audit
 
 Do not automatically delete, dispute, unlist or re-upload previously published videos. The new safeguards prevent future risky sources; they do not remove an existing Content ID claim or copyright strike.
 
-Audit existing Shorts in YouTube Studio > Content > Restrictions. Separate Content ID claims from copyright takedowns/strikes, verify each source and audio licence, compare source duration to the creator's permission, then update metadata/cover only after rights are confirmed.
+Audit existing Shorts in YouTube Studio > Content > Restrictions. Separate Content ID claims from copyright takedowns/strikes, verify each source and audio licence, and compare source duration to the creator's permission. This workflow is audit-only: it does not edit, replace, unlist, dispute or re-upload existing videos.
 
 The detailed 53-video audit sequence, 10-point pre-publish checklist, 20 title examples, description structure and five Shorts analytics metrics are in [VI RUSH Channel Operations](docs/VI-RUSH-CHANNEL-OPERATIONS.md).
 
