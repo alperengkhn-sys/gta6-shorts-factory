@@ -1,0 +1,4 @@
+{
+  "task": "backfill_published_visual_fingerprints",
+  "reason": "Compare existing published Shorts across streamer/source URL changes"
+}\n
