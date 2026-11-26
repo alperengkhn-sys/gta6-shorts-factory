@@ -2,6 +2,7 @@ import {
   MIN_BATCH_PUBLISHES,
   MAX_BATCH_PUBLISHES,
   MAX_BATCH_ATTEMPTS,
+  MAX_IN_FLIGHT_BATCH_RENDERS,
   shouldFillBatch,
   batchCompletionStatus
 } from "./render-batch-policy.mjs";
@@ -379,13 +380,15 @@ async function fillRenderBatch(db,env,batchId){
  while(attempted<MAX_AUTOMATIC_ATTEMPTS_PER_CYCLE){
   const batch=await db.prepare("SELECT id,status,target_min,target_max,max_attempts,attempts,pending,published,failed,eligible FROM render_batches WHERE id=?").bind(batchId).first();
   if(!batch||batch.status!=="active")break;
+  // One render at a time: save the visual fingerprint before the next source starts.
+  if(Number(batch.pending)>=MAX_IN_FLIGHT_BATCH_RENDERS)break;
   if(!shouldFillBatch(batch)){
    if(Number(batch.pending)===0&&(Number(batch.published)>=Number(batch.target_max)||Number(batch.attempts)>=Number(batch.max_attempts))){
     await db.prepare("UPDATE render_batches SET status=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='active'").bind(batchCompletionStatus(batch),batchId).run();
    }
    break;
   }
-  const reservation=await db.prepare("UPDATE render_batches SET pending=pending+1,attempts=attempts+1,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='active' AND published+pending<target_max AND attempts<max_attempts RETURNING id").bind(batchId).first();
+  const reservation=await db.prepare("UPDATE render_batches SET pending=pending+1,attempts=attempts+1,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='active' AND published+pending<target_max AND attempts<max_attempts AND pending<? RETURNING id").bind(batchId,MAX_IN_FLIGHT_BATCH_RENDERS).first();
   if(!reservation)break;
   const findCandidate=()=>db.prepare("SELECT DISTINCT d.id AS draft_id FROM shorts_drafts d JOIN sources s ON s.id=d.source_id JOIN jobs j ON j.id=(SELECT j2.id FROM jobs j2 WHERE j2.source_id=s.id ORDER BY j2.created_at DESC LIMIT 1) LEFT JOIN clip_analysis a ON a.source_id=s.id WHERE s.platform='twitch' AND s.relevance_status='relevant' AND s.twitch_game_id IS NOT NULL AND s.twitch_clip_duration>=45 AND j.status IN ('queued_review','failed') AND COALESCE(j.render_attempts,0)<10 AND COALESCE(j.batch_id,'')<>? AND COALESCE(j.last_error,'') NOT LIKE '%Quality gate rejected%' AND COALESCE(j.last_error,'') NOT LIKE '%Offline quality rules rejected%' ORDER BY CASE WHEN j.status='queued_review' THEN 0 ELSE 1 END,COALESCE(a.score,0) DESC,j.created_at ASC LIMIT 1").bind(batchId).first();
   let candidate=await findCandidate();
@@ -445,8 +448,11 @@ async function dispatchQueuedRenders(db,env,limit=MAX_AUTOMATIC_RENDERS_PER_CYCL
  const maxSuccesses=Math.max(1,Math.min(MAX_AUTOMATIC_RENDERS_PER_CYCLE,Number(limit)||MAX_AUTOMATIC_RENDERS_PER_CYCLE));
  const eligibleRow=await db.prepare("SELECT COUNT(DISTINCT d.id) AS n FROM shorts_drafts d JOIN sources s ON s.id=d.source_id JOIN jobs j ON j.id=(SELECT j2.id FROM jobs j2 WHERE j2.source_id=s.id ORDER BY j2.created_at DESC LIMIT 1) WHERE s.platform='twitch' AND s.relevance_status='relevant' AND s.twitch_game_id IS NOT NULL AND s.twitch_clip_duration>=45 AND j.status IN ('queued_review','failed') AND COALESCE(j.render_attempts,0)<10 AND COALESCE(j.last_error,'') NOT LIKE '%Quality gate rejected%' AND COALESCE(j.last_error,'') NOT LIKE '%Offline quality rules rejected%'").first();
  const eligible=Number(eligibleRow?.n||0);
- const batchId=uid();
- await db.prepare("INSERT INTO render_batches(id,status,target_min,target_max,max_attempts,attempts,pending,published,failed,eligible) VALUES(?,'active',?,?,?,0,0,0,0,?)").bind(batchId,Math.min(MIN_AUTOMATIC_PUBLISHES_PER_CYCLE,maxSuccesses),maxSuccesses,MAX_AUTOMATIC_ATTEMPTS_PER_CYCLE,eligible).run();
+ const existingBatch=await db.prepare("SELECT id FROM render_batches WHERE status='active' ORDER BY created_at ASC LIMIT 1").first();
+ const batchId=existingBatch?.id||uid();
+ if(!existingBatch){
+  await db.prepare("INSERT INTO render_batches(id,status,target_min,target_max,max_attempts,attempts,pending,published,failed,eligible) VALUES(?,'active',?,?,?,0,0,0,0,?)").bind(batchId,Math.min(MIN_AUTOMATIC_PUBLISHES_PER_CYCLE,maxSuccesses),maxSuccesses,MAX_AUTOMATIC_ATTEMPTS_PER_CYCLE,eligible).run();
+ }
  const result=await fillRenderBatch(db,env,batchId);
  const batch=result.batch||await db.prepare("SELECT id,status,target_min,target_max,max_attempts,attempts,pending,published,failed,eligible FROM render_batches WHERE id=?").bind(batchId).first();
  return{batch_id:batchId,batch_status:batch?.status||"unknown",target_minimum:batch?.target_min||Math.min(MIN_AUTOMATIC_PUBLISHES_PER_CYCLE,maxSuccesses),maximum_successes:batch?.target_max||maxSuccesses,eligible,attempted:result.attempted,dispatched:result.dispatched,already_existing:result.already_existing,dispatchErrors:result.dispatchErrors,not_attempted:Math.max(0,eligible-result.attempted),attempts_total:Number(batch?.attempts||0),pending:Number(batch?.pending||0),published:Number(batch?.published||0),failed:Number(batch?.failed||0),errors:result.errors};
