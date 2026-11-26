@@ -1,6 +1,7 @@
 export const MIN_BATCH_PUBLISHES = 5;
 export const MAX_BATCH_PUBLISHES = 10;
 export const MAX_BATCH_ATTEMPTS = 50;
+export const MAX_IN_FLIGHT_BATCH_RENDERS = 1;
 
 export function shouldFillBatch(batch) {
   if (!batch || batch.status !== "active") return false;
