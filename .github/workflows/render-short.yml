@@ -131,23 +131,17 @@ jobs:
           TEST_QUALITY_REJECTION: ${{ steps.task.outputs.test_quality_rejection }}
         run: |
           if [ "${TEST_QUALITY_REJECTION:-false}" = "true" ]; then
-            ERROR_LINE="Quality gate rejected: synthetic test fixture"
-            {
-              echo "error<<GTA6_RENDER_ERROR"
-              printf '%s\n' "$ERROR_LINE"
-              echo "GTA6_RENDER_ERROR"
-            } >> "$GITHUB_OUTPUT"
-            echo "rejected=true" >> "$GITHUB_OUTPUT"
-            echo "::notice::Source clip rejected by editorial quality rules; this is a normal skip and will be replaced by the Worker batch."
-            exit 0
+            printf '%s\n' "Quality gate rejected: synthetic test fixture" | tee render.log
+            RENDER_EXIT=1
+          else
+            set +e
+            python renderer/render.py \
+              --source-url "$SOURCE_URL" \
+              --title "$SHORT_TITLE" \
+              --output short.mp4 2>&1 | tee render.log
+            RENDER_EXIT=${PIPESTATUS[0]}
+            set -e
           fi
-          set +e
-          python renderer/render.py \
-            --source-url "$SOURCE_URL" \
-            --title "$SHORT_TITLE" \
-            --output short.mp4 2>&1 | tee render.log
-          RENDER_EXIT=${PIPESTATUS[0]}
-          set -e
           if [ "$RENDER_EXIT" -ne 0 ]; then
             ERROR_LINE="$(grep -E 'RENDER_FAILED:|Quality gate rejected|Offline quality rules rejected|RuntimeError:' render.log | tail -n 1 || true)"
             if [ -z "$ERROR_LINE" ]; then ERROR_LINE="Renderer exited with code $RENDER_EXIT."; fi
