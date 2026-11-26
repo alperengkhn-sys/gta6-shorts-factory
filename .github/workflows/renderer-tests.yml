@@ -1,13 +1,5 @@
 name: Renderer policy tests
 on:
-  push:
-    branches: ["**"]
-    paths:
-      - "renderer/**"
-      - "tests/**"
-      - "src/render-batch-policy.mjs"
-      - "src/index.js"
-      - ".github/workflows/renderer-tests.yml"
   pull_request:
     paths:
       - "renderer/**"
