@@ -5,6 +5,8 @@ on:
     paths:
       - "renderer/**"
       - "tests/**"
+      - "src/render-batch-policy.mjs"
+      - "src/index.js"
       - ".github/workflows/renderer-tests.yml"
   pull_request:
     paths:
@@ -28,5 +30,7 @@ jobs:
           node-version: "22"
       - name: Check Worker JavaScript syntax
         run: node --check src/index.js
+      - name: Test automatic five-to-ten publish batch policy
+        run: node --test tests/test_render_batch_policy.mjs
       - name: Run renderer policy tests
         run: python -m unittest discover -s tests -v
