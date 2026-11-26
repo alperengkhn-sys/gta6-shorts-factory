@@ -507,7 +507,7 @@ async function renderCallback(request,env,db){
 async function prepareAll(db){const result=await db.prepare(`SELECT s.id,s.title,s.creator_name,s.source_url,s.rights_status,s.relevance_status,s.twitch_game_id,s.twitch_broadcaster_id,s.twitch_clip_duration,p.broadcaster_id AS permission_broadcaster_id,a.score FROM sources s LEFT JOIN clip_analysis a ON a.source_id=s.id LEFT JOIN creator_usage_permissions p ON p.broadcaster_id=s.twitch_broadcaster_id AND p.permission_status='approved' AND p.youtube_allowed=1 AND p.audio_rights_confirmed=1 AND trim(coalesce(p.audio_rights_evidence,''))<>'' AND p.max_source_seconds>=45 AND trim(coalesce(p.creator_permission_evidence,''))<>'' AND ((p.game_rights_basis='publisher_written_permission' AND trim(coalesce(p.game_rights_evidence_reference,''))<>'') OR (p.game_rights_basis='rockstar_noncommercial_guidelines' AND p.noncommercial_use=1)) AND (p.permission_expires_at IS NULL OR datetime(p.permission_expires_at)>datetime('now')) ORDER BY s.created_at ASC`).all(),rows=result.results||[];let created=0,updated=0,existing=0,skippedIrrelevant=0,skippedPermission=0;const statements=[];
 for(const source of rows){if(source.relevance_status==="irrelevant"){skippedIrrelevant++;continue;}const categoryConfirmed=!!source.twitch_game_id&&source.relevance_status==="relevant";if(!categoryConfirmed){skippedIrrelevant++;continue;}if(!source.permission_broadcaster_id){skippedPermission++;continue;}const pack=makeEditorialPackage(source),found=await db.prepare("SELECT id,status FROM shorts_drafts WHERE source_id=? LIMIT 1").bind(source.id).first();if(found){existing++;await db.prepare("UPDATE shorts_drafts SET title=?,script=?,source_url=?,creator_name=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(pack.title,pack.script,source.source_url,source.creator_name||"Unknown",found.id).run();const existingJob=await db.prepare("SELECT id FROM jobs WHERE source_id=? LIMIT 1").bind(source.id).first();if(!existingJob)await db.prepare("INSERT INTO jobs(id,source_id,status,target_format,editorial_note,output_key) VALUES(?,?,'queued_review','shorts_9_16','Legacy draft migrated to cloud render queue.',NULL)").bind(uid(),source.id).run();updated++;continue;}const draftId=uid();statements.push(db.prepare(`INSERT INTO shorts_drafts(id,source_id,status,title,script,created_at,updated_at,source_url,creator_name) VALUES (?,?,'queued_review',?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,?,?)`).bind(draftId,source.id,pack.title,pack.script,source.source_url,source.creator_name||"Unknown"));statements.push(db.prepare(`INSERT INTO jobs(id,source_id,status,target_format,editorial_note,output_key) VALUES (?,?,'queued_review','shorts_9_16',?,NULL)`).bind(uid(),source.id,"Editorial package prepared. Automatic rendering accepts verified GTA VI Twitch clips of at least 45 seconds; exports are capped at 180 seconds including the intro."));created++;}
 for(let i=0;i<statements.length;i+=40)await db.batch(statements.slice(i,i+40));const total=await db.prepare("SELECT COUNT(*) AS n FROM shorts_drafts WHERE status='queued_review'").first();return{checked:rows.length,created,updated,existing,skipped_irrelevant:skippedIrrelevant,skipped_permission:skippedPermission,total:Number(total?.n||0)};}
-async function fillRenderBatch(db,env,batchId){
+async function fillRenderBatch(db,env,batchId,discoveryAlreadyRefreshed=false){
  let attempted=0,dispatched=0,alreadyExisting=0,dispatchErrors=0;
  const errors=[];
  while(attempted<MAX_AUTOMATIC_ATTEMPTS_PER_CYCLE){
@@ -526,27 +526,42 @@ async function fillRenderBatch(db,env,batchId){
   const findCandidate=()=>db.prepare("SELECT DISTINCT d.id AS draft_id FROM shorts_drafts d JOIN sources s ON s.id=d.source_id JOIN creator_usage_permissions p ON p.broadcaster_id=s.twitch_broadcaster_id AND p.permission_status='approved' AND p.youtube_allowed=1 AND p.audio_rights_confirmed=1 AND trim(coalesce(p.audio_rights_evidence,''))<>'' AND trim(coalesce(p.creator_permission_evidence,''))<>'' AND p.max_source_seconds>=45 AND ((p.game_rights_basis='publisher_written_permission' AND trim(coalesce(p.game_rights_evidence_reference,''))<>'') OR (p.game_rights_basis='rockstar_noncommercial_guidelines' AND p.noncommercial_use=1)) AND (p.permission_expires_at IS NULL OR datetime(p.permission_expires_at)>datetime('now')) JOIN jobs j ON j.id=(SELECT j2.id FROM jobs j2 WHERE j2.source_id=s.id ORDER BY j2.created_at DESC LIMIT 1) LEFT JOIN clip_analysis a ON a.source_id=s.id WHERE s.platform='twitch' AND s.relevance_status='relevant' AND s.twitch_game_id IS NOT NULL AND s.twitch_clip_duration>=45 AND j.status IN ('queued_review','failed') AND COALESCE(j.render_attempts,0)<10 AND COALESCE(j.batch_id,'')<>? AND COALESCE(j.last_error,'') NOT LIKE '%Quality gate rejected%' AND COALESCE(j.last_error,'') NOT LIKE '%Offline quality rules rejected%' ORDER BY CASE WHEN j.status='queued_review' THEN 0 ELSE 1 END,COALESCE(a.score,0) DESC,j.created_at ASC LIMIT 1").bind(batchId).first();
   let candidate=await findCandidate();
   if(!candidate){
-   // Expand the source pool only once per active batch, then refill from new clips.
-   const scan=await db.prepare("UPDATE render_batches SET discovery_refreshed_at=CURRENT_TIMESTAMP,discovery_refresh_status='running',updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='active' AND discovery_refresh_status IS NULL RETURNING id").bind(batchId).first();
-   if(scan){
-    try{
-     const discovery=await discover(db,env);
-     const prepared=await prepareAll(db);
-     errors.push({discovery_expansion:{clips:discovery?.clips||0,saved:discovery?.saved||0,prepared:prepared?.created||0}});
-    }catch(error){
-     errors.push({discovery_expansion_error:String(error&&error.message||error).slice(0,500)});
-    }finally{
-     await db.prepare("UPDATE render_batches SET discovery_refresh_status='complete',updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='active'").bind(batchId).run();
+   // The caller may have completed discovery immediately before creating/filling this batch.
+   // Avoid a second full Twitch scan in the same Worker invocation (subrequest quota).
+   if(discoveryAlreadyRefreshed){
+    let state=await db.prepare("SELECT discovery_refresh_status FROM render_batches WHERE id=?").bind(batchId).first();
+    if(state?.discovery_refresh_status==="running"){
+     for(let wait=0;wait<20&&!candidate;wait++){
+      state=await db.prepare("SELECT discovery_refresh_status FROM render_batches WHERE id=?").bind(batchId).first();
+      if(state?.discovery_refresh_status!=="running")break;
+      await new Promise(resolve=>setTimeout(resolve,500));
+      candidate=await findCandidate();
+     }
+    }else if(state?.discovery_refresh_status==null){
+     await db.prepare("UPDATE render_batches SET discovery_refresh_status='complete',updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='active' AND discovery_refresh_status IS NULL").bind(batchId).run();
     }
-    candidate=await findCandidate();
    }else{
-    // A sibling callback owns discovery. Briefly wait for its scan to finish
-    // before releasing our reserved slot, avoiding a false underfilled batch.
-    for(let wait=0;wait<20&&!candidate;wait++){
-     const state=await db.prepare("SELECT discovery_refresh_status FROM render_batches WHERE id=?").bind(batchId).first();
-     if(state?.discovery_refresh_status!=="running")break;
-     await new Promise(resolve=>setTimeout(resolve,500));
+    // Expand the source pool only once per active batch when no earlier discovery pass ran.
+    const scan=await db.prepare("UPDATE render_batches SET discovery_refreshed_at=CURRENT_TIMESTAMP,discovery_refresh_status='running',updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='active' AND discovery_refresh_status IS NULL RETURNING id").bind(batchId).first();
+    if(scan){
+     try{
+      const discovery=await discover(db,env);
+      const prepared=await prepareAll(db);
+      errors.push({discovery_expansion:{clips:discovery?.clips||0,saved:discovery?.saved||0,prepared:prepared?.created||0}});
+     }catch(error){
+      errors.push({discovery_expansion_error:String(error&&error.message||error).slice(0,500)});
+     }finally{
+      await db.prepare("UPDATE render_batches SET discovery_refresh_status='complete',updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='active'").bind(batchId).run();
+     }
      candidate=await findCandidate();
+    }else{
+     // A sibling callback owns discovery. Briefly wait before releasing our reserved slot.
+     for(let wait=0;wait<20&&!candidate;wait++){
+      const state=await db.prepare("SELECT discovery_refresh_status FROM render_batches WHERE id=?").bind(batchId).first();
+      if(state?.discovery_refresh_status!=="running")break;
+      await new Promise(resolve=>setTimeout(resolve,500));
+      candidate=await findCandidate();
+     }
     }
    }
   }
@@ -576,7 +591,7 @@ async function fillRenderBatch(db,env,batchId){
  }
  return{batch:finalBatch,attempted,dispatched,already_existing:alreadyExisting,dispatchErrors,errors};
 }
-async function dispatchQueuedRenders(db,env,limit=MAX_AUTOMATIC_RENDERS_PER_CYCLE){
+async function dispatchQueuedRenders(db,env,limit=MAX_AUTOMATIC_RENDERS_PER_CYCLE,discoveryAlreadyRefreshed=false){
  if(!env.GITHUB_TOKEN)return{batch_id:null,eligible:0,attempted:0,dispatched:0,already_existing:0,dispatchErrors:1,limit:MAX_AUTOMATIC_RENDERS_PER_CYCLE,errors:["GITHUB_TOKEN eksik."]};
  const maxSuccesses=Math.max(1,Math.min(MAX_AUTOMATIC_RENDERS_PER_CYCLE,Number(limit)||MAX_AUTOMATIC_RENDERS_PER_CYCLE));
  const eligibleRow=await db.prepare("SELECT COUNT(DISTINCT d.id) AS n FROM shorts_drafts d JOIN sources s ON s.id=d.source_id JOIN creator_usage_permissions p ON p.broadcaster_id=s.twitch_broadcaster_id AND p.permission_status='approved' AND p.youtube_allowed=1 AND p.audio_rights_confirmed=1 AND trim(coalesce(p.audio_rights_evidence,''))<>'' AND trim(coalesce(p.creator_permission_evidence,''))<>'' AND p.max_source_seconds>=45 AND ((p.game_rights_basis='publisher_written_permission' AND trim(coalesce(p.game_rights_evidence_reference,''))<>'') OR (p.game_rights_basis='rockstar_noncommercial_guidelines' AND p.noncommercial_use=1)) AND (p.permission_expires_at IS NULL OR datetime(p.permission_expires_at)>datetime('now')) JOIN jobs j ON j.id=(SELECT j2.id FROM jobs j2 WHERE j2.source_id=s.id ORDER BY j2.created_at DESC LIMIT 1) WHERE s.platform='twitch' AND s.relevance_status='relevant' AND s.twitch_game_id IS NOT NULL AND s.twitch_clip_duration>=45 AND j.status IN ('queued_review','failed') AND COALESCE(j.render_attempts,0)<10 AND COALESCE(j.last_error,'') NOT LIKE '%Quality gate rejected%' AND COALESCE(j.last_error,'') NOT LIKE '%Offline quality rules rejected%'").first();
@@ -586,7 +601,7 @@ async function dispatchQueuedRenders(db,env,limit=MAX_AUTOMATIC_RENDERS_PER_CYCL
  if(!existingBatch){
   await db.prepare("INSERT INTO render_batches(id,status,target_min,target_max,max_attempts,attempts,pending,published,failed,eligible) VALUES(?,'active',?,?,?,0,0,0,0,?)").bind(batchId,Math.min(MIN_AUTOMATIC_PUBLISHES_PER_CYCLE,maxSuccesses),maxSuccesses,MAX_AUTOMATIC_ATTEMPTS_PER_CYCLE,eligible).run();
  }
- const result=await fillRenderBatch(db,env,batchId);
+ const result=await fillRenderBatch(db,env,batchId,discoveryAlreadyRefreshed);
  const batch=result.batch||await db.prepare("SELECT id,status,target_min,target_max,max_attempts,attempts,pending,published,failed,eligible FROM render_batches WHERE id=?").bind(batchId).first();
  return{batch_id:batchId,batch_status:batch?.status||"unknown",target_minimum:batch?.target_min||Math.min(MIN_AUTOMATIC_PUBLISHES_PER_CYCLE,maxSuccesses),maximum_successes:batch?.target_max||maxSuccesses,eligible,attempted:result.attempted,dispatched:result.dispatched,already_existing:result.already_existing,dispatchErrors:result.dispatchErrors,not_attempted:Math.max(0,eligible-result.attempted),attempts_total:Number(batch?.attempts||0),pending:Number(batch?.pending||0),published:Number(batch?.published||0),failed:Number(batch?.failed||0),errors:result.errors};
 }
@@ -610,7 +625,7 @@ async function runScheduled(env,event){
   await env.DB.prepare("UPDATE jobs SET status='failed',last_error='Recovered stale dispatch after 45 minutes without callback.',updated_at=CURRENT_TIMESTAMP WHERE status='processing' AND dispatch_started_at IS NOT NULL AND dispatch_started_at<datetime('now','-45 minutes')").run();
   await env.DB.prepare("UPDATE shorts_drafts SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE source_id IN (SELECT source_id FROM jobs WHERE status='failed' AND last_error='Recovered stale dispatch after 45 minutes without callback.')").run();
   const prepared=await prepareAll(env.DB);
-  const rendering=await dispatchQueuedRenders(env.DB,env,MAX_AUTOMATIC_RENDERS_PER_CYCLE);
+  const rendering=await dispatchQueuedRenders(env.DB,env,MAX_AUTOMATIC_RENDERS_PER_CYCLE,true);
   const summary={
    type:"scheduled_run_completed",
    ...runContext,
@@ -711,7 +726,7 @@ if(path==="/api/permissions/revoke"&&method==="POST"){
 }
 if(path==="/api/discover"&&method==="POST")return json(await discover(env.DB,env));
 
-if(path==="/api/prepare"&&method==="POST"){let discovery;try{discovery=await discover(env.DB,env);}catch(error){discovery={error:String(error&&error.message||error).slice(0,500)};}const clipValidation=await resolveTwitchClips(env.DB,env,500);const durationValidation=await validateResolvedClipDurations(env.DB,env,500);const prepared=await prepareAll(env.DB);const rendering=await dispatchQueuedRenders(env.DB,env,10);return json({...prepared,discovery,clip_validation:clipValidation,duration_validation:durationValidation,rendering});}
+if(path==="/api/prepare"&&method==="POST"){let discovery;try{discovery=await discover(env.DB,env);}catch(error){discovery={error:String(error&&error.message||error).slice(0,500)};}const clipValidation=await resolveTwitchClips(env.DB,env,500);const durationValidation=await validateResolvedClipDurations(env.DB,env,500);const prepared=await prepareAll(env.DB);const rendering=await dispatchQueuedRenders(env.DB,env,10,true);return json({...prepared,discovery,clip_validation:clipValidation,duration_validation:durationValidation,rendering});}
 if(path==="/api/render/dispatch"&&method==="POST"){const data=await readBody(request);const result=await dispatchRender(env.DB,env,String(data.draft_id||""),data.evidence_reference,data.authorization_confirmation);return result.error?json({error:result.error},400):json(result);}
 if(path==="/api/source/quick"&&method==="POST"){
 if(!await authorized(request,env))return json({error:"Giriş gerekli."},401);
