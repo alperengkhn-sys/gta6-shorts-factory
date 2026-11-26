@@ -3,9 +3,9 @@
 import argparse, json, math, os, shutil, struct, subprocess, sys, tempfile, wave
 from pathlib import Path
 try:
-    from .visual_quality import inspect_visual_quality, compute_content_fingerprint, find_published_duplicate
+    from .visual_quality import inspect_visual_quality, compute_content_fingerprint, find_published_duplicate, select_sharp_frame_time
 except ImportError:
-    from visual_quality import inspect_visual_quality, compute_content_fingerprint, find_published_duplicate
+    from visual_quality import inspect_visual_quality, compute_content_fingerprint, find_published_duplicate, select_sharp_frame_time
 from urllib.parse import urlsplit
 
 ACTION_TERMS = (
@@ -470,8 +470,9 @@ def make_cover(video, title, duration, destination):
           f"drawtext=fontfile={font}:text='{safe}':fontcolor=white:fontsize=66:"
           "borderw=4:bordercolor=black:box=1:boxcolor=black@0.48:boxborderw=24:"
           "x=(w-text_w)/2:y=h-text_h-180")
+    best_frame_time = select_sharp_frame_time(video, start_seconds=0.25, end_seconds=min(8.0, duration - 0.05))
     run(["ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error", "-y",
-         "-ss", str(min(max(duration * 0.35, 0.5), max(duration - 0.5, 0.5))),
+         "-ss", str(best_frame_time),
          "-i", str(video), "-frames:v", "1", "-vf", vf, "-q:v", "2", str(destination)])
 
 
@@ -663,7 +664,8 @@ def main():
         analysis_path.write_text(json.dumps(analysis,indent=2),encoding="utf-8")
         duration=min(175.0,edited_duration)
         assets=branding_assets()
-        brand_sting=create_brand_sting(w,duration=4.0)
+        intro_duration = 0.30
+        brand_sting=create_brand_sting(w,duration=intro_duration)
         mature_edit=analysis["vision_review"].get("editing_treatment")=="mature_non_explicit"
         vf,overlay_inputs=video_filter(duration,assets,mature=mature_edit)
         analysis["mature_content_editing"]={
@@ -698,7 +700,7 @@ def main():
         intro_filter="scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,format=yuv420p"
         run(["ffmpeg","-nostdin","-hide_banner","-loglevel","error","-y",
              "-loop","1","-framerate","30","-i",str(cover_path),"-i",str(brand_sting),
-             "-t","4.0","-vf",intro_filter,"-map","0:v:0","-map","1:a:0",
+             "-t",str(intro_duration),"-vf",intro_filter,"-map","0:v:0","-map","1:a:0",
              "-c:v","libx264","-preset","medium","-crf","19","-profile:v","high","-pix_fmt","yuv420p",
              "-c:a","aac","-b:a","192k","-ar","48000","-ac","2","-shortest",str(intro_path)])
         concat_list=out.parent/"concat-intro-and-gameplay.txt"
@@ -710,7 +712,8 @@ def main():
              "-f","concat","-safe","0","-i",str(concat_list),"-c","copy",str(out)])
         analysis["ai_voiceover_added"]=False
         analysis["generated_subtitles_added"]=False
-        analysis["audio_editing"]="Original source audio preserved; original synthesized 4-second VI RUSH sting plays only on the generated cover intro."
+        analysis["opening_cover_seconds"] = intro_duration
+        analysis["audio_editing"]="Original source audio preserved; original synthesized VI RUSH sting plays only during the 0.30-second sharp-frame cover intro."
         analysis_path.write_text(json.dumps(analysis,indent=2),encoding="utf-8")
         print(f"RENDER_STAGE: generated cover intro + original 4-second soundtrack {cover_path}",flush=True)
     check=json.loads(run(["ffprobe","-v","error","-show_entries","stream=codec_type,codec_name,width,height,duration",
