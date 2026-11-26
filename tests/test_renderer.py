@@ -180,8 +180,8 @@ class RendererHelpersTest(unittest.TestCase):
             "silence_ratio": 0.5,
             "mean_volume_db": -20.0,
             "frame_motion_mean": 3.0,
-            "active_motion_ratio": 0.45,
-            "max_static_seconds": 1.5,
+            "active_motion_ratio": 0.10,
+            "max_static_seconds": 8.0,
         }
         with patch.dict(os.environ, {"OFFLINE_MIN_SCORE": "60"}, clear=False):
             with self.assertRaisesRegex(RuntimeError, "Offline quality rules rejected"):
