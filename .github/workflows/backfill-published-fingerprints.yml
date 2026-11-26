@@ -1,0 +1,58 @@
+name: Backfill published video fingerprints
+on:
+  push:
+    paths:
+      - ".github/fingerprint-backfill/trigger.json"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: gta6-published-content-fingerprint-backfill
+  cancel-in-progress: false
+jobs:
+  backfill:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install video tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+          python -m pip install --upgrade pip
+          pip install yt-dlp opencv-python-headless numpy
+      - name: Fingerprint previously published Shorts
+        run: python renderer/backfill_content_fingerprints.py
+      - name: Save fingerprints and duplicate annotations
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --soft origin/main
+            git add .github/published-clips
+            if git diff --cached --quiet; then
+              echo "No historical markers needed updates."
+              exit 0
+            fi
+            git commit -m "Backfill fingerprints for published GTA6 Shorts"
+            if git push origin HEAD:main; then exit 0; fi
+            echo "::warning::Concurrent main update; retrying fingerprint commit."
+            sleep $((attempt * 2))
+          done
+          echo "::error::Could not save historical content fingerprints."
+          exit 1
+      - name: Upload fingerprint audit summary
+        if: always() && hashFiles('fingerprint-backfill-summary.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: published-content-fingerprint-audit
+          path: fingerprint-backfill-summary.json
+          if-no-files-found: ignore
