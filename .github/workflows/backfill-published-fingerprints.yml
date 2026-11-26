@@ -23,7 +23,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends ffmpeg
           python -m pip install --upgrade pip
-          pip install yt-dlp opencv-python-headless numpy
+          pip install yt-dlp opencv-python-headless==4.10.0.84 numpy==1.26.4
       - name: Fingerprint previously published Shorts
         run: python renderer/backfill_content_fingerprints.py
       - name: Save fingerprints and duplicate annotations
