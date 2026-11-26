@@ -1,4 +1,5 @@
 {
   "task": "backfill_published_visual_fingerprints",
-  "reason": "Compare existing published Shorts across streamer/source URL changes"
-}\n
+  "reason": "retry_after_import_fix_and_temporal_sequence_matcher",
+  "retriggered_at": "2026-11-26T18:00:00+03:00"
+}
