@@ -28,6 +28,29 @@ const HTML = String.raw`<!doctype html>
 
 <section class="panel"><h2>Manuel kaynak ekle</h2><input id="url" placeholder="Klip URL"><input id="creator" placeholder="Yayıncı adı"><input id="title" placeholder="Klip başlığı"><button id="add">Kaynak ekle</button></section>
 <section class="panel"><h2>Kaynaklar</h2><div class="wrap"><table><thead><tr><th>Yayıncı / Klip</th><th>Puan</th><th>Medya analizi</th><th>GTA VI durumu</th><th>Kaynak</th></tr></thead><tbody id="sourceRows"></tbody></table></div></section>
+<section class="panel" id="creatorRightsPanel" style="border:1px solid #8b5cf6">
+<h2>Yayıncı ve oyun görüntüsü kullanım izinleri</h2>
+<p class="muted">Twitch MP4 indirme izni, YouTube'da yeniden yayınlama izni değildir. Her yayıncı için yazılı kullanım izni kanıtı, izin verilen azami kaynak süresi ve GTA VI oyun görüntüsü için ayrı hak dayanağı kaydedilmeden otomatik yayın yapılmaz.</p>
+<div class="detail-box">
+<label for="permissionBroadcasterId">Twitch yayıncı ID</label><input id="permissionBroadcasterId" placeholder="Kaynak tablosundaki broadcaster ID">
+<label for="permissionBroadcasterName">Yayıncı adı</label><input id="permissionBroadcasterName" placeholder="Twitch kullanıcı adı">
+<label for="permissionCreatorEvidence">Yayıncının YouTube yeniden kullanım izni kanıtı (DM/izin belgesi bağlantısı veya kayıt referansı)</label><input id="permissionCreatorEvidence" placeholder="https://... veya izin kayıt referansı">
+<label for="permissionMaxSeconds">İzin verilen en uzun kaynak kullanım süresi (saniye)</label><input id="permissionMaxSeconds" type="number" min="45" max="175" value="60">
+<label for="permissionExpiry">İzin bitiş tarihi (isteğe bağlı)</label><input id="permissionExpiry" type="datetime-local">
+<label for="permissionGameBasis">GTA VI oyun görüntüsü için hak dayanağı</label>
+<select id="permissionGameBasis" style="width:100%;padding:11px;background:#0d1119;color:white;border:1px solid #343d4d;border-radius:7px;margin:7px 0">
+<option value="rockstar_noncommercial_guidelines">Yalnızca Rockstar'ın non-commercial fan kullanım koşulları</option>
+<option value="publisher_written_permission">Rockstar/Take-Two yazılı kullanım lisansı/izni</option>
+</select>
+<label for="permissionGameEvidence">Rockstar/Take-Two yazılı izin kanıtı (bu seçenek seçildiyse zorunlu)</label><input id="permissionGameEvidence" placeholder="https://... veya izin kayıt referansı">
+<label style="display:flex;gap:8px;align-items:flex-start;margin:10px 0"><input id="permissionNoncommercial" type="checkbox" style="width:auto;margin:2px 0"> Kanalın/video kullanımının ticari olmadığını, monetized/promosyon amacı taşımadığını ve Rockstar'ın saydığı istisnalara girmediğini teyit ediyorum.</label>
+<label for="permissionNotes">Notlar / özel kapsam</label><textarea id="permissionNotes" rows="2" style="min-height:70px"></textarea>
+<label style="display:flex;gap:8px;align-items:flex-start;margin:10px 0"><input id="permissionConfirm" type="checkbox" style="width:auto;margin:2px 0"> İzin kanıtlarını kontrol ettim; kullanım platformu YouTube, süre sınırı ve kullanım kapsamı doğru.</label>
+<button type="button" id="saveCreatorPermission">İZİN KAYDINI ONAYLA</button>
+<div id="permissionMessage" class="notice hidden"></div>
+</div>
+<div class="wrap"><table><thead><tr><th>Yayıncı</th><th>Durum</th><th>İzin kapsamı</th><th>Hak dayanağı</th><th>İşlem</th></tr></thead><tbody id="permissionRows"></tbody></table></div>
+</section>
 <section class="panel"><h2>Shorts üretim paketleri</h2><p class="muted">GTA VI olduğu doğrulanan kaynaklardan paketler otomatik hazırlanır. Kaynakları seçip topluca MP4 üretebilir, hazır olanları indirebilirsin.</p><div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0"><button type="button" id="selectAllDrafts" class="secondary">Tümünü seç</button><button type="button" id="clearDraftSelection" class="secondary">Seçimi temizle</button><button type="button" id="renderSelectedDrafts">SEÇİLENLERİ MP4 ÜRET</button></div><div id="bulkRenderStatus" class="notice hidden"></div><div class="wrap"><table><thead><tr><th>Seç</th><th>Kaynak</th><th>Başlık</th><th>Durum</th><th>İşlem</th></tr></thead><tbody id="draftRows"></tbody></table></div></section>
 <section class="panel" id="youtubeKit" style="border:1px solid #394150">
 <h2>YouTube Kanal ve SEO Merkezi</h2>
@@ -60,8 +83,21 @@ function renderQuickClipDownload(){const box=$("quickClipDownloadStatus");if(!bo
 function showDraft(id){const drafts=currentData&&Array.isArray(currentData.drafts)?currentData.drafts:[];const d=drafts.find(x=>String(x.id)===String(id));if(!d){$("detail").innerHTML="<div class='status-bad'>Paket bulunamadı. Paneli yenileyip tekrar dene.</div>";$("detailPanel").scrollIntoView({behavior:"smooth",block:"start"});return;}
 $("detail").innerHTML="<div class='detail-box'><h3>"+esc(d.title||"Başlıksız paket")+"</h3><p><b>Yayıncı:</b> "+esc(d.creator_name||"Bilinmiyor")+"</p><p><b>Durum:</b> "+esc(d.status||"-")+"</p><p><b>Paket ID:</b> <span class='mini'>"+esc(d.id)+"</span></p><h3>Üretim metni</h3><textarea id='draftScript' readonly></textarea><p><a target='_blank' rel='noopener' href='"+esc(d.source_url||"#")+"'>Kaynak klibi aç</a></p><button type='button' id='copyDraft' class='secondary'>Metni kopyala</button><button type='button' id='renderDraft'>MP4 üret</button><p class='mini'>Render: <b>"+esc(d.job_status||d.status||"queued_review")+"</b></p>"+(d.output_key?"<p><a target='_blank' rel='noopener' href='"+esc(d.output_key)+"'>MP4 DOSYASINI İNDİR</a></p>":"")+(d.package_url?"<p><a target='_blank' rel='noopener' href='"+esc(d.package_url)+"'>TÜM DOSYALARI ZIP İNDİR</a></p>":"")+"<p class='mini'>YouTube: <b>"+esc(d.youtube_status||"not_run")+"</b></p>"+(d.youtube_url?"<p><a target='_blank' rel='noopener' href='"+esc(d.youtube_url)+"'>YouTube videosunu aç (public)</a></p>":"")+"<p id='renderResult' class='mini'></p></div>";$("draftScript").value=d.script||"Bu pakette henüz metin bulunmuyor.";
 $("copyDraft").onclick=async()=>{try{await navigator.clipboard.writeText($("draftScript").value);showMsg("Üretim metni panoya kopyalandı.")}catch(e){$("draftScript").select();showMsg("Metin seçildi. CTRL+C ile kopyalayabilirsin.")}};$("renderDraft").onclick=async()=>{const b=$("renderDraft");b.disabled=true;b.textContent="Render başlatılıyor...";try{const r=await api("/api/render/dispatch",{draft_id:d.id});$("renderResult").textContent="Bulut render işi başlatıldı. İş: "+r.job_id+" · Durum: "+r.status;showMsg("MP4 üretimi buluta gönderildi.");await refresh()}catch(e){$("renderResult").textContent=e.message;showMsg(e.message)}finally{b.disabled=false;b.textContent="MP4 üret"}};$("detailPanel").scrollIntoView({behavior:"smooth",block:"start"});}
+async function loadPermissions(){
+ try{
+  const result=await api("/api/permissions");
+  const list=result.permissions||[];
+  $("permissionRows").innerHTML=list.map(p=>{
+   const expiry=p.permission_expires_at||"No expiry recorded";
+   const basis=p.game_rights_basis==="publisher_written_permission"?"Written publisher licence":"Non-commercial Rockstar policy";
+   const status=p.permission_status==="approved"?"APPROVED":p.permission_status;
+   const safeId=esc(p.broadcaster_id);
+   return "<tr><td><b>"+esc(p.broadcaster_name)+"</b><br><span class='mini'>"+safeId+"</span></td><td>"+esc(status)+"</td><td>Max source: "+esc(p.max_source_seconds)+"s<br>"+esc(expiry)+"<br>Evidence: "+esc(p.creator_permission_evidence)+"</td><td>"+esc(basis)+(p.game_rights_evidence_reference?"<br>"+esc(p.game_rights_evidence_reference):"")+"</td><td><button type='button' class='secondary' data-revoke-permission='"+safeId+"'>İZNİ GERİ ÇEK</button></td></tr>";
+  }).join("")||"<tr><td colspan='5'>Henüz doğrulanmış kullanım izni kaydı yok. İzin kaydı olmayan yayıncılar otomatik yayın havuzuna alınmaz.</td></tr>";
+ }catch(e){$("permissionRows").innerHTML="<tr><td colspan='5'>İzin kayıtları alınamadı: "+esc(e.message)+"</td></tr>";}
+}
 async function loginCheck(){try{await api("/api/me");$("login").classList.add("hidden");$("app").classList.remove("hidden");await refresh();}catch(e){$("app").classList.add("hidden");$("login").classList.remove("hidden");}}
-async function refresh(){try{let system=null;try{system=await api("/api/system/status")}catch(e){}if(system){const checks=[["Cloudflare D1",system.database],["Uygulama parolası",system.appPassword],["Twitch API",system.twitchClient],["GitHub Actions",system.githubToken],["Render geri bildirim anahtarı",system.renderWebhookSecret]];$("systemStatus").innerHTML="<p>Worker: <b>"+esc(system.version)+"</b></p>"+checks.map(([name,ok])=>"<p>"+(ok?"<span class='status-ok'>HAZIR</span>":"<span class='status-bad'>EKSİK</span>")+" · "+esc(name)+"</p>").join("")}else{$("systemStatus").textContent="Bulut bağlantı tanılaması yeni Worker dağıtımından sonra kullanılabilir."}currentData=await api("/api/data");const s=currentData.sources||[],d=currentData.drafts||[];$("sources").textContent=s.length;$("drafts").textContent=d.length;$("queued").textContent=d.filter(x=>x.status==="queued_review").length;$("published").textContent=d.filter(x=>x.youtube_status==="published_public"&&x.youtube_url).length;
+async function refresh(){try{let system=null;try{system=await api("/api/system/status")}catch(e){}if(system){const checks=[["Cloudflare D1",system.database],["Uygulama parolası",system.appPassword],["Twitch API",system.twitchClient],["GitHub Actions",system.githubToken],["Render geri bildirim anahtarı",system.renderWebhookSecret]];$("systemStatus").innerHTML="<p>Worker: <b>"+esc(system.version)+"</b></p>"+checks.map(([name,ok])=>"<p>"+(ok?"<span class='status-ok'>HAZIR</span>":"<span class='status-bad'>EKSİK</span>")+" · "+esc(name)+"</p>").join("")}else{$("systemStatus").textContent="Bulut bağlantı tanılaması yeni Worker dağıtımından sonra kullanılabilir."}currentData=await api("/api/data");await loadPermissions();const s=currentData.sources||[],d=currentData.drafts||[];$("sources").textContent=s.length;$("drafts").textContent=d.length;$("queued").textContent=d.filter(x=>x.status==="queued_review").length;$("published").textContent=d.filter(x=>x.youtube_status==="published_public"&&x.youtube_url).length;
 $("sourceRows").innerHTML=s.map(x=>"<tr><td><b>"+esc(x.creator_name)+"</b><br>"+esc(x.title)+(x.relevance_status==="relevant"?"<br><span class='status-ok'>GTA VI kategorisi doğrulandı</span>":"")+"</td><td>"+esc(x.score==null?"-":x.score)+"/100</td><td>"+(x.media_analyzed_at?("Kalite "+esc(x.media_quality_score==null?"-":x.media_quality_score)+"/100<br>"+esc(x.source_width)+"×"+esc(x.source_height)+" · "+esc(x.source_fps)+" FPS<br>"+(x.source_has_audio?"Ses var":"Ses yok")+" · Sessizlik "+esc(Math.round(Number(x.silence_ratio||0)*100))+"%<br>Sahne geçişi: "+esc(x.scene_change_count==null?"-":x.scene_change_count)+" · Ortalama ses: "+esc(x.mean_volume_db==null?"-":x.mean_volume_db+" dB")):"Render analizi bekleniyor")+"</td><td>"+esc(x.relevance_status)+"</td><td><a target='_blank' rel='noopener' href='"+esc(x.source_url)+"'>Klibi aç</a></td></tr>").join("");
 $("draftRows").innerHTML=d.map(x=>{const st=String(x.job_status||x.status||"queued_review"),ready=st==="ready"&&!!x.output_key,busy=st==="processing";return "<tr><td><input type='checkbox' class='draft-select' value='"+esc(x.id)+"' "+(ready||busy?"":"checked")+" aria-label='Kaynağı seç'></td><td>"+esc(x.creator_name||"Bilinmiyor")+"</td><td>"+esc(x.title)+"</td><td>"+esc(st)+"</td><td><button type='button' class='view-button' data-view='"+esc(x.id)+"'>Görüntüle</button> <button type='button' data-render='"+esc(x.id)+"' "+(ready||busy?"disabled":"")+">"+(ready?"ÜRETİLDİ":busy?"İŞLENİYOR":"MP4 ÜRET")+"</button> "+(ready?(String(x.output_key||"").toLowerCase().endsWith(".mp4")?"<a class='button-link' target='_blank' rel='noopener' href='"+esc(x.output_key)+"'>MP4 İNDİR</a> "+(x.package_url?"<a class='button-link' target='_blank' rel='noopener' href='"+esc(x.package_url)+"'>PAKET ZIP</a>":""):"<a class='button-link' target='_blank' rel='noopener' href='"+esc(x.package_url||x.output_key)+"'>PAKET ZIP İNDİR</a>"):"")+"</td></tr>"}).join("");if(!d.length)$("draftRows").innerHTML="<tr><td colspan='5'>Henüz üretim paketi yok. Önce GTA VI keşfini ve paket oluşturmayı çalıştır.</td></tr>";}catch(e){showMsg(e.message);}}
 $("draftRows").addEventListener("click",async e=>{const view=e.target.closest("button[data-view]");if(view){e.preventDefault();e.stopPropagation();showDraft(view.getAttribute("data-view"));return;}const render=e.target.closest("button[data-render]");if(render){const id=render.getAttribute("data-render");render.disabled=true;render.textContent="BAŞLATILIYOR...";try{const r=await api("/api/render/dispatch",{draft_id:id});showMsg(r.already_exists?r.message:"MP4 üretimi başlatıldı. İş: "+r.job_id);await refresh()}catch(err){showMsg(err.message);render.disabled=false;render.textContent="MP4 ÜRET"}}});$("selectAllDrafts").onclick=()=>document.querySelectorAll("#draftRows .draft-select").forEach(x=>x.checked=true);$("clearDraftSelection").onclick=()=>document.querySelectorAll("#draftRows .draft-select").forEach(x=>x.checked=false);$("renderSelectedDrafts").onclick=async()=>{const ids=[...document.querySelectorAll("#draftRows .draft-select:checked")].map(x=>x.value),box=$("bulkRenderStatus"),btn=$("renderSelectedDrafts");if(!ids.length){showMsg("Önce üretilecek kaynakları seç.");return;}btn.disabled=true;box.classList.remove("hidden");let ok=0,failed=0;for(let i=0;i<ids.length;i++){box.textContent="Toplu üretim: "+(i+1)+"/"+ids.length+" hazırlanıyor...";try{const r=await api("/api/render/dispatch",{draft_id:ids[i]});if(r.already_exists&&r.status==="ready")ok++;else if(r.already_exists)ok++;else ok++;}catch(err){failed++;}}box.textContent="Toplu işlem tamamlandı. Başlatılan: "+ok+" · Başlatılamayan: "+failed+". Durum ve indirme bağlantıları aşağıdaki satırlarda gösteriliyor.";btn.disabled=false;await refresh();};
@@ -77,6 +113,32 @@ $("discover").onclick=async()=>{showMsg("GTA VI Twitch keşfi çalışıyor...")
 $("prepare").onclick=async()=>{showMsg("Paketler oluşturuluyor ve mevcut paketler güncelleniyor...");try{const r=await api("/api/prepare",{});showMsg("ÜRETİM HAZIRLIĞI TAMAMLANDI"+"\nKontrol edilen: "+r.checked+"\nYeni paket: "+r.created+"\nGüncellenen paket: "+r.updated+"\nÖnceden mevcut: "+r.existing+"\nAlakasız kaynak atlandı: "+r.skipped_irrelevant+"\nKuyruktaki toplam: "+r.total);await refresh()}catch(e){showMsg(e.message)}};
 $("quickClipProduce").onclick=async()=>{const b=$("quickClipProduce"),out=$("quickClipResult"),url=$("quickClipUrl").value.trim();if(!url){out.textContent="Paste a public Twitch clip URL first.";out.classList.remove("hidden");return;}b.disabled=true;b.textContent="SENDING TO FACTORY...";out.textContent="Checking GTA VI category, queueing render and public YouTube upload...";out.classList.remove("hidden");try{const r=await api("/api/source/quick",{url});out.textContent="Factory job started. Job: "+r.job_id+" · Status: "+r.status+". MP4, ZIP and public YouTube link will appear in the dashboard when finished.";showMsg("Clip sent to the factory.");$("quickClipUrl").value="";await refresh()}catch(e){out.textContent=e.message;showMsg(e.message)}finally{b.disabled=false;b.textContent="SEND TO FACTORY & PUBLISH"}};
 $("add").onclick=async()=>{try{await api("/api/source/manual",{url:$("url").value,creator:$("creator").value,title:$("title").value});$("url").value="";$("creator").value="";$("title").value="";showMsg("Kaynak eklendi.");await refresh()}catch(e){showMsg(e.message)}};
+$("saveCreatorPermission").onclick=async()=>{
+ const b=$("saveCreatorPermission"),out=$("permissionMessage");
+ const data={
+  broadcaster_id:$("permissionBroadcasterId").value.trim(),
+  broadcaster_name:$("permissionBroadcasterName").value.trim(),
+  creator_permission_evidence:$("permissionCreatorEvidence").value.trim(),
+  max_source_seconds:Number($("permissionMaxSeconds").value),
+  permission_expires_at:$("permissionExpiry").value?new Date($("permissionExpiry").value).toISOString():"",
+  game_rights_basis:$("permissionGameBasis").value,
+  game_rights_evidence_reference:$("permissionGameEvidence").value.trim(),
+  noncommercial_use:$("permissionNoncommercial").checked,
+  notes:$("permissionNotes").value.trim(),
+  confirm_authorization:$("permissionConfirm").checked
+ };
+ b.disabled=true;b.textContent="KAYDEDİLİYOR...";
+ try{await api("/api/permissions/grant",data);out.textContent="İzin kaydı onaylandı. Bu yayıncının klipleri yalnızca kayıtlı süre ve hak kapsamı içinde üretilebilir.";out.classList.remove("hidden");$("permissionConfirm").checked=false;await loadPermissions();await refresh();}
+ catch(e){out.textContent=e.message;out.classList.remove("hidden");}
+ finally{b.disabled=false;b.textContent="İZİN KAYDINI ONAYLA";}
+};
+$("permissionRows").addEventListener("click",async e=>{
+ const b=e.target.closest("button[data-revoke-permission]");if(!b)return;
+ const id=b.getAttribute("data-revoke-permission");
+ if(!confirm("Bu yayıncının gelecekteki otomatik kullanımı durdurulsun mu?"))return;
+ try{await api("/api/permissions/revoke",{broadcaster_id:id});await loadPermissions();}
+ catch(err){$("permissionMessage").textContent=err.message;$("permissionMessage").classList.remove("hidden");}
+});
 loginCheck();
 </script></body></html>`;
 
@@ -540,6 +602,51 @@ if(path==="/api/twitch/downloads/bulk.zip"&&method==="POST"){const data=await re
 if(path==="/api/twitch/downloads/status"&&method==="GET")return json(await getDownloadStatus(env.DB));
 if(path==="/api/system/status"&&method==="GET")return json({version:VERSION,database:!!env.DB,appPassword:!!env.APP_PASSWORD,twitchClient:!!(env.TWITCH_CLIENT_ID&&env.TWITCH_CLIENT_SECRET),githubToken:!!env.GITHUB_TOKEN,renderWebhookSecret:!!env.RENDER_WEBHOOK_SECRET});
 if(path==="/api/data"&&method==="GET")return json(await getData(env.DB));
+if(path==="/api/permissions"&&method==="GET"){
+ const rows=await env.DB.prepare("SELECT broadcaster_id,broadcaster_name,permission_status,creator_permission_evidence,max_source_seconds,permission_expires_at,game_rights_basis,game_rights_evidence_reference,noncommercial_use,notes,updated_at FROM creator_usage_permissions ORDER BY broadcaster_name COLLATE NOCASE").all();
+ return json({permissions:rows.results||[]});
+}
+if(path==="/api/permissions/grant"&&method==="POST"){
+ const data=await readBody(request);
+ const broadcasterId=String(data.broadcaster_id||"").trim();
+ const broadcasterName=String(data.broadcaster_name||"").trim().slice(0,160);
+ const creatorEvidence=String(data.creator_permission_evidence||"").trim().slice(0,2000);
+ const gameBasis=String(data.game_rights_basis||"").trim();
+ const gameEvidence=String(data.game_rights_evidence_reference||"").trim().slice(0,2000);
+ const maxSeconds=Number(data.max_source_seconds);
+ const expiry=String(data.permission_expires_at||"").trim();
+ const noncommercial=data.noncommercial_use===true;
+ if(data.confirm_authorization!==true)return json({error:"İzin kaydını onaylamak için açık teyit gerekiyor."},400);
+ if(!broadcasterId||!broadcasterName||!creatorEvidence||!Number.isFinite(maxSeconds)||maxSeconds<45||maxSeconds>175)
+  return json({error:"Yayıncı ID/adı, yayıncı izin kanıtı ve 45–175 saniye arası azami kullanım süresi zorunludur."},400);
+ if(expiry&&(!Number.isFinite(Date.parse(expiry))||Date.parse(expiry)<=Date.now()))
+  return json({error:"İzin bitiş tarihi geçerli ve gelecekte olmalı."},400);
+ if(!["rockstar_noncommercial_guidelines","publisher_written_permission"].includes(gameBasis))
+  return json({error:"Rockstar/Take-Two oyun görüntüsü için geçerli hak dayanağını seç."},400);
+ if(gameBasis==="rockstar_noncommercial_guidelines"&&!noncommercial)
+  return json({error:"Rockstar'ın genel fan kullanım politikası yalnızca non-commercial kullanım için geçerlidir; ticari/monetized kullanım için yazılı yayıncı izni gerekir."},400);
+ if(gameBasis==="publisher_written_permission"&&!gameEvidence)
+  return json({error:"Yayıncıdan alınmış yazılı oyun görüntüsü izninin kanıtı zorunludur."},400);
+ await env.DB.prepare(`INSERT INTO creator_usage_permissions(
+  broadcaster_id,broadcaster_name,permission_status,creator_permission_evidence,max_source_seconds,
+  permission_expires_at,game_rights_basis,game_rights_evidence_reference,noncommercial_use,youtube_allowed,notes,updated_at
+ ) VALUES(?,?,'approved',?,?,?,?,?,?,1,?,CURRENT_TIMESTAMP)
+ ON CONFLICT(broadcaster_id) DO UPDATE SET
+  broadcaster_name=excluded.broadcaster_name,permission_status='approved',
+  creator_permission_evidence=excluded.creator_permission_evidence,
+  max_source_seconds=excluded.max_source_seconds,permission_expires_at=excluded.permission_expires_at,
+  game_rights_basis=excluded.game_rights_basis,
+  game_rights_evidence_reference=excluded.game_rights_evidence_reference,
+  noncommercial_use=excluded.noncommercial_use,youtube_allowed=1,notes=excluded.notes,updated_at=CURRENT_TIMESTAMP
+ `).bind(broadcasterId,broadcasterName,creatorEvidence,maxSeconds,expiry||null,gameBasis,gameEvidence||null,noncommercial?1:0,String(data.notes||"").slice(0,1000)).run();
+ return json({ok:true,broadcaster_id:broadcasterId,permission_status:"approved"});
+}
+if(path==="/api/permissions/revoke"&&method==="POST"){
+ const data=await readBody(request),id=String(data.broadcaster_id||"").trim();
+ if(!id)return json({error:"broadcaster_id required"},400);
+ await env.DB.prepare("UPDATE creator_usage_permissions SET permission_status='revoked',youtube_allowed=0,updated_at=CURRENT_TIMESTAMP WHERE broadcaster_id=?").bind(id).run();
+ return json({ok:true,permission_status:"revoked"});
+}
 if(path==="/api/discover"&&method==="POST")return json(await discover(env.DB,env));
 
 if(path==="/api/prepare"&&method==="POST"){let discovery;try{discovery=await discover(env.DB,env);}catch(error){discovery={error:String(error&&error.message||error).slice(0,500)};}const clipValidation=await resolveTwitchClips(env.DB,env,500);const durationValidation=await validateResolvedClipDurations(env.DB,env,500);const prepared=await prepareAll(env.DB);const rendering=await dispatchQueuedRenders(env.DB,env,10);return json({...prepared,discovery,clip_validation:clipValidation,duration_validation:durationValidation,rendering});}
