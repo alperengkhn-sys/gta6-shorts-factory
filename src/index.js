@@ -679,7 +679,7 @@ if(path==="/api/permissions/grant"&&method==="POST"){
  await env.DB.prepare(`INSERT INTO creator_usage_permissions(
   broadcaster_id,broadcaster_name,permission_status,creator_permission_evidence,max_source_seconds,
   permission_expires_at,game_rights_basis,game_rights_evidence_reference,audio_rights_evidence,audio_rights_confirmed,noncommercial_use,youtube_allowed,notes,updated_at
- ) VALUES(?,?,'approved',?,?,?,?,?,?,?,1,?,1,?,CURRENT_TIMESTAMP)
+ ) VALUES(?,?,'approved',?,?,?,?,?,?,1,?,1,?,CURRENT_TIMESTAMP)
  ON CONFLICT(broadcaster_id) DO UPDATE SET
   broadcaster_name=excluded.broadcaster_name,permission_status='approved',
   creator_permission_evidence=excluded.creator_permission_evidence,
