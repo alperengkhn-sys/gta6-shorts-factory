@@ -38,11 +38,28 @@ def main():
 
     if not payload.get("access_token"):
         raise RuntimeError("Google returned no access token.")
-    scopes = payload.get("scope", "")
-    if scopes and "https://www.googleapis.com/auth/youtube.upload" not in scopes.split():
+    scopes = set(str(payload.get("scope", "")).split())
+    upload_scope = "https://www.googleapis.com/auth/youtube.upload"
+    read_scopes = {
+        "https://www.googleapis.com/auth/youtube.readonly",
+        "https://www.googleapis.com/auth/youtube.force-ssl",
+        "https://www.googleapis.com/auth/youtube",
+    }
+    write_scopes = {
+        "https://www.googleapis.com/auth/youtube.force-ssl",
+        "https://www.googleapis.com/auth/youtube",
+    }
+    analytics_scope = "https://www.googleapis.com/auth/yt-analytics.readonly"
+    if scopes and upload_scope not in scopes:
         raise RuntimeError("The refreshed token does not include the YouTube upload scope.")
     print("PASS: Google accepted the refresh token; YouTube upload scope is present.")
-    print("No video was uploaded or modified.")
+    print("SHORTS_PROCESSING_AND_THUMBNAIL_STATUS: " +
+          ("available" if not scopes or bool(scopes & read_scopes) else "missing_youtube_readonly"))
+    print("EXISTING_VIDEO_METADATA_UPDATE: " +
+          ("available" if not scopes or bool(scopes & write_scopes) else "missing_youtube_force_ssl"))
+    print("CHANNEL_ANALYTICS: " +
+          ("available" if analytics_scope in scopes else "missing_yt_analytics_readonly"))
+    print("No video was uploaded or modified. Token values are never printed.")
 
 
 if __name__ == "__main__":
