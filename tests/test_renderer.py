@@ -294,6 +294,7 @@ class RendererHelpersTest(unittest.TestCase):
         from tempfile import TemporaryDirectory
         from renderer.youtube_upload import upload_custom_thumbnail
         read_scope = "https://www.googleapis.com/auth/youtube.readonly"
+        upload_scope = "https://www.googleapis.com/auth/youtube.upload"
         status = json.dumps({"items": [{
             "status": {"uploadStatus": "uploaded"},
             "processingDetails": {"processingStatus": "processing"},
@@ -303,7 +304,7 @@ class RendererHelpersTest(unittest.TestCase):
             cover.write_bytes(b"jpeg-test")
             with patch("renderer.youtube_upload.request", return_value=(200, {}, status)) as api, \
                  patch("renderer.youtube_upload.time.sleep") as sleep:
-                result = upload_custom_thumbnail("video123", cover, "access-token", {read_scope})
+                result = upload_custom_thumbnail("video123", cover, "access-token", {read_scope, upload_scope})
         self.assertEqual(result, "processing_timeout")
         self.assertEqual(api.call_count, 40)
         self.assertEqual(sleep.call_count, 40)
