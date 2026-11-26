@@ -100,6 +100,7 @@ async function ensureSchema(db){
  await ensureColumn(db,"jobs","batch_id","TEXT");
  await db.prepare(`CREATE TABLE IF NOT EXISTS render_batches (id TEXT PRIMARY KEY,status TEXT NOT NULL DEFAULT 'active',target_min INTEGER NOT NULL DEFAULT 5,target_max INTEGER NOT NULL DEFAULT 10,max_attempts INTEGER NOT NULL DEFAULT 50,attempts INTEGER NOT NULL DEFAULT 0,pending INTEGER NOT NULL DEFAULT 0,published INTEGER NOT NULL DEFAULT 0,failed INTEGER NOT NULL DEFAULT 0,eligible INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
  await ensureColumn(db,"render_batches","discovery_refreshed_at","TEXT");
+ await ensureColumn(db,"render_batches","discovery_refresh_status","TEXT");
  await ensureColumn(db,"jobs","youtube_url","TEXT");
  await ensureColumn(db,"jobs","youtube_status","TEXT DEFAULT 'not_configured'");
  await ensureColumn(db,"jobs","render_attempts","INTEGER NOT NULL DEFAULT 0");
@@ -390,15 +391,26 @@ async function fillRenderBatch(db,env,batchId){
   let candidate=await findCandidate();
   if(!candidate){
    // Expand the source pool only once per active batch, then refill from new clips.
-   const scan=await db.prepare("UPDATE render_batches SET discovery_refreshed_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='active' AND discovery_refreshed_at IS NULL RETURNING id").bind(batchId).first();
+   const scan=await db.prepare("UPDATE render_batches SET discovery_refreshed_at=CURRENT_TIMESTAMP,discovery_refresh_status='running',updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='active' AND discovery_refresh_status IS NULL RETURNING id").bind(batchId).first();
    if(scan){
     try{
      const discovery=await discover(db,env);
      const prepared=await prepareAll(db);
      errors.push({discovery_expansion:{clips:discovery?.clips||0,saved:discovery?.saved||0,prepared:prepared?.created||0}});
-     candidate=await findCandidate();
     }catch(error){
      errors.push({discovery_expansion_error:String(error&&error.message||error).slice(0,500)});
+    }finally{
+     await db.prepare("UPDATE render_batches SET discovery_refresh_status='complete',updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='active'").bind(batchId).run();
+    }
+    candidate=await findCandidate();
+   }else{
+    // A sibling callback owns discovery. Briefly wait for its scan to finish
+    // before releasing our reserved slot, avoiding a false underfilled batch.
+    for(let wait=0;wait<20&&!candidate;wait++){
+     const state=await db.prepare("SELECT discovery_refresh_status FROM render_batches WHERE id=?").bind(batchId).first();
+     if(state?.discovery_refresh_status!=="running")break;
+     await new Promise(resolve=>setTimeout(resolve,500));
+     candidate=await findCandidate();
     }
    }
   }
