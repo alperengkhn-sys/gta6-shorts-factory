@@ -96,6 +96,36 @@ def inspect_visual_quality(media_path: str | Path, sample_count: int = 10) -> di
         "inspected_aspect_ratio":"9:16 centered crop"
     }
 
+def select_sharp_frame_time(media_path: str | Path, start_seconds: float = 0.25,
+                             end_seconds: float = 8.0, sample_count: int = 20) -> float:
+    """Choose a clear early gameplay frame for the opening cover and Shorts thumbnail."""
+    cap = cv2.VideoCapture(str(media_path))
+    if not cap.isOpened():
+        return max(0.0, float(start_seconds))
+    fps = float(cap.get(cv2.CAP_PROP_FPS) or 0)
+    frame_count = float(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
+    duration = frame_count / fps if fps > 0 else 0.0
+    if duration <= 0:
+        cap.release()
+        return max(0.0, float(start_seconds))
+    left = min(max(0.0, float(start_seconds)), max(0.0, duration - 0.05))
+    right = min(max(left + 0.05, float(end_seconds)), max(left + 0.05, duration - 0.05))
+    times = np.linspace(left, right, max(2, int(sample_count)))
+    best_time, best_score = left, -1.0
+    for timestamp in times:
+        cap.set(cv2.CAP_PROP_POS_MSEC, float(timestamp) * 1000.0)
+        ok, frame = cap.read()
+        if not ok or frame is None:
+            continue
+        gray = cv2.cvtColor(cv2.resize(_vertical_crop(frame), (360, 640), interpolation=cv2.INTER_AREA),
+                            cv2.COLOR_BGR2GRAY)
+        score = float(cv2.Laplacian(gray, cv2.CV_64F).var())
+        if score > best_score:
+            best_time, best_score = float(timestamp), score
+    cap.release()
+    return round(best_time, 3)
+
+
 def _dhash64(gray: np.ndarray) -> str:
     small = cv2.resize(gray,(9,8),interpolation=cv2.INTER_AREA)
     bits=0
