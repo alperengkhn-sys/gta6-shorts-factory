@@ -99,6 +99,7 @@ async function ensureSchema(db){
  await db.prepare(`CREATE TABLE IF NOT EXISTS jobs (id TEXT PRIMARY KEY,source_id TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'queued_review',target_format TEXT,editorial_note TEXT,output_key TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
  await ensureColumn(db,"jobs","batch_id","TEXT");
  await db.prepare(`CREATE TABLE IF NOT EXISTS render_batches (id TEXT PRIMARY KEY,status TEXT NOT NULL DEFAULT 'active',target_min INTEGER NOT NULL DEFAULT 5,target_max INTEGER NOT NULL DEFAULT 10,max_attempts INTEGER NOT NULL DEFAULT 50,attempts INTEGER NOT NULL DEFAULT 0,pending INTEGER NOT NULL DEFAULT 0,published INTEGER NOT NULL DEFAULT 0,failed INTEGER NOT NULL DEFAULT 0,eligible INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
+ await ensureColumn(db,"render_batches","discovery_refreshed_at","TEXT");
  await ensureColumn(db,"jobs","youtube_url","TEXT");
  await ensureColumn(db,"jobs","youtube_status","TEXT DEFAULT 'not_configured'");
  await ensureColumn(db,"jobs","render_attempts","INTEGER NOT NULL DEFAULT 0");
@@ -385,7 +386,22 @@ async function fillRenderBatch(db,env,batchId){
   }
   const reservation=await db.prepare("UPDATE render_batches SET pending=pending+1,attempts=attempts+1,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='active' AND published+pending<target_max AND attempts<max_attempts RETURNING id").bind(batchId).first();
   if(!reservation)break;
-  const candidate=await db.prepare("SELECT DISTINCT d.id AS draft_id FROM shorts_drafts d JOIN sources s ON s.id=d.source_id JOIN jobs j ON j.id=(SELECT j2.id FROM jobs j2 WHERE j2.source_id=s.id ORDER BY j2.created_at DESC LIMIT 1) LEFT JOIN clip_analysis a ON a.source_id=s.id WHERE s.platform='twitch' AND s.relevance_status='relevant' AND s.twitch_game_id IS NOT NULL AND s.twitch_clip_duration>=45 AND j.status IN ('queued_review','failed') AND COALESCE(j.render_attempts,0)<10 AND COALESCE(j.batch_id,'')<>? AND COALESCE(j.last_error,'') NOT LIKE '%Quality gate rejected%' AND COALESCE(j.last_error,'') NOT LIKE '%Offline quality rules rejected%' ORDER BY CASE WHEN j.status='queued_review' THEN 0 ELSE 1 END,COALESCE(a.score,0) DESC,j.created_at ASC LIMIT 1").bind(batchId).first();
+  const findCandidate=()=>db.prepare("SELECT DISTINCT d.id AS draft_id FROM shorts_drafts d JOIN sources s ON s.id=d.source_id JOIN jobs j ON j.id=(SELECT j2.id FROM jobs j2 WHERE j2.source_id=s.id ORDER BY j2.created_at DESC LIMIT 1) LEFT JOIN clip_analysis a ON a.source_id=s.id WHERE s.platform='twitch' AND s.relevance_status='relevant' AND s.twitch_game_id IS NOT NULL AND s.twitch_clip_duration>=45 AND j.status IN ('queued_review','failed') AND COALESCE(j.render_attempts,0)<10 AND COALESCE(j.batch_id,'')<>? AND COALESCE(j.last_error,'') NOT LIKE '%Quality gate rejected%' AND COALESCE(j.last_error,'') NOT LIKE '%Offline quality rules rejected%' ORDER BY CASE WHEN j.status='queued_review' THEN 0 ELSE 1 END,COALESCE(a.score,0) DESC,j.created_at ASC LIMIT 1").bind(batchId).first();
+  let candidate=await findCandidate();
+  if(!candidate){
+   // Expand the source pool only once per active batch, then refill from new clips.
+   const scan=await db.prepare("UPDATE render_batches SET discovery_refreshed_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='active' AND discovery_refreshed_at IS NULL RETURNING id").bind(batchId).first();
+   if(scan){
+    try{
+     const discovery=await discover(db,env);
+     const prepared=await prepareAll(db);
+     errors.push({discovery_expansion:{clips:discovery?.clips||0,saved:discovery?.saved||0,prepared:prepared?.created||0}});
+     candidate=await findCandidate();
+    }catch(error){
+     errors.push({discovery_expansion_error:String(error&&error.message||error).slice(0,500)});
+    }
+   }
+  }
   if(!candidate){
    await db.prepare("UPDATE render_batches SET pending=MAX(0,pending-1),updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='active'").bind(batchId).run();
    const afterEmpty=await db.prepare("SELECT id,status,target_min,target_max,max_attempts,attempts,pending,published,failed,eligible FROM render_batches WHERE id=?").bind(batchId).first();
