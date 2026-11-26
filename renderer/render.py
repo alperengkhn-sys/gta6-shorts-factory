@@ -250,7 +250,7 @@ def media_analysis(media):
 
 
 def vision_review(media, workdir, metrics=None, title=""):
-    """Free, deterministic offline editorial screening; no external AI/API or billing."""
+    """Offline screening that rejects only genuinely unusable gameplay."""
     if os.environ.get("RENDER_TEST_MODE") == "1":
         return {"score":100,"compelling":True,"event":"CI synthetic fixture",
           "category":"other","youtube_safe":True,"age_restriction_recommended":False,
@@ -261,69 +261,93 @@ def vision_review(media, workdir, metrics=None, title=""):
 
     metrics = metrics or media_analysis(media)
     title_text = clean(title).lower()
-    # Deterministic text safety rules. These are conservative title/metadata
-    # checks, not a claim that a local ruleset can understand every video frame.
-    mature = False
-    blocked = []
-
     scene_count = metrics.get("scene_change_count")
     silence_ratio = float(metrics.get("silence_ratio") or 0)
     mean_volume = metrics.get("mean_volume_db")
     active_motion_ratio = metrics.get("active_motion_ratio")
     max_static_seconds = metrics.get("max_static_seconds")
     frame_motion_mean = metrics.get("frame_motion_mean")
-    score = 58
+    score = 54
     reasons = ["Offline media-activity screening; no paid AI service was called."]
-    if not isinstance(scene_count, (int, float)):
-        raise RuntimeError("Quality gate rejected this clip: scene-change analysis unavailable.")
-    # Twitch gameplay often stays in one continuous camera scene. Scene cuts are
-    # a weak signal for Shorts quality, so do not reject continuous gameplay here;
-    # actual motion and long-static-section checks below remain mandatory.
-    if silence_ratio > 0.50:
-        raise RuntimeError("Quality gate rejected this clip: more than half the source is silent.")
+
+    # A clip may contain pauses, quiet dialogue, or a single continuous camera
+    # scene. Those are editing signals, not automatic rejection reasons.
     if mean_volume is None or float(mean_volume) < -38:
         raise RuntimeError("Quality gate rejected this clip: source audio is missing or too quiet.")
-    if not isinstance(active_motion_ratio, (int, float)) or not isinstance(max_static_seconds, (int, float)) or frame_motion_mean is None:
+    if (not isinstance(active_motion_ratio, (int, float))
+            or not isinstance(max_static_seconds, (int, float))
+            or not isinstance(frame_motion_mean, (int, float))):
         raise RuntimeError("Quality gate rejected this clip: real frame-motion analysis unavailable.")
-    if float(active_motion_ratio) < 0.32:
-        raise RuntimeError("Quality gate rejected this clip: too little actual gameplay movement; likely waiting, loading, menu, or static broadcast footage.")
-    if float(max_static_seconds) >= 4.0:
-        raise RuntimeError("Quality gate rejected this clip: a static or near-static section lasts 4 seconds or longer.")
+    if float(active_motion_ratio) < 0.18:
+        raise RuntimeError(
+            "Quality gate rejected this clip: too little actual gameplay movement; "
+            "likely waiting, loading, menu, or static broadcast footage."
+        )
+
     if isinstance(scene_count, (int, float)):
         if scene_count >= 12:
-            score += 17
+            score += 12
             reasons.append("High scene-change activity.")
         elif scene_count >= 6:
-            score += 12
+            score += 8
             reasons.append("Good scene-change activity.")
         elif scene_count >= 3:
             score += 4
             reasons.append("Some scene changes detected.")
         else:
-            reasons.append("Continuous gameplay scene; evaluated using actual frame motion instead of cut count.")
+            reasons.append("Continuous gameplay scene; evaluated using actual frame motion.")
+    else:
+        reasons.append("Scene-cut count unavailable; actual frame motion used instead.")
+
+    motion = float(active_motion_ratio)
+    if motion >= 0.65:
+        score += 12
+        reasons.append("Strong continuous gameplay movement.")
+    elif motion >= 0.45:
+        score += 8
+        reasons.append("Usable gameplay movement.")
+    elif motion >= 0.32:
+        score += 5
+        reasons.append("Moderate gameplay movement.")
+    else:
+        reasons.append("Low but usable movement; clip retained.")
+
     if silence_ratio <= 0.08:
-        score += 10
+        score += 8
         reasons.append("Low dead-air ratio.")
-    elif silence_ratio >= 0.35:
+    elif silence_ratio >= 0.70:
         score -= 10
-        reasons.append("Large silent portion.")
-    if mean_volume is not None:
-        if float(mean_volume) > -24:
-            score += 5
-            reasons.append("Usable source audio level.")
-        elif float(mean_volume) < -38:
-            score -= 8
-            reasons.append("Very quiet source audio.")
+        reasons.append("Large quiet portions detected; trim where possible.")
+    elif silence_ratio >= 0.35:
+        score -= 6
+        reasons.append("Some quiet portions detected; trim where possible.")
+
+    if float(max_static_seconds) >= 12.0:
+        score -= 6
+        reasons.append("Long static section detected; retained because overall gameplay movement is sufficient.")
+    elif float(max_static_seconds) >= 4.0:
+        score -= 2
+        reasons.append("Brief static section detected; not treated as a rejection.")
+
+    if float(mean_volume) > -24:
+        score += 5
+        reasons.append("Usable source audio level.")
+
     matched = [term for term in ACTION_TERMS if term in title_text]
     if matched:
         score += 8
         reasons.append("Gameplay/action title signal: " + ", ".join(matched[:3]) + ".")
     if len(title_text) < 8:
-        score -= 8
-        reasons.append("Insufficient descriptive title metadata.")
+        score -= 4
+        reasons.append("Short source title; footage metrics carry more weight.")
+
     score = max(0, min(100, int(score)))
-    if score < int(os.environ.get("OFFLINE_MIN_SCORE", "68")):
-        raise RuntimeError("Offline quality rules rejected this clip (score=" + str(score) + "): " + clean("; ".join(reasons)))
+    minimum_score = int(os.environ.get("OFFLINE_MIN_SCORE", "60"))
+    if score < minimum_score:
+        raise RuntimeError(
+            "Offline quality rules rejected this clip (score=" + str(score) + "): "
+            + clean("; ".join(reasons))
+        )
 
     return {
         "score": score, "compelling": score >= 70,
@@ -332,7 +356,7 @@ def vision_review(media, workdir, metrics=None, title=""):
         "youtube_safe": True, "age_restriction_recommended": False,
         "editing_treatment": "standard",
         "editorial_tone": "neutral",
-        "reasons": reasons, "confidence": 0.55,
+        "reasons": reasons, "confidence": 0.65,
         "status": "passed", "provider": "local_rules",
         "model": "deterministic-media-metadata", "frames_sampled": 0,
         "age_restriction_status": "not_recommended"
@@ -565,17 +589,17 @@ def main():
             raise RuntimeError(f"Source clip is only {source_duration:.1f} seconds. The channel minimum is 45 seconds; shorter clips are rejected.")
         if not has_source_audio:
             raise RuntimeError("Source clip has no audio stream; refusing to add synthetic audio.")
-        analysis=media_analysis(media)
-        analysis["source_quality"] = validate_source_quality(source_duration, analysis.get("video", {}))
-        analysis["vision_review"]=vision_review(media,w,analysis,title)
-        silence_intervals=analysis.pop("_silence_intervals",[])
-        scene_times=analysis.pop("_scene_change_times",[])
-        highlight_start,highlight_duration,highlight_score=select_highlight_window(source_duration,silence_intervals,scene_times)
+        source_analysis=media_analysis(media)
+        source_quality=validate_source_quality(source_duration, source_analysis.get("video", {}))
+        silence_intervals=source_analysis.pop("_silence_intervals",[])
+        scene_times=source_analysis.pop("_scene_change_times",[])
+        highlight_start,highlight_duration,highlight_score=select_highlight_window(
+            source_duration,silence_intervals,scene_times
+        )
         selected_source=media
         if source_duration>highlight_duration:
             selected_source=w/"selected-highlight.mp4"
             run(["ffmpeg","-nostdin","-hide_banner","-loglevel","error","-y","-ss",str(highlight_start),"-i",str(media),"-t",str(highlight_duration),"-map","0:v:0","-map","0:a:0","-c:v","libx264","-preset","medium","-crf","19","-profile:v","high","-pix_fmt","yuv420p","-c:a","aac","-b:a","192k",str(selected_source)])
-        analysis["highlight_selection"]={"start_seconds":highlight_start,"duration_seconds":highlight_duration,"activity_score":highlight_score,"method":"non-silent audio + scene-change density"}
         preferred_minimum = 45.0
         media_for_render,edited_duration,removed_silence=auto_trim_silence(
             selected_source,w,minimum_remaining=preferred_minimum
@@ -585,10 +609,20 @@ def main():
             raise RuntimeError(
                 f"Edited gameplay is only {edited_duration:.1f} seconds. The minimum is 45 seconds; refusing to publish."
             )
-        if highlight_duration >= 45.0 and edited_duration < 45.0:
-            raise RuntimeError(
-                f"Available source was at least 45 seconds, but edited output is only {edited_duration:.1f}s."
-            )
+        # Evaluate the actual selected/trimmed sequence, not quiet or static
+        # material discarded before the final Short is assembled.
+        analysis=media_analysis(media_for_render)
+        analysis["source_quality"]=source_quality
+        analysis["source_duration_seconds"]=round(source_duration,3)
+        analysis["highlight_selection"]={
+            "start_seconds":highlight_start,
+            "duration_seconds":highlight_duration,
+            "activity_score":highlight_score,
+            "method":"non-silent audio + scene-change density"
+        }
+        analysis["vision_review"]=vision_review(media_for_render,w,analysis,title)
+        analysis.pop("_silence_intervals",None)
+        analysis.pop("_scene_change_times",None)
         analysis["silence_removed_seconds"]=removed_silence
         analysis["automatic_dead_air_trim"]=removed_silence>0
         analysis["preferred_minimum_duration_seconds"]=preferred_minimum
