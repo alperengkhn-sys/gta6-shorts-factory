@@ -350,7 +350,8 @@ if(topic.length>=5&&!genericTopic){
  const base=(titleLeads[angle]||"GTA 6 Gameplay")+": "+topic;
  title=(base.length<39?base+" | GTA 6 Shorts":base).slice(0,60).replace(/[ ,:;|—-]+$/,"").trim();
 }else if(creator){
- title=("A GTA 6 Moment from "+creator+"'s Stream | Shorts").slice(0,60);
+ const creatorTail=["Worth a Second Look","One Detail to Notice","A Sudden Turn","Watch What Changes"];
+ title=("GTA 6: "+creator.slice(0,16)+" — "+creatorTail[seed%creatorTail.length]+" | Shorts").slice(0,60);
 }else{
  title=(variants[angle]||variants.moment)[seed%(variants[angle]||variants.moment).length];
 }
