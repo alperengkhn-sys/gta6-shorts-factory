@@ -60,7 +60,15 @@ def main():
         {"Content-Type": "application/x-www-form-urlencoded"},
         "POST",
     )
-    access_token = json.loads(token_raw)["access_token"]
+    token_info = json.loads(token_raw)
+    access_token = token_info["access_token"]
+    granted_scopes = set(str(token_info.get("scope", "")).split())
+    can_check_processing = (
+        not granted_scopes
+        or "https://www.googleapis.com/auth/youtube.readonly" in granted_scopes
+        or "https://www.googleapis.com/auth/youtube.force-ssl" in granted_scopes
+        or "https://www.googleapis.com/auth/youtube" in granted_scopes
+    )
 
     title = os.environ.get("SHORT_TITLE", "GTA 6 Short").strip()[:100]
     description = os.environ.get(
@@ -159,23 +167,64 @@ def main():
     thumbnail_status = "not_available"
     cover = Path("short-cover.jpg")
     if cover.is_file() and cover.stat().st_size:
-        try:
-            # YouTube requires Shorts processing to be complete before thumbnails.set.
-            # The refresh token is intentionally limited to youtube.upload, so the
-            # videos.list polling endpoint is not authorized. Allow transcoding time
-            # before setting the cover instead of making an out-of-scope API call.
-            print("YOUTUBE_PROCESSING_WAIT: allowing 120 seconds for Shorts processing", flush=True)
-            time.sleep(120)
-            thumb_status, _, _ = request(
-                "https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId=" + urllib.parse.quote(video_id),
-                cover.read_bytes(),
-                {"Authorization": "Bearer " + access_token, "Content-Type": "image/jpeg"},
-                "POST",
+        if not can_check_processing:
+            thumbnail_status = "needs_youtube_readonly_scope"
+            print(
+                "YOUTUBE_THUMBNAIL_PENDING: re-authorize the channel token with youtube.readonly "
+                "so the uploader can wait for processingDetails.processingStatus=succeeded.",
+                file=sys.stderr,
             )
-            thumbnail_status = "uploaded" if thumb_status in (200, 201) else "failed"
-        except Exception as exc:
-            thumbnail_status = "failed"
-            print("YouTube thumbnail upload failed: " + str(exc)[:500], file=sys.stderr)
+        else:
+            processing_ready = False
+            try:
+                # YouTube's current Shorts thumbnail API requires processing to
+                # finish first. Poll the owner-only processing status instead of
+                # sleeping for a fixed interval that may be too short.
+                for attempt in range(40):
+                    status_url = (
+                        "https://www.googleapis.com/youtube/v3/videos?part=processingDetails,status&id="
+                        + urllib.parse.quote(video_id)
+                    )
+                    _, _, status_raw = request(
+                        status_url,
+                        headers={"Authorization": "Bearer " + access_token},
+                        method="GET",
+                    )
+                    items = json.loads(status_raw).get("items", [])
+                    if not items:
+                        raise RuntimeError("YouTube processing status did not return the uploaded video.")
+                    item = items[0]
+                    upload_status = str(item.get("status", {}).get("uploadStatus", ""))
+                    if upload_status in ("rejected", "failed"):
+                        reason = item.get("status", {}).get("rejectionReason", "unknown")
+                        raise RuntimeError("YouTube rejected the uploaded video: " + str(reason))
+                    processing_status = str(item.get("processingDetails", {}).get("processingStatus", ""))
+                    if processing_status == "succeeded":
+                        processing_ready = True
+                        break
+                    if processing_status == "failed":
+                        reason = item.get("processingDetails", {}).get("processingFailureReason", "unknown")
+                        raise RuntimeError("YouTube video processing failed: " + str(reason))
+                    print(
+                        f"YOUTUBE_PROCESSING_WAIT: status={processing_status or 'not_ready'} "
+                        f"attempt={attempt + 1}/40",
+                        flush=True,
+                    )
+                    time.sleep(15)
+                if not processing_ready:
+                    thumbnail_status = "processing_timeout"
+                    print("YOUTUBE_THUMBNAIL_PENDING: processing did not finish within ten minutes.", file=sys.stderr)
+                else:
+                    thumb_status, _, _ = request(
+                        "https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId=" + urllib.parse.quote(video_id),
+                        cover.read_bytes(),
+                        {"Authorization": "Bearer " + access_token, "Content-Type": "image/jpeg"},
+                        "POST",
+                    )
+                    thumbnail_status = "uploaded" if thumb_status in (200, 201) else "failed"
+            except Exception as exc:
+                thumbnail_status = "failed"
+                print("YouTube processing/thumbnail check failed: " + str(exc)[:700], file=sys.stderr)
     output("upload_status", "uploaded_" + privacy)
     output("video_url", video_url)
     output("thumbnail_status", thumbnail_status)
