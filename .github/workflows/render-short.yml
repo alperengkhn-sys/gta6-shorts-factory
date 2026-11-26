@@ -64,6 +64,7 @@ jobs:
           from pathlib import Path
           task = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
           print("noop=" + ("true" if task.get("noop") else "false"))
+          print("test_quality_rejection=" + ("true" if task.get("test_quality_rejection") else "false"))
           for key in ("source_url", "title", "description", "tags", "job_id", "render_attempt", "creator_name", "source_title"):
               print(f"{key}={str(task.get(key, '')).replace(chr(10), ' ')}")
           print("package_text<<GTA6_TASK_EOF")
@@ -72,7 +73,7 @@ jobs:
           PY
       - name: Check whether this Twitch clip was already published
         id: dedupe
-        if: steps.task.outputs.noop != 'true'
+        if: steps.task.outputs.noop != 'true' && steps.task.outputs.test_quality_rejection != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           SOURCE_URL: ${{ inputs.source_url || steps.task.outputs.source_url }}
@@ -110,14 +111,14 @@ jobs:
               print("Existing YouTube publication marker found; duplicate upload will be skipped.")
           PY
       - name: Install media tools
-        if: steps.task.outputs.noop != 'true'
+        if: steps.task.outputs.noop != 'true' && steps.task.outputs.test_quality_rejection != 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg fonts-dejavu-core
           python -m pip install --upgrade pip
           pip install yt-dlp pillow
       - name: Prepare transparent channel overlays
-        if: steps.task.outputs.noop != 'true'
+        if: steps.task.outputs.noop != 'true' && steps.task.outputs.test_quality_rejection != 'true'
         run: python renderer/prepare_branding.py
       - name: Render vertical MP4
         if: steps.task.outputs.noop != 'true'
@@ -127,7 +128,19 @@ jobs:
           SHORT_TITLE: ${{ inputs.title || steps.task.outputs.title }}
           PACKAGE_TEXT: ${{ inputs.package_text || steps.task.outputs.package_text }}
           OFFLINE_MIN_SCORE: "68"
+          TEST_QUALITY_REJECTION: ${{ steps.task.outputs.test_quality_rejection }}
         run: |
+          if [ "${TEST_QUALITY_REJECTION:-false}" = "true" ]; then
+            ERROR_LINE="Quality gate rejected: synthetic test fixture"
+            {
+              echo "error<<GTA6_RENDER_ERROR"
+              printf '%s\\n' "$ERROR_LINE"
+              echo "GTA6_RENDER_ERROR"
+            } >> "$GITHUB_OUTPUT"
+            echo "rejected=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Source clip rejected by editorial quality rules; this is a normal skip and will be replaced by the Worker batch."
+            exit 0
+          fi
           set +e
           python renderer/render.py \
             --source-url "$SOURCE_URL" \
