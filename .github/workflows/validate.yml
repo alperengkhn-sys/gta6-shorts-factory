@@ -29,6 +29,8 @@ jobs:
           /tmp/actionlint -color
       - name: Check Worker JavaScript syntax
         run: node --input-type=module --check < src/index.js
+      - name: Test automatic five-to-ten publish batch policy
+        run: node --test tests/test_render_batch_policy.mjs
       - name: Check dashboard JavaScript syntax
         run: |
           node --input-type=module <<'NODE'
@@ -146,3 +148,5 @@ jobs:
           test -s renderer/render.py
           test -s renderer/youtube_upload.py
           test -s tests/test_renderer.py
+          test -s tests/test_render_batch_policy.mjs
+          test -s src/render-batch-policy.mjs
