@@ -2,5 +2,35 @@
   "source_url": "https://www.twitch.tv/avoidingthepuddle/clip/PricklyImpossibleReindeerKippa-K4GZFY5Z2KqgQNiU",
   "video_url": "https://www.youtube.com/watch?v=xDuDc6sYs64",
   "title": "GTA 6 Gameplay: the internet | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 51.25,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "69badcdd78f2e3f0",
+      "ce37c9cdf164e4e1",
+      "ca5d1f6ff0e5e4e9",
+      "abb953dbe1d1d1f0",
+      "cb8d64a6f1d9c9e5",
+      "285737c771d091c3",
+      "60af4f6670e8a9e1",
+      "c03f2f4ff1e8a8e1",
+      "8c2d7ffaf0f073bc",
+      "aaa78e5ff3e2ffdd",
+      "5f371117ebc137cf",
+      "aa3e2a2c798b7725",
+      "3193574ff4ea42f2",
+      "22239697b098200f",
+      "8d3c27f379687668",
+      "810f9f5ff3e1e860",
+      "ba0737072669c9c9",
+      "0b03251bf1d0d4f8",
+      "891cd10a61e1e103",
+      "c1c69d7de2f4f2cc",
+      "4644e8cc85cc8eff",
+      "83ae12fc3063d3b1",
+      "b2783c9468f1f2e8"
+    ]
+  }
 }

@@ -1,6 +1,25 @@
 {
   "source_url": "https://www.twitch.tv/lacy/clip/RelievedRichRhinocerosPeteZaroll-qOXHVQ3XVK3asCkK",
   "video_url": "https://www.youtube.com/watch?v=2O2YU2CqsoU",
-  "title": "YOU HAVE TO SEE THIS GTA 6 MOMENT! \ud83d\udc40",
-  "status": "uploaded_public"
+  "title": "YOU HAVE TO SEE THIS GTA 6 MOMENT! 👀",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 29.983,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "2416c33a05078101",
+      "2416c33a0d078106",
+      "2416c33a0d078100",
+      "2416c33a0d078100",
+      "2416c33a0d078100",
+      "2416c33a0d078100",
+      "2416c33a0d078106",
+      "2416c33a0d078100",
+      "2416c33a0d078129",
+      "2416c33a0d078100",
+      "2416c33a0d07811c",
+      "2416c33a0d078104"
+    ]
+  }
 }

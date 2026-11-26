@@ -2,5 +2,39 @@
   "source_url": "https://www.twitch.tv/caseoh_/clip/OddSweetToadMVGame-GtoXLBw9qz8XcLCg",
   "video_url": "https://www.youtube.com/watch?v=-f6IycXmeyI",
   "title": "GTA 6 Gameplay: kyle 1 | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "e4fabf80935793a0",
+      "f23132b4b65633e1",
+      "902320a0a0e8c080",
+      "ff003234f072cf6f",
+      "86900060707023f6",
+      "1a3a322202d68080",
+      "d82052c6ce4e8818",
+      "303a386060b0332e",
+      "10303c736078dbc0",
+      "10303c736070dbc0",
+      "48a4c62060632328",
+      "714d857e796d2589",
+      "02080100e0713842",
+      "00102626a2793969",
+      "564464606171752f",
+      "b7e763f363e3f36b",
+      "060e0e0c0c0c0f0f",
+      "01180e038482a293",
+      "04cc0e81a4a0386b",
+      "0014321c1d191148",
+      "3e7f7f4f5b4fefe0",
+      "848404468383c596",
+      "937cf4b060a04844",
+      "061b3b169cefe767",
+      "1151737ae36350c0",
+      "22b2503377263049",
+      "0088acb0a04220eb"
+    ]
+  }
 }

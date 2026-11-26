@@ -1,6 +1,41 @@
 {
   "source_url": "https://www.twitch.tv/misterbiznes92/clip/BlushingCaringPigFloof-VISL7uxuDlE0bTw6",
   "video_url": "https://www.youtube.com/watch?v=2KQXvzl7rlc",
-  "title": "GTA 6 Gameplay: \u0443\u0444 | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "title": "GTA 6 Gameplay: уф | GTA 6 #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.033,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "20000303061e7cf9",
+      "101004070dd8490d",
+      "082202c2c2408003",
+      "c8e26a72c240c003",
+      "a0aa32bae2206003",
+      "a86a6a9ae2e16003",
+      "088a8a82a220e003",
+      "280a0a0a023018c3",
+      "082282026230f083",
+      "c020309a322162c3",
+      "60304cee3a3163c3",
+      "d545751160b08087",
+      "050505018c261425",
+      "440105853c26644b",
+      "c161214560307087",
+      "81c1319520604007",
+      "8181c135d0604007",
+      "8505050504000007",
+      "c585c5c580809187",
+      "c585c5c180808087",
+      "092f06461bb87170",
+      "a98b870504507832",
+      "898a170d15507264",
+      "490b870f15507264",
+      "983c2060e0e0e070",
+      "62024263f23bb7b7",
+      "c64242416a532727",
+      "9fd266260f1333b2"
+    ]
+  }
 }

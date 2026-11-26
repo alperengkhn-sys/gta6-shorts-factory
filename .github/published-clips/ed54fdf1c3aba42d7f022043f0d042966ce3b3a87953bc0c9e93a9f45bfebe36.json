@@ -2,5 +2,39 @@
   "source_url": "https://www.twitch.tv/lacy/clip/TiredDeafJuiceUncleNox-CD_q5QQDwhv_jCLj",
   "video_url": "https://www.youtube.com/watch?v=8gINhKUOaCM",
   "title": "GTA 6 Gameplay: got caught | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 59.983,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "1e2307261b180818",
+      "a321656e6320604c",
+      "4d268b9dc7c0c0cc",
+      "c381612e63202060",
+      "2623094d67202060",
+      "8b01652c3310100c",
+      "ce8345263331103f",
+      "4ad9003633311030",
+      "0ec306263b190818",
+      "8e09232e3b190818",
+      "46428b9dc7c2c086",
+      "8b81652c33303128",
+      "8c17c76d26311030",
+      "c7f1f337ccf3f7f2",
+      "e7f5f3b7ecb3f7f4",
+      "99ef6f2fc09e9f9b",
+      "674f8799282c363b",
+      "0c0d450d15b63a1b",
+      "8685a124df9fcf5c",
+      "6070684872cda407",
+      "fc78e8ccd8918f8e",
+      "2042462626b68616",
+      "083070707034cccd",
+      "400100016948c4a4",
+      "ff3f3f9fb65c0d0b",
+      "1e78b9999d9d9c83",
+      "1e7899999d8dcc8f"
+    ]
+  }
 }

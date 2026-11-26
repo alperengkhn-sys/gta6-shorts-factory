@@ -1,6 +1,37 @@
 {
   "source_url": "https://www.twitch.tv/cleey0h/clip/AmazingMotionlessDeerTF2John-rABZ-e7AVdeM15wC",
   "video_url": "https://www.youtube.com/watch?v=oQ6FGP_9TmI",
-  "title": "GTA 6 Gameplay: Selfie Time \ud83d\udc4d | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "title": "GTA 6 Gameplay: Selfie Time 👍 | GTA 6 #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 53.017,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "8684848d9c9e1a24",
+      "dc8c88886868d098",
+      "dc8c888848785898",
+      "1e40503656644cbc",
+      "1e48403656644cbc",
+      "efca922ab6ba6d66",
+      "6c8cc4646870fe0f",
+      "ecaca42c6870fe07",
+      "e3e0d0b6d66644c4",
+      "55e5c32303b199e5",
+      "c8a3c0a8ececcada",
+      "e96bd09c347ceada",
+      "93f0717030e8b429",
+      "0040072233020404",
+      "406142f0e0060008",
+      "00c0404080800290",
+      "50c1838230204440",
+      "3e94aebed89f7fbb",
+      "179bd7d216d7fff9",
+      "09c179e0394d4d6d",
+      "20d371e15b1e0b8b",
+      "80c16ce45a0e0e8f",
+      "b09049c84f0f7298",
+      "80c06ce6562739dc"
+    ]
+  }
 }

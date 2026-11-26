@@ -1,6 +1,40 @@
 {
   "source_url": "https://www.twitch.tv/xqc/clip/DifferentPreciousWaffleHotPokket-wMDh_pqLv3Ve6ZOc",
   "video_url": "https://www.youtube.com/watch?v=c3Gl6Nf1eIg",
-  "title": "GTA 6 POLICE CHASE GETS WILD! \ud83d\ude94",
-  "status": "uploaded_public"
+  "title": "GTA 6 POLICE CHASE GETS WILD! 🚔",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "b2b711308c848244",
+      "c1c9ccdb8ecececf",
+      "189ba1a215ebe777",
+      "0726061e8c87a3d1",
+      "07070e1c1c87b99b",
+      "9f8f0503119104ab",
+      "5d3f1f0f9f8f87a3",
+      "7f293f1e0f8f9f8f",
+      "7f3f3f9f9f1bb191",
+      "ff6d10b68a9e9eb7",
+      "8fcf232f09a709cf",
+      "fefefb2e9a0d8c8c",
+      "01a6a625b73d3b3f",
+      "e25043c31e0e1e8f",
+      "42534bc59c0f959f",
+      "1f1e1444f60e0e8f",
+      "ba7ab4359e9f3d3c",
+      "ff4fce8fbfd3834c",
+      "f8b9b3ccab8f21a1",
+      "f0f0639b879b121f",
+      "f07523369d1b0f1d",
+      "f0e9ebd1c5b2451e",
+      "4f383357dc9f4783",
+      "3cf2e67cdf91940e",
+      "c8498b3d5da999cf",
+      "0f9e6ebfffef8f1f",
+      "132f2e6ded9f0f0f"
+    ]
+  }
 }

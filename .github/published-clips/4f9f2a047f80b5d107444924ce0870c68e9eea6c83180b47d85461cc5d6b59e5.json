@@ -2,5 +2,39 @@
   "source_url": "https://www.twitch.tv/xqc/clip/DullPrettyCaterpillarKappaWealth-_PBk2Ut1sJ0GUkqc",
   "video_url": "https://www.youtube.com/watch?v=cGuXaXsGCPc",
   "title": "GTA 6 Gameplay: xQc finishes after 62 hours and rates it a 9/10 | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "dace4f19a9c8a6a2",
+      "dace4709a9e8a2a2",
+      "dace4f39a9c8a6a2",
+      "dacf4b19a8c8a6a2",
+      "7acf4f1989c8a6a2",
+      "ded7f2e5c2c1e022",
+      "665e5606dac68695",
+      "5f1ff81878680412",
+      "c2101090808000c1",
+      "2055dcd483c4c18d",
+      "00555cc48184e5e1",
+      "b5a7c5c284c7e1c7",
+      "7e3f7e5cc4c4a2e5",
+      "323a7440e0a3b071",
+      "f41c39a224515071",
+      "3a3e3e6cccc840c9",
+      "3e3e2e6cc4c5d0d1",
+      "1291b1e3c0c56360",
+      "4c3f8f8fc1e0a3e3",
+      "3f484165c1c78384",
+      "074503c38383c7a3",
+      "074103c383c3c3a3",
+      "074103c3838383a3",
+      "fefcd8c8c0898bcf",
+      "71e5a75fccc1c6c3",
+      "89898363c3e3eb69",
+      "60378349c0c1c1a0"
+    ]
+  }
 }

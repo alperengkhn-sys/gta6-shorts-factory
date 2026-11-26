@@ -2,5 +2,39 @@
   "source_url": "https://www.twitch.tv/superblazing_/clip/FaintCrackyHyenaMVGame-kCCqbS5NZ0jLIxX5",
   "video_url": "https://www.youtube.com/watch?v=w2FzaqCPe-c",
   "title": "GTA 6 Gameplay: superblazing_ - Highlight 77a7b4 Part 05 | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "c1f3ee46c78633cf",
+      "c0e7cec6c6cfebc9",
+      "d0cccecf4f9ad3c7",
+      "c4f6666eefcaf9a9",
+      "c5e4cfce87cec1c3",
+      "e0cdceccc74f3383",
+      "d2e26e46ce8623cd",
+      "c3e2ce864786b3cf",
+      "c8e74ece45c663c9",
+      "f0f2f23d3e7df9bb",
+      "f07a7a3ee3c7c7e6",
+      "b0ea868edf8fcf66",
+      "f03a7abe7f3f1746",
+      "e8eae63ddf5f9e8b",
+      "dfded4d24ecb8fcf",
+      "dfddd4522ee7edd3",
+      "ded6d4d254e63c58",
+      "296aa4e7cf8cbbb7",
+      "2a6529e6cfcdb13b",
+      "256aa9ec8f88603f",
+      "aa6aa9ec8e98703f",
+      "2a61a9e4cf4c303f",
+      "2a61a9e6cf4c703f",
+      "a462a9ee8f98f03f",
+      "a262a9ec8f48703f",
+      "24e2a9e78ee43637",
+      "a462a9df8e98b737"
+    ]
+  }
 }

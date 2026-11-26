@@ -2,5 +2,39 @@
   "source_url": "https://www.twitch.tv/ludwig/clip/HeadstrongMiniatureMeerkatChefFrank-nbtWhXGIzTSMRThf",
   "video_url": "https://www.youtube.com/watch?v=xSQG-IC42I0",
   "title": "GTA 6 Gameplay: accumulating insurance fraud | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "40404c390e8de280",
+      "ce6ca2960be4d185",
+      "330b0fe396d9d285",
+      "c69c760798f0d284",
+      "647c7383a860d284",
+      "648f0f0688e0d284",
+      "6474780748289d9c",
+      "647c7807886418e0",
+      "647c7807b83458e0",
+      "647c7807a86418e0",
+      "e6f17f07a86418e0",
+      "a49c6707a86408e0",
+      "644f534788444c18",
+      "247a7e4748640c14",
+      "647d7f0748664c1c",
+      "647c4d4748660c14",
+      "44355d172dac5919",
+      "36163d2530bfd8d5",
+      "7c836b27b0bfd9d7",
+      "dec34fb08398c28d",
+      "a5c467c8a34cc28d",
+      "94034ff04358c28f",
+      "67dcf892aca4ca9c",
+      "5b0eda603f39c489",
+      "b176426c782b38bd",
+      "65e5e6327c3e3797",
+      "33f1623e3c3b373d"
+    ]
+  }
 }

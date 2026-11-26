@@ -2,5 +2,37 @@
   "source_url": "https://www.twitch.tv/ishowspeed/clip/ProductiveBraveNikudonDeIlluminati-qNMmyjkr7j_nq38Z",
   "video_url": "https://www.youtube.com/watch?v=zjPfxwQKtJQ",
   "title": "GTA 6 Character: WOAH Jason stepbro | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 56.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "3f6f3b3b6b63aba3",
+      "0e968347069e9ad8",
+      "0e8e179b16ce4a68",
+      "0e9f13168ec64a52",
+      "8e4fd3464eca6a78",
+      "8e87a32a4e5a6a78",
+      "0e07935796ca4a7a",
+      "0e079357869ada5a",
+      "0e979386869ada5a",
+      "e8b2c22020f959d9",
+      "dbb33cbcf1e3c7cd",
+      "dbb33cbcf1e3c7cd",
+      "f9b93c3cf1e3c7cd",
+      "fbbb3c3cf1e3c7cd",
+      "f9b93c7cf3e3c7cd",
+      "fbbb3c3cf1e3c7cd",
+      "f9b97c7cf3e7cecc",
+      "fbb33cb8f1e3c7cd",
+      "fbb93c7ef3e3c7cf",
+      "fbb13cbaf0e3c7cf",
+      "dbb93cbe98f1e7c7",
+      "8cc138aeabe7fcda",
+      "ac78dcfb9fe7071f",
+      "ecfcfb1ecf0f3f1e",
+      "ccf1f67c9d0f7e3e"
+    ]
+  }
 }

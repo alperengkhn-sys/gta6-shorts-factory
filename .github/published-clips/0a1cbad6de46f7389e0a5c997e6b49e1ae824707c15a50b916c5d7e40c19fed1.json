@@ -1,6 +1,40 @@
 {
   "source_url": "https://www.twitch.tv/frametamer666/clip/CoweringSpikySwordDatSheffy-DFDPY6OT_XwCYxhB",
   "video_url": "https://www.youtube.com/watch?v=Cd9DVCGq3b4",
-  "title": "GTA 6 Gameplay: \u041a\u0438\u0440\u0430... | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "title": "GTA 6 Gameplay: Кира... | GTA 6 #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "374f2cc6c6e3f8e0",
+      "060fcd464747c91c",
+      "108dc56b09074906",
+      "0c0d27010da4f00c",
+      "048fc5420b274104",
+      "040fc5c243cbc106",
+      "048f8507030b4104",
+      "0047870303474104",
+      "240f45020b034104",
+      "0087450602234104",
+      "040f0507020a5104",
+      "1087452309074906",
+      "040f85ca4b83c104",
+      "040f8dc3134bc106",
+      "406337874944510c",
+      "03218686c7371f03",
+      "11190b1f1f1b4e40",
+      "0123892283c5650c",
+      "0123418180c16320",
+      "01a7818982c36300",
+      "0127818b82c36380",
+      "0127818b82432300",
+      "0127818182e32304",
+      "0183818b82c32340",
+      "0103c18b8243e3e0",
+      "0127868281c36380",
+      "05078602014323f0"
+    ]
+  }
 }

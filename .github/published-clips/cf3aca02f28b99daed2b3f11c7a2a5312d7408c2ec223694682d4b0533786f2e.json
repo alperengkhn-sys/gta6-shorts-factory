@@ -1,6 +1,25 @@
 {
   "source_url": "https://www.twitch.tv/leothecrack/clip/CourageousAlertFalconOpieOP-Inh8e8xSBAV-Bx6m",
   "video_url": "https://www.youtube.com/watch?v=DC0hKIQYWFY",
-  "title": "YOU HAVE TO SEE THIS GTA 6 MOMENT! \ud83d\udc40",
-  "status": "uploaded_public"
+  "title": "YOU HAVE TO SEE THIS GTA 6 MOMENT! 👀",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 30.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "060401838514141b",
+      "00044c6406cfe726",
+      "109011016c2370a2",
+      "5e7d7a4f265b9327",
+      "eac8019c8411869e",
+      "a0e8f0d020808e0e",
+      "f0e1291280010697",
+      "f5e124048411049c",
+      "b4e3d9b4172e1b17",
+      "b52558c8d86c387c",
+      "7e7dd9c9d1347896",
+      "3d3558ecf8b2bc0c"
+    ]
+  }
 }

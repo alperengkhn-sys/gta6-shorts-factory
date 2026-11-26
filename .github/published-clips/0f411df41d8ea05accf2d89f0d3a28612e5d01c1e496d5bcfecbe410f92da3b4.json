@@ -2,5 +2,37 @@
   "source_url": "https://www.twitch.tv/caseoh_/clip/ClumsyVivaciousDotterelBrokeBack-wxQt-rqtGLWo29wm",
   "video_url": "https://www.youtube.com/watch?v=u0dN_qCBWwg",
   "title": "GTA 6 Gameplay: omg haha (nsfw ) LUL | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 54.85,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "e6cec7e6f0e00013",
+      "9f8e8edefccedc0f",
+      "3d3d2d1d0d8c0c1c",
+      "d169c4c479e50446",
+      "e3a04c4c8f6633d8",
+      "e3a04c4c8fcf734e",
+      "e7604c488f6e7358",
+      "e7604c4c8f4f7371",
+      "e7604c4c8f677352",
+      "e7604c5c8f4fe316",
+      "e7a4585f3830389e",
+      "50e0e06770f373a3",
+      "a0c0e0ec418cc50b",
+      "80c1c01c0e180913",
+      "0000801c0e98090d",
+      "4041888e8f0c0c34",
+      "40c15a9e9a1d1c1d",
+      "5060e18fcd0d049e",
+      "10001118f87c7857",
+      "07276773f3e0ea37",
+      "40e0e2cfc7c70b0b",
+      "e7604f4c0cec7c2b",
+      "e7a44d9032f07d87",
+      "e7604c89ec1f8329",
+      "e7a048641b8ff8cc"
+    ]
+  }
 }

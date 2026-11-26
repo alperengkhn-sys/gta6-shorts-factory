@@ -2,5 +2,39 @@
   "source_url": "https://www.twitch.tv/ishowspeed/clip/YummyExuberantManateeTBTacoRight-1fsqLIQGYozFBgVs",
   "video_url": "https://www.youtube.com/watch?v=fBvAunCdcgc",
   "title": "GTA 6 Gameplay: THEY DID IT | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 59.983,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "c9df3fffc186ce87",
+      "0c64a3c61c63ce0f",
+      "4c004471c4fe6470",
+      "4f0000403e3f5f7f",
+      "0f8000c80896c200",
+      "0c00000000000000",
+      "0c2b1a3bcd1f205f",
+      "4e333939cf1d6900",
+      "4e6b39394f1d2d50",
+      "4f3939398f1d2f42",
+      "4db4792d1e9dffff",
+      "0db869bf1d9dfffb",
+      "0df8e9bf1d9dfffe",
+      "0a42c3c2f3cf9f1f",
+      "4a42c782b3cfdf5f",
+      "0a42c5a6b7efdf7f",
+      "8982c6e57c5edf0e",
+      "0e0b83a180c0258d",
+      "8c8a890f0f1b2f0f",
+      "0c0a8160781a1d2b",
+      "0c30100381010100",
+      "4d6f3c3c332ecec2",
+      "ed2f1c1c330e0607",
+      "fdef7c7c332e0e08",
+      "fdef7c7c332e1e1e",
+      "f9f178783911509c",
+      "0969090080c62381"
+    ]
+  }
 }

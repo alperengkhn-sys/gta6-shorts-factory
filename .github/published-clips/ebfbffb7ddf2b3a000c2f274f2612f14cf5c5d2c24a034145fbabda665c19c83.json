@@ -2,5 +2,39 @@
   "source_url": "https://www.twitch.tv/superblazing_/clip/FrozenImpossibleClipzHeyGirl-m-M_is0z82KsjT2X",
   "video_url": "https://www.youtube.com/watch?v=svAAiRfwtuY",
   "title": "GTA 6 Gameplay: superblazing_ - Highlight 77a7b4 Part 10 | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "0c14061124111094",
+      "f348684547060103",
+      "9c5e440342120201",
+      "24310306021218c4",
+      "8c1c04048c0c341e",
+      "b8f229090307978b",
+      "ddb7c3651edd192b",
+      "00060606e4e4e4e6",
+      "c0c1c0d19111090b",
+      "80c042c662212326",
+      "80c042c362616322",
+      "00c044433311536b",
+      "0000a02710172921",
+      "0000a02223233111",
+      "0000a02222122911",
+      "0000a02222223151",
+      "0000a02222223013",
+      "0000a02222263159",
+      "0000a02222223150",
+      "0000a02226223152",
+      "71399730785acacb",
+      "c54041c0e080c080",
+      "90894a07cba5c18c",
+      "182a2a267968e4b4",
+      "1c323166cbd0e0d1",
+      "3c347dc4d1c1c2e1",
+      "38345dbcb8b0d0d8"
+    ]
+  }
 }

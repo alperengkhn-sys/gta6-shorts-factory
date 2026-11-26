@@ -2,5 +2,39 @@
   "source_url": "https://www.twitch.tv/superblazing_/clip/CarelessBlightedLardPanicVis-HriTaV-FV9d966xG",
   "video_url": "https://www.youtube.com/watch?v=p79o1HmOAQ4",
   "title": "GTA 6 Gameplay: superblazing_ - Highlight 77a7b4 Part 06 | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "a2622aec8f98b03f",
+      "a2622aec8f48303f",
+      "24e4a9e78ee63737",
+      "a464a99e8e84b737",
+      "2562a9eccf88313f",
+      "25e2a9e6cf889317",
+      "2a6aa9ed8f88b3b7",
+      "8302430132048181",
+      "d7d697b7092c6213",
+      "e9ebe9c58dd8d751",
+      "9290d15141553415",
+      "0e0c435e1c3d3072",
+      "020212120000080d",
+      "fbf9f1f050302829",
+      "8088cc4900490981",
+      "20a030b8b97130d0",
+      "64e000c0f1d0e8e0",
+      "81a687877050c04e",
+      "82c687877051d04c",
+      "82c687877052c28c",
+      "82c687c77050d084",
+      "8f9787e2f0d0d8c8",
+      "f3f3f260b0244488",
+      "19f393ba00838383",
+      "381435191c183242",
+      "71613a2a890a18b0",
+      "29111b1838e97068"
+    ]
+  }
 }

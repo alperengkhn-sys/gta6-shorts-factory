@@ -2,5 +2,39 @@
   "source_url": "https://www.twitch.tv/ishowspeed/clip/EndearingAttractiveWeaselRedCoat-RJvEC_FLk1a9Gvdo",
   "video_url": "https://www.youtube.com/watch?v=L7zNp_UUUrQ",
   "title": "GTA 6 Gameplay: Speed reacts to the trailer | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 59.983,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "268307430b87c7e2",
+      "eefc6142c0d3e3e2",
+      "38fdf34764c6c7e2",
+      "cdfffee064636373",
+      "fbbeb7b79f1f8eb2",
+      "cbce8b2facbdff22",
+      "0b83959734d84da2",
+      "a74c20a8a8b9b052",
+      "7f7f733332929a1a",
+      "7f3f3f3f0f87370f",
+      "fffecf0f0fc7979f",
+      "fffe1a333a347434",
+      "3f2f1fefce0e8c2e",
+      "3f2f1fcdcc0c0c1c",
+      "bf3f1fcddc8c1c3c",
+      "170fc7454fcf4706",
+      "8001010361c50d5e",
+      "3f1e18785c3c4e07",
+      "6c18182cccd8ccc2",
+      "00081c0cacb45c64",
+      "030797042483a303",
+      "0664c07840c1c0b2",
+      "150a8d2ce6632b1a",
+      "26231323316be422",
+      "1c1e1d0002020202",
+      "c3c3db4a4b7f5542",
+      "120b191da86bb652"
+    ]
+  }
 }

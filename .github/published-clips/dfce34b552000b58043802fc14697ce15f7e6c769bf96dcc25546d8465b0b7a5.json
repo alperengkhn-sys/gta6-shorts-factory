@@ -1,6 +1,40 @@
 {
   "source_url": "https://www.twitch.tv/xqc/clip/SuperSlickStrawberryAMPEnergy-iLijF7374bmMsbtk",
   "video_url": "https://www.youtube.com/watch?v=ohsGP6QFePA",
-  "title": "YOU HAVE TO SEE THIS GTA 6 MOMENT! \ud83d\udc40",
-  "status": "uploaded_public"
+  "title": "YOU HAVE TO SEE THIS GTA 6 MOMENT! 👀",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "729ab2086c829088",
+      "99cb5dc2f023a692",
+      "994b5dc14812ace4",
+      "394b5d43e8b2cef1",
+      "c3e757039742ca95",
+      "0000000000000000",
+      "000000000000001e",
+      "0000000000000016",
+      "0000000000000000",
+      "334b5d89c0c2cce6",
+      "984bee49a049c4a1",
+      "d3cc14405861c040",
+      "d6991240605862c1",
+      "714c8c4278606064",
+      "00512e2641d6d8e8",
+      "0022cb5dc1003c4c",
+      "8059674e506446c9",
+      "181c0c2b1a606e62",
+      "c2cc4c605343c8e9",
+      "0663969668246424",
+      "ae1110582524a290",
+      "a9329080a8a64190",
+      "652698c2464a38b0",
+      "ecacc9c6672d1244",
+      "cd69fb767b6d74e1",
+      "f08d2f4caeb35e4d",
+      "01912a3fb98b3778"
+    ]
+  }
 }

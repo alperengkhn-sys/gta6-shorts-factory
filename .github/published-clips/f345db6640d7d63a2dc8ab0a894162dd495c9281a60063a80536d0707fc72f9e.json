@@ -1,6 +1,40 @@
 {
   "source_url": "https://www.twitch.tv/mirwana/clip/KawaiiMistyOrangeVoHiYo-cTXPA8_PtNX7BAob",
   "video_url": "https://www.youtube.com/watch?v=YDXwzvsF2d8",
-  "title": "GTA 6 Gameplay: \u0421\u0422\u0420\u0418\u041f\u0423\u0425\u0410 \u0423\u0424\u0424 | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "title": "GTA 6 Gameplay: СТРИПУХА УФФ | GTA 6 #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "781809c563090d14",
+      "d373622289e1672f",
+      "5f7c7626675536cd",
+      "0405416b9818e7e3",
+      "4028d4d13a1e3863",
+      "02e868e6bf3eb865",
+      "05050408113d3871",
+      "2220840986076777",
+      "76f6bc365b9e1445",
+      "4a8ab286dbd8b40e",
+      "6618068eb363838f",
+      "72560c83d9ddb016",
+      "1632d0c40737337c",
+      "0531708e1a38bef1",
+      "31396486727a7bf8",
+      "3971989e4e67367c",
+      "3171989e0e02382c",
+      "317198be323070fc",
+      "3111b8327c723c7c",
+      "357918367871f5f0",
+      "11399c3e31727859",
+      "fbfa71d0c44f3327",
+      "d7ca73ebce469379",
+      "bbf8f1a60e3e774b",
+      "af7e78707117bea7",
+      "18d1a19e1930784d",
+      "38b8c0c51d3abc1f"
+    ]
+  }
 }

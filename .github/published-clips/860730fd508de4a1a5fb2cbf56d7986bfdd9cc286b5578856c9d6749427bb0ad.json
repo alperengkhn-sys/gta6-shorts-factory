@@ -2,5 +2,40 @@
   "source_url": "https://www.twitch.tv/xqc/clip/FurryLittleBunnyCoolStoryBob-_J3RtuezOHW-UCWQ",
   "video_url": "https://www.youtube.com/watch?v=wYorBn-Ek5s",
   "title": "GTA 6 Gameplay: review so far | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.033,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "1e600516dfcf7e6a",
+      "1e630516ddebe965",
+      "1e630506ece8e870",
+      "1e630516dfebf9f0",
+      "1e630516d7cbe961",
+      "1e630516d7cbe861",
+      "1f070f16dfcfe961",
+      "1e630f16d7cbe961",
+      "1e630516d7ebe961",
+      "1e630516dfcbe960",
+      "1e630f06ceece8e5",
+      "1e621830d1e1e9f1",
+      "5ee30f00c5c3e970",
+      "1e630715decfe971",
+      "1e630717d7cbe971",
+      "1e230516dff9f161",
+      "1e630516d5efec77",
+      "1e630516c7c3e9f1",
+      "1e630504c1c1e1e1",
+      "1e630516dfebe977",
+      "1e630516d7cbe871",
+      "1e630506c7e3e961",
+      "1e230d00c1c1e060",
+      "1e630516ceede070",
+      "1e630516deeff068",
+      "1e630516f1e1e1e1",
+      "1e630516d5e9e877",
+      "1e630516d7cbe971"
+    ]
+  }
 }

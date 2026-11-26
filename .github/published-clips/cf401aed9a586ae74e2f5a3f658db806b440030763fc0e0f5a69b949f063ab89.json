@@ -2,5 +2,34 @@
   "source_url": "https://www.twitch.tv/ishowspeed/clip/AssiduousTacitCurlewBigBrother-iONSnZn21uUITjLw",
   "video_url": "https://www.youtube.com/watch?v=B7m1SzOBYQM",
   "title": "GTA 6 Gameplay: bro omega sus | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 49.35,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "20c0941135153573",
+      "8cee8e9e3b1000c0",
+      "0e5c0d8be0fe7f1f",
+      "0c000787c6c45a14",
+      "88807070e6a61031",
+      "0cc2ce5c5850281c",
+      "0c00040f3ae40f07",
+      "0c000001070e313b",
+      "c6004fafce9e1e27",
+      "c6084f0ece9e1636",
+      "0e4f0e0090310006",
+      "0cdc4c1418080800",
+      "0d08301a79210316",
+      "6f3f3f6fe7632627",
+      "cfefefdfeb09170b",
+      "cf7dbd7d7fbfbfcf",
+      "efedfdfd3b9f3f3f",
+      "ef7d7d6d2fdfbfb2",
+      "ef7d7d6d175fcf96",
+      "ef7d7d6d175f8f1e",
+      "ef6d7d7d2fdfbf12",
+      "ef6d7d7d2fdfbf1e"
+    ]
+  }
 }

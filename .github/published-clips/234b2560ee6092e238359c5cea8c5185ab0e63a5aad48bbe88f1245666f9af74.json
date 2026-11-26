@@ -2,5 +2,39 @@
   "source_url": "https://www.twitch.tv/caseoh_/clip/EvilChillyKleeKeepo-uq_TPadcMek2sAdf",
   "video_url": "https://www.youtube.com/watch?v=BHJ0HBw9_oU",
   "title": "GTA 6 Gameplay: dont snitch | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "6b4e103f364514c0",
+      "90d41490745e5510",
+      "0f31fb061e9dc560",
+      "c007c72cbaf76535",
+      "0a86732abaeb6973",
+      "1a877b23d2ea389e",
+      "41494355b363b0f8",
+      "8686afe132d0acd0",
+      "98128cb090e8d8a3",
+      "b0108cb490a0f8a6",
+      "9031acd470a8d8a6",
+      "435351d0c8d2cc8e",
+      "0010187878868c06",
+      "1010387878868e06",
+      "5051987878868e06",
+      "54e8fe0f8393a41e",
+      "8d9fd6dc4741f860",
+      "436a0adeccecd048",
+      "06a0828a3041a3e0",
+      "91a346d85370a1a3",
+      "3410ac7edc9029c9",
+      "e0c0b1f8b19091a6",
+      "60c0b1f8998090b6",
+      "e0c0b0f0b9a090a6",
+      "f0d0b1b8b9a090a6",
+      "a6537e708d8c7ad3",
+      "85737e78cdddf9d8"
+    ]
+  }
 }

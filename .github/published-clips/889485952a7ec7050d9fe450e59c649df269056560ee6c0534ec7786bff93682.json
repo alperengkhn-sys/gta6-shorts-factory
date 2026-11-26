@@ -2,5 +2,39 @@
   "source_url": "https://www.twitch.tv/timthetatman/clip/BrightWanderingLemurAMPTropPunch-1Ygg3jlwmtQYBO13",
   "video_url": "https://www.youtube.com/watch?v=G-lJWaaVRX0",
   "title": "GTA 6 Gameplay: LMAO | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "3f675b59870b1110",
+      "03021a1a1b0e0e3a",
+      "d1312b16666148f0",
+      "f4fc7c3c2ccd0e87",
+      "0874d284c0c78384",
+      "010303c200070c01",
+      "290c005001020200",
+      "8088b8f0e8d8f8b7",
+      "ccc26aebcbc74eb3",
+      "8881c054567c1032",
+      "0000061053d7990b",
+      "000004415bdbb02f",
+      "00018be7cee6f8f1",
+      "781d85072f1f4800",
+      "0302121b1a1e2e4f",
+      "fe9e0e8ebe4e0e28",
+      "fbf9d3db2bb33797",
+      "e1e0e4ece0e0ecec",
+      "848187868883c3c2",
+      "0b0e0f1b038f8d03",
+      "09080050c10080e4",
+      "00001c30786c682b",
+      "e19991939393c1a0",
+      "0e4fae9f5f2f2f8f",
+      "00c9c9c1e83b0e8f",
+      "0f0723203024070f",
+      "01c1c181414183c2"
+    ]
+  }
 }

@@ -2,5 +2,39 @@
   "source_url": "https://www.twitch.tv/sweet_anita/clip/GrotesqueYummyAlligatorFloof-pf12WC99_rfasSiR",
   "video_url": "https://www.youtube.com/watch?v=zUy7Q99UKCs",
   "title": "GTA 6 Gameplay: Anita resists looking at man ass in the eye tracker challenge. | GTA 6 #Sh",
-  "status": "uploaded_public"
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 58.867,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "b1f1f117755c50be",
+      "b0f2d67b5ede589c",
+      "f0c2d2b7b7bbf0be",
+      "f0d1cb6d3fbbf0be",
+      "b0c2d6375eda509c",
+      "9ecefea7ac7efe3c",
+      "fff3fbe72d7dffab",
+      "a0c0c6175a78d09c",
+      "fff7ffa7ad7dfeae",
+      "ffe6fee3bd7efe2e",
+      "df8ede6eeefeee2a",
+      "dececeeeeefaee2a",
+      "f6f2f67e6efefeae",
+      "b8f1f97737353d16",
+      "31e8de3abebc989c",
+      "f133de373fbd3994",
+      "70f4da7737bd71b4",
+      "b865c67737bd71b4",
+      "f8d0d677969f55b4",
+      "f092d257d6dbf0b4",
+      "b0b978f737bb70b4",
+      "b1f6d6335edfd09c",
+      "a1a696777e7b509c",
+      "dfeede6eedbefe2e",
+      "f8f8fc379e1df535",
+      "fec6feb7b67cfc34",
+      "fffbffa72d7cffae"
+    ]
+  }
 }

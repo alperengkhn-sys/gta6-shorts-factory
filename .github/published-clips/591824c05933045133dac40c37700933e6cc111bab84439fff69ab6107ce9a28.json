@@ -2,5 +2,37 @@
   "source_url": "https://www.twitch.tv/kaicenat/clip/UnusualConsiderateLionGingerPower-oJF7Ao2MX9omrH0x",
   "video_url": "https://www.youtube.com/watch?v=pPQhLlJpNE8",
   "title": "GTA 6 Relationships: kai cenat argues with his new girlfriend | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 54.367,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "d85c5cd0eec36727",
+      "fce060f0ccc4720b",
+      "b9b0b6b0d909694b",
+      "e362484878b1f33b",
+      "0ecac6274566efd7",
+      "3d3c1c9c1e9ede97",
+      "1f190dcd8f0dae8e",
+      "e2b3a36ecdc7ced4",
+      "79e9b9bd179bce87",
+      "3cb4941616accec3",
+      "1f9a961e172ccf8b",
+      "1f9ab63617adcf9b",
+      "0f8c1c1b3b5393af",
+      "af8fcd1b1b93ce55",
+      "af8f4d0d0d8f5787",
+      "1e9b4ed9d55dcfc7",
+      "3e3212c3c90b95b1",
+      "bda6343296d7e37a",
+      "9d84541a0686c0ea",
+      "39514a0d292f539c",
+      "3971ec6c0d8d9b40",
+      "99d1c1ce12258e99",
+      "8a8a8e0e0cbff902",
+      "ebd2f0d460fccbc3",
+      "0d404a68e060eaaf"
+    ]
+  }
 }

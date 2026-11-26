@@ -2,5 +2,24 @@
   "source_url": "https://www.twitch.tv/kaicenat/clip/BetterBoxyPhoneKappaPride-dj6XJ97C0t6ZaTrX",
   "video_url": "https://www.youtube.com/watch?v=c3RH6MKb_T4",
   "title": "GTA 6 Gameplay: pegging in gone wild | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 29.983,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "bd6e2c0e96260350",
+      "1755584d41cee0e0",
+      "7964c7c5792591a8",
+      "3f5226173f77674f",
+      "0409691161403057",
+      "020004049092f085",
+      "040444341070380b",
+      "04000d2551f4700b",
+      "04004d2551f46023",
+      "0004492909636428",
+      "0204062410326c6d",
+      "1f27698d03191008"
+    ]
+  }
 }

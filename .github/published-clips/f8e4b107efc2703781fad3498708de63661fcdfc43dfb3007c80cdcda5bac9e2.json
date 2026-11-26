@@ -1,6 +1,40 @@
 {
   "source_url": "https://www.twitch.tv/strogo/clip/BadOutstandingDunlinHeyGirl-2671JwJ3gcHrSf3W",
   "video_url": "https://www.youtube.com/watch?v=sP3EYZeH0SM",
-  "title": "GTA 6 Gameplay: \u0414\u0432\u0435\u0440\u044c \u0434\u0435\u0440\u0436\u0438, \u0447\u0442\u043e\u0431\u044b \u043c\u0430\u043c\u0430 \u043d\u0435 \u0437\u0430\u0448\u043b\u0430 | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "title": "GTA 6 Gameplay: Дверь держи, чтобы мама не зашла | GTA 6 #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 59.967,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "9b9890848ee2701d",
+      "87cf059386911e06",
+      "c3cf150b8b911e06",
+      "838d038b02511e06",
+      "838d031342511f06",
+      "87cf0d1316401e06",
+      "83c1118b0b490e06",
+      "2f850b9684911506",
+      "3386098a46111c06",
+      "66060b8244011d0e",
+      "6b2fe8bc5c163b9b",
+      "65ec390d2d5c1961",
+      "9b336e0e8e8ca183",
+      "919b929892b8b8b4",
+      "9f96b687f8e4cebc",
+      "f7efcdccedfc7f7f",
+      "bfeded6465667c78",
+      "7f7bddecfd773d38",
+      "ff3e1d4d5d373d38",
+      "98d9d8c8f0306040",
+      "adaafa721f2bb92c",
+      "afaab2721f2bb32c",
+      "e5e3d337375e3622",
+      "3c3c76c020e008f8",
+      "43c0849889e5e400",
+      "1890306321080984",
+      "1a83116945230383"
+    ]
+  }
 }

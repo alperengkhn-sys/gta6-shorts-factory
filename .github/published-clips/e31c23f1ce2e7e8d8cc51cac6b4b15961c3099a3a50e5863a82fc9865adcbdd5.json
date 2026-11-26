@@ -1,6 +1,27 @@
 {
   "source_url": "https://www.twitch.tv/xqc/clip/VivaciousCallousYogurtDxCat-tcAghtrsbnP82HX2",
   "video_url": "https://www.youtube.com/watch?v=4cTCnuVHO98",
-  "title": "YOU HAVE TO SEE THIS GTA 6 MOMENT! \ud83d\udc40",
-  "status": "uploaded_public"
+  "title": "YOU HAVE TO SEE THIS GTA 6 MOMENT! 👀",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 33.683,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "1e630714defbf0eb",
+      "1e630516dee7e87b",
+      "1e630516dfefe96e",
+      "1e230516cfef687b",
+      "1e600516d7cbe875",
+      "1e630d54d5cbe96f",
+      "1e630f17d7f9f96b",
+      "1e630f16d7cbe9e3",
+      "1e630f17dfefe868",
+      "1e630716ddebe967",
+      "1ee30516d5ebe8ee",
+      "1e630516dfebe9f3",
+      "1e630516ddefef6f",
+      "1e630516dff9f0f3"
+    ]
+  }
 }

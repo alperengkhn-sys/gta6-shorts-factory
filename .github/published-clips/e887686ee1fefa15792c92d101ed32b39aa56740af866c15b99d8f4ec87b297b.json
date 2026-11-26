@@ -1,6 +1,40 @@
 {
   "source_url": "https://www.twitch.tv/padexxx_/clip/ObliqueBetterEggnogEagleEye--AL8wLZwUMZRJI3R",
   "video_url": "https://www.youtube.com/watch?v=M583v1ZCbDQ",
-  "title": "GTA 6 Gameplay: \ud83d\udd25\ud83d\udd25 | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "title": "GTA 6 Gameplay: 🔥🔥 | GTA 6 #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "0e064d0f4a88f1e1",
+      "1306678e0f8fe10f",
+      "4d1b478e0ec7a30b",
+      "1a06450e0e8ba345",
+      "17064d1e1587e30f",
+      "4b8a2f8ccec76547",
+      "1d26475756c9d113",
+      "190c590f0accf187",
+      "06064d0e0fdba341",
+      "13126f0e0cc5614d",
+      "071a77ce0ccfa3cf",
+      "a00090e78766e726",
+      "71f1a6e6e7727f42",
+      "2d252d7cc8cd021d",
+      "82828606090b138a",
+      "2524080a0b03000f",
+      "2327870783830389",
+      "597175e84d0b5938",
+      "e09c8e008014250f",
+      "c2cc8e480414480b",
+      "808c8e4804144917",
+      "97d3c6e3e3d3c165",
+      "c04098181808084a",
+      "7c744cc8a8a8e255",
+      "d454f070f0686cce",
+      "383030949c5c1455",
+      "e4e9c9cc988c808e"
+    ]
+  }
 }

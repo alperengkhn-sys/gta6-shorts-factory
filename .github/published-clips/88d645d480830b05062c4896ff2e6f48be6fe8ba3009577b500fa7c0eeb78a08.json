@@ -1,6 +1,40 @@
 {
   "source_url": "https://www.twitch.tv/roonevo/clip/CharmingSweetRaccoonDoritosChip-E9f1c4FcsWIARYNc",
   "video_url": "https://www.youtube.com/watch?v=7QnU8NHNGXw",
-  "title": "GTA 6 Gameplay: \u043e\u0431\u0449\u0438\u0442\u0435\u043b\u044c\u043d\u0430\u044f | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "title": "GTA 6 Gameplay: общительная | GTA 6 #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "8b8a6cfcfc7e9693",
+      "8b4e0c3e19e109d8",
+      "8b8c2a787cf60e48",
+      "4bac6c6878f000c2",
+      "6c6871cb050d0e4f",
+      "287c7ce402408367",
+      "287c74f618400c21",
+      "5d590567a006e726",
+      "e1f1989f27633841",
+      "0d0d8f9411f14c98",
+      "0d0d8f9711e14c18",
+      "0d0d0f9610e14e19",
+      "0d058f9511f14c18",
+      "85858f971270e490",
+      "8183c31793322660",
+      "8183c31393947821",
+      "f018421e82622559",
+      "f098821782622559",
+      "f018420e82622519",
+      "f018821e82632d71",
+      "f018a21e82622559",
+      "0143601480a2d2d1",
+      "81c3e01690c29cf1",
+      "f2178f1e87240626",
+      "81c1431783924220",
+      "213123dbc1620001",
+      "3f7e0b4c834e3303"
+    ]
+  }
 }

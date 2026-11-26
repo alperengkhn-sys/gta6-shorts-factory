@@ -1,6 +1,25 @@
 {
   "source_url": "https://www.twitch.tv/tminnzy/clip/RudeBlueStapleResidentSleeper-hN6aHqGrcSgwB2Dl",
   "video_url": "https://www.youtube.com/watch?v=B44ZdUopmrw",
-  "title": "YOU HAVE TO SEE THIS GTA 6 MOMENT! \ud83d\udc40",
-  "status": "uploaded_public"
+  "title": "YOU HAVE TO SEE THIS GTA 6 MOMENT! 👀",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 29.967,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "046101a14c0b1303",
+      "004101614c0a0035",
+      "042041b04d8b32a9",
+      "000302c2661d0e2b",
+      "030281a93868c759",
+      "7f6b373ab41fa702",
+      "be3d0339b9e96065",
+      "6f0e0f39b9030265",
+      "000000392b00000e",
+      "000000392b000000",
+      "0000000000000000",
+      "0000000000000000"
+    ]
+  }
 }

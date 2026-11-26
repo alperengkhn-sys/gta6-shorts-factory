@@ -2,5 +2,39 @@
   "source_url": "https://www.twitch.tv/dinah/clip/CloudyWisePieThunBeast-bhRsZq7iff5K7yN8",
   "video_url": "https://www.youtube.com/watch?v=hpnBKIDGeaM",
   "title": "GTA 6 Gameplay: Automated Twitch Highlight | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "6a48e1b3cfc2847a",
+      "6a48d3b3e7c28876",
+      "6a4c7bf0e7a28872",
+      "0a4cc88300880370",
+      "aea90f4761750cf4",
+      "aa2884408b8580f4",
+      "8c282830386520f4",
+      "0e28a0440e8580f6",
+      "0c283062606520f6",
+      "aea8b426848584f4",
+      "8aa8f4e0606500f6",
+      "aea8b48c044084ee",
+      "2aa924ef838584f4",
+      "8da83463e36500f4",
+      "4e2880408b0588f6",
+      "0829a130386564f6",
+      "ae28a48e9b8580b4",
+      "abb8b072307520b5",
+      "1164c4c4110a0901",
+      "5a602800c018040b",
+      "5f534ccfc18e8280",
+      "57524cccc82f2200",
+      "16506861218b0084",
+      "1e5062c1c0c7c113",
+      "5e50081830140113",
+      "9bf3e1e360c7c103",
+      "1fd389baa2050103"
+    ]
+  }
 }

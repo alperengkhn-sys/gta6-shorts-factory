@@ -1,6 +1,25 @@
 {
   "source_url": "https://www.twitch.tv/dinah/clip/PopularPeacefulNikudonKAPOW-DpvmBLqP4dJyGER9",
   "video_url": "https://www.youtube.com/watch?v=WQF-A-lUC60",
-  "title": "GTA 6 POLICE CHASE GETS WILD! \ud83d\ude94",
-  "status": "uploaded_public"
+  "title": "GTA 6 POLICE CHASE GETS WILD! 🚔",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 30.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "2ba258095939589a",
+      "33ad6860e030960e",
+      "804c0e2f5c9e9f9f",
+      "40e020030f151e0c",
+      "f8fcf0f0fb7c7c2e",
+      "030303034270560e",
+      "383819999a8c948f",
+      "9ef8b88c87dedccc",
+      "f7cfcfcfcf8f8d8d",
+      "3f3f0f1f0f0f1f4e",
+      "1f2e9c9d7ddcfcd8",
+      "3e3f878f0f8690d0"
+    ]
+  }
 }

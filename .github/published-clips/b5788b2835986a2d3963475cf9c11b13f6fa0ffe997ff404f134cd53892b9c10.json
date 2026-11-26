@@ -1,6 +1,40 @@
 {
   "source_url": "https://www.twitch.tv/blackufa/clip/ObedientSavageWhaleFrankerZ-HIRxAS0Aj8cvSuV0",
   "video_url": "https://www.youtube.com/watch?v=lvU6gwv8UeU",
-  "title": "GTA 6 Gameplay: \u0441\u0435\u0440\u0436\u0430\u043d\u0442 \u041a\u0438\u0441\u044f, \u0432\u0430\u0448\u0438 \u0434\u043e\u043a\u0443\u043c\u0435\u043d\u0442\u044b | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "title": "GTA 6 Gameplay: сержант Кися, ваши документы | GTA 6 #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "3336b73d6fafe3f2",
+      "06269eea26e9fa6a",
+      "4b8a8a66a6979c23",
+      "0efb7d653eafbf3b",
+      "6d5cabd359939ada",
+      "0646c321a0d0421f",
+      "4b070f87918e1f9d",
+      "cdcfefaf8b838108",
+      "30f0d3c340e0c08e",
+      "07be1651cfc18586",
+      "344849e8984d9d21",
+      "8dcbcfac85078f98",
+      "1c1b258e8e872200",
+      "07013551e0e6d497",
+      "7409908868e7d387",
+      "0d4de9af8ece97a6",
+      "dfc000c0c68b8198",
+      "0c81763aa9c7578d",
+      "93b2f49ef6b69917",
+      "7c996368599cdf47",
+      "b49975e59d203000",
+      "78f8de7046c6a686",
+      "74f8bdbcf4347147",
+      "b79ff7fb99e8efff",
+      "e2f1f9f1ccbbbcfc",
+      "aac266c6c2a8f2dc",
+      "a90cec83cbe8d0f0"
+    ]
+  }
 }

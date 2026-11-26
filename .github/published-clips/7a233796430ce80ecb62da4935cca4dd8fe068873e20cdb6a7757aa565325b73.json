@@ -1,6 +1,38 @@
 {
   "source_url": "https://www.twitch.tv/xqc/clip/WealthyNimbleHamsterDansGame-yrU7UShZomelh1Ke",
   "video_url": "https://www.youtube.com/watch?v=biKum3NNAoc",
-  "title": "YOU HAVE TO SEE THIS GTA 6 MOMENT! \ud83d\udc40",
-  "status": "uploaded_public"
+  "title": "YOU HAVE TO SEE THIS GTA 6 MOMENT! 👀",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 54.367,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "8d82e6f7cd3369d9",
+      "1698b93afc6e3537",
+      "100830b001171717",
+      "9000d0800d8a9ebf",
+      "3c2d0e5953c7cb9b",
+      "0e8e17676569a1d1",
+      "03613183a1c787be",
+      "0414066667a7df63",
+      "070d5650f1f9b811",
+      "010105085b67e3e9",
+      "0717237361c19ad5",
+      "07555f47e9618bcf",
+      "ff7cbe875768e8b7",
+      "1111199b9b73fd40",
+      "330f3c330f01010e",
+      "c3a3db9c3e68db99",
+      "604262765b585143",
+      "053525a59ebae0c0",
+      "3b0b3a280908099b",
+      "86c3dbce8b276272",
+      "86cedb4f0b27637c",
+      "86cfdb4f0727637e",
+      "252c2c104506c786",
+      "0a28821c88080717",
+      "853403143c948d1f"
+    ]
+  }
 }

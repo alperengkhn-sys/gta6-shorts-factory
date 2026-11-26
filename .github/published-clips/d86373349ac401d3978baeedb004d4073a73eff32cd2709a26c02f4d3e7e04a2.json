@@ -2,5 +2,24 @@
   "source_url": "https://www.twitch.tv/padexxx_/clip/FancyNeighborlyParrotFrankerZ-h70JDhuTbtAGKyed",
   "video_url": "https://www.youtube.com/watch?v=HPhkvqj32vw",
   "title": "YOU HAVE TO SEE THIS GTA 6 MOMENT! 👀",
-  "status": "uploaded_public"
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 30.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "1c393d696160f0f1",
+      "1c3d1d1c31b0f0f0",
+      "0e1a5acac9c0d0f3",
+      "d78789439202380c",
+      "4141cd4c8b23180c",
+      "434b8dcb4223790c",
+      "43cfc9c30323780c",
+      "4bcbcdc05200390c",
+      "4b4b8dcf9200380c",
+      "41438dce0b23580d",
+      "4d0f9d894252180c",
+      "c5c1c1714f000909"
+    ]
+  }
 }

@@ -2,5 +2,39 @@
   "source_url": "https://www.twitch.tv/montanablack88/clip/CalmElatedPrariedog4Head-r1jQrPTSP5J2vEkV",
   "video_url": "https://www.youtube.com/watch?v=tdGMQ3GmgDA",
   "title": "GTA 6 Gameplay: Monte hat kein Aim | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "8707a723c7c7ceca",
+      "0e0e2ece6e6eb6c2",
+      "0e0e2ece6e6e7633",
+      "1e0e6ecc6c6cf6c6",
+      "1e9e9e1ebbbda125",
+      "c74323555169c34b",
+      "4e8dac3cacb83c1e",
+      "adafec6dbdbedc0e",
+      "6f6ed766b6f4de07",
+      "6757d766b6f44e07",
+      "554d4ddc52789c33",
+      "bb535b4fdf6fa62c",
+      "6d3d0f9fbbd7e513",
+      "b99faf4ebed6e539",
+      "b99f87cebed6e529",
+      "9d9faecebcd4c5b2",
+      "b73aace59797bf9b",
+      "baa2c6c676537f05",
+      "0384572f3e696949",
+      "06086e7e7f676707",
+      "010747d6f4bec22f",
+      "006465dd78f0722b",
+      "0133370f8db5360f",
+      "2f9f9ffd7afa301b",
+      "5f0f07c3e7e77b4a",
+      "7b3f8f2f2d3283a0",
+      "83fb47312c3e5741"
+    ]
+  }
 }

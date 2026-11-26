@@ -2,5 +2,39 @@
   "source_url": "https://www.twitch.tv/dinah/clip/RespectfulDeadScorpionFreakinStinkin-e2RNV9ax1M-ndSod",
   "video_url": "https://www.youtube.com/watch?v=BUWWcGAKV5s",
   "title": "GTA 6 Gameplay: dinah - Highlight dc59b9 Part 09 | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "50695b4a61716d50",
+      "0107051514171608",
+      "010704041617170d",
+      "f8d8dc56160e8606",
+      "f910f4c64edfdfcf",
+      "0080809078783838",
+      "2e757dbf3f777796",
+      "723232361c47c160",
+      "30e0e8c9d9301c06",
+      "78c1c191b3f1380c",
+      "e18a92b273e2300a",
+      "80838332e1721803",
+      "c4c2628000400040",
+      "00000480881c1c1c",
+      "786d4fc581c0ee84",
+      "f3fcbc9ccddd8f8f",
+      "071f1f4f47373737",
+      "00c1111110534c00",
+      "0102120280654a0c",
+      "81080040c0e0c060",
+      "080e0c2e262e3423",
+      "828a8a8b8cc8c8f0",
+      "38347cbc7c78e1c7",
+      "00442410b1f090c7",
+      "0604443d11b0d003",
+      "0404453490f0d82b",
+      "08118b010112316c"
+    ]
+  }
 }

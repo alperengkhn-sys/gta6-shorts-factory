@@ -2,5 +2,39 @@
   "source_url": "https://www.twitch.tv/rubius/clip/SuperBadNightingaleRlyTho-B9FZAXYBOnpW38es",
   "video_url": "https://www.youtube.com/watch?v=vmHblsoYuWA",
   "title": "GTA 6 Gameplay: Lo real que es | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "865fd36756ca4a5a",
+      "06069357869adb58",
+      "060f93970e9a5b58",
+      "0f92022160fd7915",
+      "f3b33c7c71e0c1cd",
+      "f3b33c7c7160c1cf",
+      "f1b53c3c71e0c18d",
+      "f3b33c7c71e0c18d",
+      "f1b53c3c71e0c1c3",
+      "f1b53c3c71e0c1c3",
+      "f1b53c3c71e0c1cf",
+      "f1b13c3c71e1c3cf",
+      "f3b3bc7c71e0c1cb",
+      "f1b5bc3c71e1c1c3",
+      "f3b3bc3c71e0c1c7",
+      "f3b1bc3c72e3c5c7",
+      "f3b1bc78f160c5c3",
+      "f3b1be7cf060e5c3",
+      "c0e01c9ee3f67c2e",
+      "f0fb1f091fcf1ba3",
+      "f3b1b977cf2b6707",
+      "f0f8f6768737e7a3",
+      "f3b1bd67cf2f6f4b",
+      "f3b399438b893533",
+      "f3b1bc3c73e3c7c3",
+      "f3b1bc7c71e2c70b",
+      "fdf7fff7ddee6816"
+    ]
+  }
 }

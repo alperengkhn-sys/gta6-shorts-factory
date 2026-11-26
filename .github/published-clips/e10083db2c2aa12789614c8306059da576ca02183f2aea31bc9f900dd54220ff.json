@@ -2,5 +2,39 @@
   "source_url": "https://www.twitch.tv/wings667/clip/ClearFunnySpaghettiAMPEnergyCherry-gELPPui23Cv-FYJI",
   "video_url": "https://www.youtube.com/watch?v=3RGSeDNd5rg",
   "title": "GTA 6 Gameplay: - VI | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "d808a01623e3a5bb",
+      "d808802e4e46e6ad",
+      "d008811723c3a7b9",
+      "d808811703e3a53d",
+      "d00880370742e73d",
+      "d008c0370747e7ed",
+      "d00881370747f7b1",
+      "d008801f23e3f971",
+      "d8d8108383070dc6",
+      "58f0f8cc108099d9",
+      "f07078d92880803c",
+      "08180a1288854546",
+      "83878f47634664c3",
+      "c24365c34d4c8e12",
+      "268d859595c14c0c",
+      "4d8d11555586380e",
+      "8d09250d0d86300c",
+      "4c01250d4d06f23a",
+      "989a830b4d493c19",
+      "0806271117817c1d",
+      "080c05879587781a",
+      "2c2513978707c319",
+      "2c2413978787c21b",
+      "49cc6397b787e031",
+      "484c6593938fe319",
+      "484c0117154f3919",
+      "484d072f8f06e319"
+    ]
+  }
 }

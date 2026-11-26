@@ -2,5 +2,24 @@
   "source_url": "https://www.twitch.tv/ishowspeed/clip/CrazyAbnegateLapwingPipeHype-fzo4DD3_M-TisQLE",
   "video_url": "https://www.youtube.com/watch?v=_AlcgbCXg2g",
   "title": "GTA 6 Mission: first robbery speed | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 29.983,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "cc3d350d1507133a",
+      "4f2747279f9b4f36",
+      "8fcbcef4502180c5",
+      "0dc7e65970246421",
+      "ce8cb5b91d1cda79",
+      "0f3f399b9afa7f45",
+      "0fc3914d53b93e1f",
+      "08c39149797d3c1f",
+      "677564c5c6703130",
+      "4cc8cdcdd4303414",
+      "c8999084c0282a10",
+      "5d192bc8c0800841"
+    ]
+  }
 }

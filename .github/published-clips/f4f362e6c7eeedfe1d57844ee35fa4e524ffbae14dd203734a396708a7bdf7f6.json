@@ -2,5 +2,39 @@
   "source_url": "https://www.twitch.tv/caseoh_/clip/SmoggyCleverMosquitoTBTacoRight-RVBfPSPbe5p5k44q",
   "video_url": "https://www.youtube.com/watch?v=_ItCCgeSH4A",
   "title": "GTA 6 Gameplay: get away | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 59.95,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "130383c810c4c6f6",
+      "1303c3c810c4c6f6",
+      "1303c3c810c4c6f6",
+      "1303c3c810c4c6f6",
+      "1203c38890c4c6f6",
+      "100383891c1e8ffe",
+      "1303c3c890c0c6f4",
+      "1303c3c890c0c0e0",
+      "1103c2c910c487f0",
+      "1303c21c90c487f0",
+      "9f9f9cb2c8e0e9f4",
+      "88c868cdd0e0d6f0",
+      "161acbd971c8e812",
+      "c1cc378770e8c8d8",
+      "f3daef4f72c8989c",
+      "1d4bc71af9f8caf8",
+      "9c85656da5f81c98",
+      "d8ce6626f2e043c3",
+      "67b73f27cd343650",
+      "a8e16727b5e188f3",
+      "5f27031939de8ff8",
+      "c06197606c79e39e",
+      "4ce4b382b831b2b7",
+      "b1d98ea32773579d",
+      "01864f15e3315152",
+      "60343b8e7d3b34df",
+      "0e8802393c999cd8"
+    ]
+  }
 }

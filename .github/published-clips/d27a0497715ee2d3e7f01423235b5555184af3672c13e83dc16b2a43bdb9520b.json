@@ -1,6 +1,34 @@
 {
   "source_url": "https://www.twitch.tv/kaicenat/clip/AltruisticInquisitiveBibimbapDoubleRainbow-LNYO5Alg-RoKSC2m",
   "video_url": "https://www.youtube.com/watch?v=ejN3T3m1dM4",
-  "title": "UNREAL GTA 6 DRIVING MOMENT! \ud83d\ude97",
-  "status": "uploaded_public"
+  "title": "UNREAL GTA 6 DRIVING MOMENT! 🚗",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 47.633,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "5485071c1c1c2c0a",
+      "5485061c1c1c2c06",
+      "542933e7e1e161ea",
+      "542b33e7e1e161f2",
+      "d485061c1c1c2c4c",
+      "d485061c1c1c2c0e",
+      "98686c5cdeea6c66",
+      "0000001e1e2f3126",
+      "d40c1e08000000e9",
+      "c868221000000000",
+      "e060000000000000",
+      "c885071e1c1c2c4c",
+      "c885071c1c1c2c4c",
+      "c885071c1c1c2c4c",
+      "0200002a932a930e",
+      "8200000000000000",
+      "8ac9816333050508",
+      "8ac8c56333052504",
+      "c885071e1c1c2c4c",
+      "c885071c1c1c2c0e",
+      "c885071c1c1c2c4c"
+    ]
+  }
 }

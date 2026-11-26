@@ -2,5 +2,40 @@
   "source_url": "https://www.twitch.tv/caseoh_/clip/ResoluteCrazyPistachioPrimeMe-FgUccHgoroOQYUJB",
   "video_url": "https://www.youtube.com/watch?v=DP-KJUTpnoY",
   "title": "GTA 6 Gameplay: cooked them | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.033,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "f48e46a361e90801",
+      "e71b8f06e7a88001",
+      "401a8e8363e80001",
+      "76b60d6587c00c20",
+      "62b61d258fc18c00",
+      "673e1d050fc18c80",
+      "673e1d050fc18c00",
+      "673e1d050fc18c00",
+      "673e1d050fc18e02",
+      "e0c1ef19798c8080",
+      "fd2c0c9ddb3184c2",
+      "b83178e079b0c300",
+      "f118c8ddecb671bd",
+      "93170d8dd4389d98",
+      "79d3520606313c14",
+      "e43aaee3d3317c67",
+      "e03806be0d210d03",
+      "e9fa188f880b8b78",
+      "66d838a3fd1214f1",
+      "ca984e5e37e03206",
+      "26f6c4cd8d8c9f1d",
+      "c2a2d791c04761e3",
+      "bb4308d49ec9d1a1",
+      "07db6acdc9d8d24a",
+      "0e64c5cbb234a158",
+      "6b4e103f364514c0",
+      "90d41490745e5510",
+      "0f31fb061e9dc560"
+    ]
+  }
 }

@@ -2,5 +2,34 @@
   "source_url": "https://www.twitch.tv/thegrefg/clip/GleamingHappyDogCorgiDerp-ePrEJHL-na9Fa8i0",
   "video_url": "https://www.youtube.com/watch?v=0BhO_71maX8",
   "title": "GTA 6 Gameplay: KFC | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 50.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "19703e2d79da9b29",
+      "19704a5b61a4d212",
+      "19704c4de571a46b",
+      "19709c0d59f0b64b",
+      "19707a4b69f02537",
+      "19d0365773f70c0e",
+      "19705a1b23d8740c",
+      "19704c1bb1ee5c1d",
+      "19705a5b73e82c0d",
+      "19d4b61761242cc6",
+      "19704c5f71b02ef1",
+      "19705c4d79b02e5d",
+      "19d0a62fc3c76f07",
+      "19707d0d39f1b689",
+      "19702c2d39f99387",
+      "19d0a627e1452513",
+      "19702e2d793b0e61",
+      "19502ead79701649",
+      "19702c2d39f9bef9",
+      "19c0b65761e2252b",
+      "1970dc5f59e0772d",
+      "1970d84d49e1372d"
+    ]
+  }
 }

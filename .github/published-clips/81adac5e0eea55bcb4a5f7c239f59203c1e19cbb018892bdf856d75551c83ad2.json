@@ -1,6 +1,40 @@
 {
   "source_url": "https://www.twitch.tv/trymacs/clip/OptimisticHardHabaneroPoooound--XxzdB2ibqmwWr1R",
   "video_url": "https://www.youtube.com/watch?v=_iXVDc7rEsA",
-  "title": "YOU HAVE TO SEE THIS GTA 6 MOMENT! \ud83d\udc40",
-  "status": "uploaded_public"
+  "title": "YOU HAVE TO SEE THIS GTA 6 MOMENT! 👀",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 59.983,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "c68ba32a4e58687a",
+      "161f935796cac858",
+      "061f93578698dad8",
+      "069f93c78698d81a",
+      "a6b2822060fcb915",
+      "b3b33c7c7160c181",
+      "b3b13c7c7160c1c1",
+      "b1b97c7c73e3c3c3",
+      "b3b13c7c7160c1c3",
+      "b1b93c7c71e1c1c3",
+      "b3b13c7c7160c1c1",
+      "b1b93c7c71e3c1c3",
+      "b3b13c7c7160c1c1",
+      "b1b13c3c3260c5c3",
+      "b3b13c787160c143",
+      "b3b13e7c3060e5c3",
+      "80e11c9eebf37c26",
+      "f8ee07191bcf1be3",
+      "b3b139672e33670f",
+      "f0f8f6368737e7a5",
+      "b3b139670f376f17",
+      "b3d1d1a5881c3597",
+      "b3b13c3c73e3c7c3",
+      "f3b13c787160c3c3",
+      "31b1f7f7dcfeac26",
+      "707161e1cce4e484",
+      "7d9d9f9e3e3f3db3"
+    ]
+  }
 }

@@ -2,5 +2,32 @@
   "source_url": "https://www.twitch.tv/stefkicha1/clip/VastSleepyMagePeteZarollTie-qUYVJW5JIU0jnAPJ",
   "video_url": "https://www.youtube.com/watch?v=KOqSjmexv60",
   "title": "GTA 6 Gameplay: hahaha | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 45.45,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "cd8580964643316c",
+      "478f858603c3302c",
+      "c3cd86cd43c33068",
+      "8f8d050f8a031818",
+      "8b8d844f03031918",
+      "860b0d9b06061208",
+      "8f8f891505431819",
+      "8f8f859505410818",
+      "878f8d8d1301581a",
+      "4e4e0913474a3030",
+      "83922986da589810",
+      "060c8305b5311101",
+      "363b0d098fc7e520",
+      "cfcf040503a7e380",
+      "c7cb050907276690",
+      "478f850d16461009",
+      "0f8f051115410c19",
+      "078f8d8b1200061a",
+      "0f8da50b8a03191a",
+      "8785854b0b03191a"
+    ]
+  }
 }

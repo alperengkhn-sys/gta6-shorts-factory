@@ -2,5 +2,39 @@
   "source_url": "https://www.twitch.tv/rivers_gg/clip/KathishSourBubbleteaTebowing-SKX46YYb2Sc4FYuM",
   "video_url": "https://www.youtube.com/watch?v=mcIC4tQKPBs",
   "title": "GTA 6 Gameplay: rivers_gg - Highlight f016cb Part 02 | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "44ff3f0f33a56131",
+      "c1ff3f0f33a56131",
+      "e0ff3f0f37a56131",
+      "e0ff3f1f37a76531",
+      "e0ff3f1f3325e531",
+      "e3ff3f0f33a5e161",
+      "e2ff3f0f33a56131",
+      "e0ff3f1f23a36331",
+      "e8ffff0f27a76531",
+      "e0df7f1f37a56131",
+      "e0ff7f1f37256331",
+      "851f3f1f33a56131",
+      "e2cf3f0733256131",
+      "e5ff3f0f33a56131",
+      "c8ff3f0733e5e531",
+      "60ff3f1f27a76531",
+      "60ff3f0733a56131",
+      "c41f1f1f37a56131",
+      "8c1f1f1f0703e121",
+      "60ff7f1f27a76531",
+      "e0ff3f1733a56131",
+      "61ff3f1f37b77231",
+      "61ff3f1f37b57231",
+      "60ff3f1f37b57231",
+      "f8e0048bb1947238",
+      "37393b29b63b4b18",
+      "f5fbf8f1f36a8a8c"
+    ]
+  }
 }

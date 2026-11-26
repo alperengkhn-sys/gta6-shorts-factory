@@ -1,6 +1,29 @@
 {
   "source_url": "https://www.twitch.tv/xqc/clip/TriangularFaithfulMushroomTriHard-w7G2t3F9rpXJJxa8",
   "video_url": "https://www.youtube.com/watch?v=v1X7HjcAGEw",
-  "title": "YOU HAVE TO SEE THIS GTA 6 MOMENT! \ud83d\udc40",
-  "status": "uploaded_public"
+  "title": "YOU HAVE TO SEE THIS GTA 6 MOMENT! 👀",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 37.517,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "0d19038e61e300a6",
+      "1f13329e69f892ee",
+      "c3e0828170c08279",
+      "78e6e5c760c606a7",
+      "ffcc0f8de3c303cd",
+      "fa2e35072b4201cc",
+      "d0ece64e61c99078",
+      "70cce6cee1c94994",
+      "60cce6cee1c94194",
+      "f0d864c760c18132",
+      "140dcd1ce0c606a6",
+      "8281e1b160c180f2",
+      "1281f19060e08970",
+      "1281f19060e08978",
+      "9a82f6429df1fe2a",
+      "960fcf856d6023e2"
+    ]
+  }
 }

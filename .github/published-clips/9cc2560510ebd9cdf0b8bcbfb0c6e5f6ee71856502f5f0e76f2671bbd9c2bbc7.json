@@ -2,5 +2,39 @@
   "source_url": "https://www.twitch.tv/lacy/clip/CredulousKawaiiTriangleFUNgineer-Zys54vtw1G4OmIkN",
   "video_url": "https://www.youtube.com/watch?v=cXQZ_L6aWvU",
   "title": "GTA 6 Gameplay: wtf | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 59.983,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "67c7871787890e2e",
+      "3c240c0b0d4d8717",
+      "f0e1c9030f4d8f1f",
+      "f0f8d00b1d1d1eb6",
+      "ec686c13179d8f35",
+      "3c648c13174d8f15",
+      "f0f0c90b2725478f",
+      "b0f0e91747cd8d17",
+      "36660613959d0d2c",
+      "66660613959d0d0e",
+      "c7cb9b27238b0d2f",
+      "f0f0e0035d2d0f3f",
+      "a6640e13959d0d37",
+      "9ee68e13968c8616",
+      "b6a20b1316840414",
+      "9ee60e138e868616",
+      "9ece8e17968c8616",
+      "8ec68e1396848616",
+      "eec6861397840416",
+      "6643490316840416",
+      "2643491316848416",
+      "7878780e83210900",
+      "7cfc780f83211c44",
+      "1830606000060606",
+      "84981c1e3c0f8f85",
+      "ab9be270da7c7c7f",
+      "0212854594cceef6"
+    ]
+  }
 }

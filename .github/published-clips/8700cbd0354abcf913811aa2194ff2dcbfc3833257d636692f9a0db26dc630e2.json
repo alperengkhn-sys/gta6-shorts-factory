@@ -2,5 +2,39 @@
   "source_url": "https://www.twitch.tv/lirik/clip/ReliablePowerfulOilBatChest-ydNija0st6UB0byp",
   "video_url": "https://www.youtube.com/watch?v=p7Gzfn6Zxtk",
   "title": "GTA 6 Hidden Detail: Lirik finds An Easter egg | GTA 6 #Shorts",
-  "status": "uploaded_public"
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 59.983,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "0000010160e022b2",
+      "177fc3fffeb0cbff",
+      "e7e75ffff146bfff",
+      "47e363abe3afffff",
+      "8d9b6dbdf0fcc61e",
+      "f7f7ee49598fff70",
+      "fdfffd67f3b7fb20",
+      "f7fff54f47415c08",
+      "eef7f96b67752fe5",
+      "d2f8fd0e9c9e16f8",
+      "f4f5ff941db5e507",
+      "f1fdff9c0dba08c0",
+      "f1feff36dc06420f",
+      "ce5ebe1c1932f454",
+      "00000074f137bef4",
+      "689d5f87841a983b",
+      "feffec9f831188a4",
+      "feffbc451b0f49c1",
+      "adef99bb8383bca1",
+      "adffb3a7e7f1c1e2",
+      "f5ff77cfccecb19c",
+      "8d330323e3d9e8c6",
+      "1b0f1e6963262bcb",
+      "974b4783885f0724",
+      "0002072f06100986",
+      "420b0e1f677058d7",
+      "0c05010061f0e8c6"
+    ]
+  }
 }

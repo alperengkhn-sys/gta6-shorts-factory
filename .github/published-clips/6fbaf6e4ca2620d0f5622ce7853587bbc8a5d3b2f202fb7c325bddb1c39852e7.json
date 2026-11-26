@@ -2,5 +2,39 @@
   "source_url": "https://www.twitch.tv/cohhcarnage/clip/ArtsyGenerousAniseDendiFace-NxwfD1GOBiYOHbfx",
   "video_url": "https://www.youtube.com/watch?v=omkaUYnUgQk",
   "title": "GTA 6 Hidden Detail: Cohh realized something about the UFO Easter Egg he found in | GTA 6 ",
-  "status": "uploaded_public"
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "470707878783a8ab",
+      "4f0f0fce8783a1a5",
+      "2000008080008082",
+      "6000004080c0e0aa",
+      "41010141c1c0e1ae",
+      "030303c383c3e1aa",
+      "030303c185c5e5ed",
+      "030303c1c7c3e1e5",
+      "030303c1c5c5e1e5",
+      "030303c1c7c5e5e5",
+      "030303c1c5838daf",
+      "030303c1c5878dae",
+      "030303c1c7838787",
+      "030303c1c5c1c181",
+      "030303c1c5c5c1c1",
+      "030303c1c5c5c5c4",
+      "41010341c286a125",
+      "43010147c0c0e5a3",
+      "43030341c1c5e0aa",
+      "030703438785a0a0",
+      "0707138f878183a6",
+      "0004004180c0c080",
+      "2a00040c00000000",
+      "6902828100804140",
+      "6602828802414242",
+      "661696c808434342",
+      "63038b8f1280c685"
+    ]
+  }
 }
