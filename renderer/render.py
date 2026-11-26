@@ -563,6 +563,8 @@ def main():
     ap.add_argument("--source-url",required=True)
     ap.add_argument("--title",required=True)
     ap.add_argument("--output",default="short.mp4")
+    ap.add_argument("--max-source-seconds",type=float,default=175.0,
+                    help="Maximum permitted seconds of the creator's source footage in the final edit.")
     ap.add_argument("--test-local-source", help=argparse.SUPPRESS)
     a=ap.parse_args()
     if a.test_local_source:
@@ -573,6 +575,9 @@ def main():
     elif not validate_source_url(a.source_url):
         raise SystemExit("Invalid source URL: production rendering accepts public HTTPS Twitch clip URLs only.")
     title=clean(a.title)[:90]
+    max_source_seconds=float(a.max_source_seconds)
+    if not math.isfinite(max_source_seconds) or max_source_seconds<45.0 or max_source_seconds>175.0:
+        raise SystemExit("Permission limit must be between 45 and 175 seconds of source footage.")
     out=Path(a.output).resolve(); out.parent.mkdir(parents=True,exist_ok=True)
     with tempfile.TemporaryDirectory() as td:
         w=Path(td); media=w/"source.mp4"
@@ -597,7 +602,7 @@ def main():
         silence_intervals=source_analysis.pop("_silence_intervals",[])
         scene_times=source_analysis.pop("_scene_change_times",[])
         highlight_start,highlight_duration,highlight_score=select_highlight_window(
-            source_duration,silence_intervals,scene_times
+            source_duration,silence_intervals,scene_times,window=max_source_seconds
         )
         selected_source=media
         if source_duration>highlight_duration:
@@ -640,6 +645,7 @@ def main():
         analysis["content_fingerprint"] = content_fingerprint
         analysis["source_quality"]=source_quality
         analysis["source_duration_seconds"]=round(source_duration,3)
+        analysis["permission_max_source_seconds"]=round(max_source_seconds,3)
         analysis["highlight_selection"]={
             "start_seconds":highlight_start,
             "duration_seconds":highlight_duration,
