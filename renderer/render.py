@@ -2,6 +2,10 @@
 """Vertical Shorts renderer with silence trimming, original audio, branding overlays and unique covers."""
 import argparse, json, math, os, shutil, struct, subprocess, sys, tempfile, wave
 from pathlib import Path
+try:
+    from .visual_quality import inspect_visual_quality, compute_content_fingerprint, find_published_duplicate
+except ImportError:
+    from visual_quality import inspect_visual_quality, compute_content_fingerprint, find_published_duplicate
 from urllib.parse import urlsplit
 
 ACTION_TERMS = (
@@ -610,7 +614,30 @@ def main():
             )
         # Evaluate the actual selected/trimmed sequence, not quiet or static
         # material discarded before the final Short is assembled.
+        visual_quality = inspect_visual_quality(media_for_render)
+        if visual_quality["facecam_detected"]:
+            raise RuntimeError(
+                "Quality gate rejected: persistent streamer face-cam detected in the final 9:16 frame "
+                f"({visual_quality.get('facecam_corner')}, {visual_quality.get('facecam_sample_hits')}/"
+                f"{visual_quality.get('samples')} sampled frames)."
+            )
+        if visual_quality["blur_rejected"]:
+            raise RuntimeError(
+                "Quality gate rejected: gameplay footage is heavily blurred "
+                f"(median sharpness {visual_quality.get('sharpness_median')})."
+            )
+        content_fingerprint = compute_content_fingerprint(media_for_render)
+        duplicate = find_published_duplicate(content_fingerprint)
+        if duplicate:
+            raise RuntimeError(
+                "Quality gate rejected: duplicate visual content already published "
+                f"({duplicate.get('matched_frames')} matching frames, "
+                f"{round(float(duplicate.get('coverage', 0))*100)}% overlap; "
+                f"previous video {duplicate.get('video_url')})."
+            )
         analysis=media_analysis(media_for_render)
+        analysis["visual_quality_review"] = visual_quality
+        analysis["content_fingerprint"] = content_fingerprint
         analysis["source_quality"]=source_quality
         analysis["source_duration_seconds"]=round(source_duration,3)
         analysis["highlight_selection"]={
