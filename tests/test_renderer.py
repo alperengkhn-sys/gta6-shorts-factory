@@ -160,6 +160,20 @@ class RendererHelpersTest(unittest.TestCase):
         self.assertEqual(review["frames_sampled"], 0)
         self.assertTrue(any("no paid AI service" in reason for reason in review["reasons"]))
 
+    def test_offline_review_accepts_continuous_gameplay_without_scene_cuts(self):
+        metrics = {
+            "scene_change_count": 0,
+            "silence_ratio": 0.03,
+            "mean_volume_db": -22.0,
+            "frame_motion_mean": 4.2,
+            "active_motion_ratio": 0.72,
+            "max_static_seconds": 1.0,
+        }
+        with patch.dict(os.environ, {"OFFLINE_MIN_SCORE": "68"}, clear=False):
+            review = vision_review(None, None, metrics=metrics, title="GTA 6 continuous gameplay drive")
+        self.assertGreaterEqual(review["score"], 68)
+        self.assertTrue(any("Continuous gameplay scene" in reason for reason in review["reasons"]))
+
     def test_offline_review_rejects_low_activity_clip(self):
         metrics = {
             "scene_change_count": 5,
