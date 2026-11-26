@@ -181,12 +181,29 @@ def compare_content_fingerprints(first: dict[str,Any], second: dict[str,Any],
                 pairs.append((distance,i,j))
     pairs.sort()
     used_a,used_b=set(),set()
-    total_distance=0
+    selected=[]
     for distance,i,j in pairs:
         if i in used_a or j in used_b:
             continue
-        used_a.add(i);used_b.add(j);total_distance+=distance
-    matched=len(used_a);shorter=min(len(a),len(b))
+        used_a.add(i);used_b.add(j);selected.append((i,j,distance))
+    selected.sort()
+    # Require matching frames to appear in the same temporal order. This
+    # reduces false positives from common HUD pixels or repeated static scenes.
+    chains=[]
+    for index,(i,j,distance) in enumerate(selected):
+        best_length,best_distance=1,distance
+        for previous in range(index):
+            pi,pj,pdist=selected[previous]
+            if pi<i and pj<j and chains[previous][0]+1>best_length:
+                best_length=chains[previous][0]+1
+                best_distance=chains[previous][1]+distance
+        chains.append((best_length,best_distance))
+    if chains:
+        best_index=max(range(len(chains)),key=lambda k:chains[k][0])
+        matched,total_distance=chains[best_index]
+    else:
+        matched,total_distance=0,0
+    shorter=min(len(a),len(b))
     coverage=matched/shorter if shorter else 0.0
     required=max(12,int(math.ceil(shorter*min_coverage)))
     return {"duplicate":matched>=required and coverage>=min_coverage,
