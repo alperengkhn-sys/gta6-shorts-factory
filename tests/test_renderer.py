@@ -174,6 +174,34 @@ class RendererHelpersTest(unittest.TestCase):
         self.assertGreaterEqual(review["score"], 68)
         self.assertTrue(any("Continuous gameplay scene" in reason for reason in review["reasons"]))
 
+    def test_offline_review_keeps_clip_with_long_static_pause_if_overall_motion_is_good(self):
+        metrics = {
+            "scene_change_count": 2,
+            "silence_ratio": 0.08,
+            "mean_volume_db": -22.0,
+            "frame_motion_mean": 3.2,
+            "active_motion_ratio": 0.55,
+            "max_static_seconds": 9.0,
+        }
+        with patch.dict(os.environ, {"OFFLINE_MIN_SCORE": "68"}, clear=False):
+            review = vision_review(None, None, metrics=metrics, title="GTA 6 gameplay police chase")
+        self.assertGreaterEqual(review["score"], 68)
+        self.assertTrue(any("retained because overall gameplay movement" in reason for reason in review["reasons"]))
+
+    def test_offline_review_keeps_high_silence_ratio_if_footage_and_audio_are_usable(self):
+        metrics = {
+            "scene_change_count": 8,
+            "silence_ratio": 0.70,
+            "mean_volume_db": -20.0,
+            "frame_motion_mean": 3.4,
+            "active_motion_ratio": 0.55,
+            "max_static_seconds": 2.0,
+        }
+        with patch.dict(os.environ, {"OFFLINE_MIN_SCORE": "60"}, clear=False):
+            review = vision_review(None, None, metrics=metrics, title="GTA 6 explosive gameplay action")
+        self.assertGreaterEqual(review["score"], 60)
+        self.assertTrue(any("quiet portions detected" in reason for reason in review["reasons"]))
+
     def test_offline_review_rejects_low_activity_clip(self):
         metrics = {
             "scene_change_count": 5,
