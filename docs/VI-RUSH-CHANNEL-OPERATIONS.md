@@ -95,12 +95,12 @@ Hiçbir videoyu otomatik olarak silme, yeniden yükleme veya Content ID uyuşmaz
 2. Content ID claim, bölgesel/global block, takedown ve copyright strike kayıtlarını ayrı gruplara ayırın.
 3. Claim ayrıntısında hak sahibini, eşleşen ses/görüntü bölümünü ve ülke politikasını kaydedin.
 4. Kaynak klip, yayıncı kullanım izni, izin verilen saniye ve ses/müzik lisansını eşleştirin.
-5. İzin süresi aşılmışsa kaydı riskli olarak işaretleyin; ayrı ve açık talimat olmadan mevcut videoyu değiştirmeyin veya yeniden yayımlamayın.
-6. Content ID müzik eşleşmesi varsa, hakkınız yoksa müziği YouTube'un izin verdiği yöntemle kaldırın/değiştirin veya klibi kullanmayın.
-7. Bulguları kayıt altına alın. Bu denetim mevcut videoları otomatik olarak düzenlemez; yeni bir düzenleme için ayrıca açık talimat gerekir.
-8. Studio'daki Restrictions durumunu ve denetim sonucunu kaydedin; mevcut videoya müdahale etmeyin.
-9. Geçerli claim varsa yalnızca tüm gerekli haklara sahip olduğunuz veya claim'in yanlış olduğu kanıtlanabiliyorsa itiraz edin.
-10. Takedown/strike varsa sıradan Content ID claim gibi ele almayın; retraction veya geçerli counter-notification için resmî süreci izleyin.
+5. İzin süresi aşılmışsa kaydı riskli olarak işaretleyin; mevcut Short'u kesmeyin, silmeyin veya yeniden yayımlamayın.
+6. Content ID müzik eşleşmesi varsa hak sahibini ve eşleşen bölümü not edin; mevcut Short'ta müziği değiştirmeyin veya kaldırmayın.
+7. Bulguları yalnızca denetim kaydına ekleyin; başlık, açıklama, etiket veya kapak değiştirmeyin.
+8. Studio'daki Restrictions durumunu ve denetim sonucunu kaydedin; 53 videonun tamamı olduğu gibi kalır.
+9. Claim'e itiraz etmeyin veya hak talebini kaldırmaya çalışmayın; bu adım için ayrıca açık talimat gerekir.
+10. Takedown/strike varsa türünü ve son tarihini kaydedin; mevcut videoda karşı bildirim veya başka işlem başlatmayın.
 
 Content ID claim videoyu engelleyebilir, para kazanmayı hak sahibine yönlendirebilir veya sadece takip edebilir. Copyright strike ise geçerli bir telif kaldırma talebiyle ilgilidir ve farklı sonuçları vardır. 1–3 dakika arasındaki Shorts'ta aktif Content ID claim varsa video engellenebilir:
 - https://support.google.com/youtube/answer/6013276
