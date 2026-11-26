@@ -28,7 +28,7 @@ Rockstar'ın kamuya açık fan politikası genel olarak yalnızca non-commercial
 - Yüz/kamera kutusu, bulanıklık ve görsel tekrar kontrolleri kaynak seçimini etkiler.
 - Bu filtreler yerel OpenCV sezgisel kontrolleridir; yüzleri veya bulanıklığı yüzde 100 doğrulukla sınıflandıran bir yapay zekâ garantisi değildir. Belirsiz/şüpheli klipler insan incelemesine alınmalıdır.
 
-Shorts kapağı için YouTube'un güncel yardım sayfası ve Studio'nun izin verdiği yol izlenir. YouTube API'si Shorts için özel kapak yüklemeyi destekler; fakat API çağrısı ancak video işleme durumu `succeeded` olduktan sonra yapılmalıdır. Kanalın OAuth yetkisi/hesap uygunluğu da gerekir:
+Shorts kapağı için YouTube'un güncel yardım sayfası ve API kuralları izlenir. `thumbnails.set` Shorts'u destekler ve `youtube.upload` OAuth kapsamı bu API çağrısı için yeterlidir. `youtube.readonly` varsa yükleyici video işleme durumunu `succeeded` olana kadar API'den takip eder; yalnızca `youtube.upload` varsa 120 saniye bekleyip kapağı yine yükler. API'ye çok erken gönderilen kapak uygulanmayabileceği için bekleme korunur. Özel Shorts kapağı hesabın doğrulanmış/uygun olmasına da bağlıdır:
 - https://support.google.com/youtube/answer/72431
 - https://developers.google.com/youtube/data-api/reference/rest/v3/thumbnails/set
 
@@ -95,7 +95,7 @@ Hiçbir videoyu otomatik olarak silme, yeniden yükleme veya Content ID uyuşmaz
 2. Content ID claim, bölgesel/global block, takedown ve copyright strike kayıtlarını ayrı gruplara ayırın.
 3. Claim ayrıntısında hak sahibini, eşleşen ses/görüntü bölümünü ve ülke politikasını kaydedin.
 4. Kaynak klip, yayıncı kullanım izni, izin verilen saniye ve ses/müzik lisansını eşleştirin.
-5. İzin süresi aşılmışsa yalnızca izin verilen süreye göre yeni bir kurgu hazırlayın; hak kanıtı yoksa videoyu yayıma geri döndürmeyin.
+5. İzin süresi aşılmışsa kaydı riskli olarak işaretleyin; ayrı ve açık talimat olmadan mevcut videoyu değiştirmeyin veya yeniden yayımlamayın.
 6. Content ID müzik eşleşmesi varsa, hakkınız yoksa müziği YouTube'un izin verdiği yöntemle kaldırın/değiştirin veya klibi kullanmayın.
 7. Bulguları kayıt altına alın. Bu denetim mevcut videoları otomatik olarak düzenlemez; yeni bir düzenleme için ayrıca açık talimat gerekir.
 8. Studio'daki Restrictions durumunu ve denetim sonucunu kaydedin; mevcut videoya müdahale etmeyin.
