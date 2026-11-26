@@ -26,6 +26,82 @@ def request(url, data=None, headers=None, method=None):
         detail = e.read().decode("utf-8", "replace")[:2500]
         raise RuntimeError(f"HTTP {e.code}: {detail}") from e
 
+
+def upload_custom_thumbnail(video_id, cover, access_token, granted_scopes):
+    """Upload a custom Shorts thumbnail with the narrowest available OAuth scope."""
+    scopes = set(granted_scopes or ())
+    processing_read_scopes = {
+        "https://www.googleapis.com/auth/youtube.readonly",
+        "https://www.googleapis.com/auth/youtube.force-ssl",
+        "https://www.googleapis.com/auth/youtube",
+    }
+    thumbnail_upload_scopes = {
+        "https://www.googleapis.com/auth/youtube.upload",
+        "https://www.googleapis.com/auth/youtube.force-ssl",
+        "https://www.googleapis.com/auth/youtube",
+        "https://www.googleapis.com/auth/youtubepartner",
+    }
+    if scopes and not (scopes & thumbnail_upload_scopes):
+        return "missing_thumbnail_upload_scope"
+
+    if scopes & processing_read_scopes:
+        processing_ready = False
+        for attempt in range(40):
+            status_url = (
+                "https://www.googleapis.com/youtube/v3/videos?part=processingDetails,status&id="
+                + urllib.parse.quote(video_id)
+            )
+            _, _, status_raw = request(
+                status_url,
+                headers={"Authorization": "Bearer " + access_token},
+                method="GET",
+            )
+            items = json.loads(status_raw).get("items", [])
+            if not items:
+                raise RuntimeError("YouTube processing status did not return the uploaded video.")
+            item = items[0]
+            upload_status = str(item.get("status", {}).get("uploadStatus", ""))
+            if upload_status in ("rejected", "failed"):
+                reason = item.get("status", {}).get("rejectionReason", "unknown")
+                raise RuntimeError("YouTube rejected the uploaded video: " + str(reason))
+            processing_status = str(item.get("processingDetails", {}).get("processingStatus", ""))
+            if processing_status == "succeeded":
+                processing_ready = True
+                break
+            if processing_status == "failed":
+                reason = item.get("processingDetails", {}).get("processingFailureReason", "unknown")
+                raise RuntimeError("YouTube video processing failed: " + str(reason))
+            print(
+                f"YOUTUBE_PROCESSING_WAIT: status={processing_status or 'not_ready'} "
+                f"attempt={attempt + 1}/40",
+                flush=True,
+            )
+            time.sleep(15)
+        if not processing_ready:
+            return "processing_timeout"
+    else:
+        # Official thumbnails.set accepts youtube.upload. Read scope is only
+        # needed to poll processingDetails, so retain the working time-buffer
+        # path rather than skipping the user's requested cover altogether.
+        print(
+            "YOUTUBE_PROCESSING_WAIT: no read scope; waiting 120 seconds before thumbnails.set "
+            "using youtube.upload.",
+            flush=True,
+        )
+        time.sleep(120)
+
+    status, _, _ = request(
+        "https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId="
+        + urllib.parse.quote(video_id),
+        Path(cover).read_bytes(),
+        {"Authorization": "Bearer " + access_token, "Content-Type": "image/jpeg"},
+        "POST",
+    )
+    if status not in (200, 201):
+        raise RuntimeError(f"YouTube thumbnails.set returned unexpected HTTP {status}.")
+    return "uploaded"
+
+
 def main():
     client_id = os.environ.get("YOUTUBE_CLIENT_ID", "").strip()
     client_secret = os.environ.get("YOUTUBE_CLIENT_SECRET", "").strip()
@@ -175,73 +251,15 @@ def main():
     cover = Path("short-cover.jpg")
     if cover.is_file() and cover.stat().st_size:
         try:
-            if not can_upload_thumbnail:
-                thumbnail_status = "missing_thumbnail_upload_scope"
-                print(
-                    "YOUTUBE_THUMBNAIL_FAILED: token does not include a scope accepted by thumbnails.set.",
-                    file=sys.stderr,
-                )
+            thumbnail_status = upload_custom_thumbnail(
+                video_id, cover, access_token, granted_scopes
+            )
+            if thumbnail_status == "uploaded":
+                print("YOUTUBE_THUMBNAIL_UPLOADED: custom Shorts cover accepted by YouTube.", flush=True)
+            elif thumbnail_status == "processing_timeout":
+                print("YOUTUBE_THUMBNAIL_PENDING: processing did not finish within ten minutes.", file=sys.stderr)
             else:
-                if can_check_processing:
-                    # When read access is granted, wait for the authoritative
-                    # owner-only processing status before setting the Shorts cover.
-                    processing_ready = False
-                    for attempt in range(40):
-                        status_url = (
-                            "https://www.googleapis.com/youtube/v3/videos?part=processingDetails,status&id="
-                            + urllib.parse.quote(video_id)
-                        )
-                        _, _, status_raw = request(
-                            status_url,
-                            headers={"Authorization": "Bearer " + access_token},
-                            method="GET",
-                        )
-                        items = json.loads(status_raw).get("items", [])
-                        if not items:
-                            raise RuntimeError("YouTube processing status did not return the uploaded video.")
-                        item = items[0]
-                        upload_status = str(item.get("status", {}).get("uploadStatus", ""))
-                        if upload_status in ("rejected", "failed"):
-                            reason = item.get("status", {}).get("rejectionReason", "unknown")
-                            raise RuntimeError("YouTube rejected the uploaded video: " + str(reason))
-                        processing_status = str(item.get("processingDetails", {}).get("processingStatus", ""))
-                        if processing_status == "succeeded":
-                            processing_ready = True
-                            break
-                        if processing_status == "failed":
-                            reason = item.get("processingDetails", {}).get("processingFailureReason", "unknown")
-                            raise RuntimeError("YouTube video processing failed: " + str(reason))
-                        print(
-                            f"YOUTUBE_PROCESSING_WAIT: status={processing_status or 'not_ready'} "
-                            f"attempt={attempt + 1}/40",
-                            flush=True,
-                        )
-                        time.sleep(15)
-                    if not processing_ready:
-                        thumbnail_status = "processing_timeout"
-                        print("YOUTUBE_THUMBNAIL_PENDING: processing did not finish within ten minutes.", file=sys.stderr)
-                else:
-                    # youtube.upload is explicitly accepted by thumbnails.set.
-                    # Without a read scope we cannot poll processingDetails, so
-                    # preserve the previously working 120-second processing
-                    # buffer and then call thumbnails.set with the upload token.
-                    print(
-                        "YOUTUBE_PROCESSING_WAIT: no read scope; waiting 120 seconds before thumbnails.set "
-                        "using the authorized youtube.upload scope.",
-                        flush=True,
-                    )
-                    time.sleep(120)
-
-                if thumbnail_status != "processing_timeout":
-                    thumb_status, _, _ = request(
-                        "https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId=" + urllib.parse.quote(video_id),
-                        cover.read_bytes(),
-                        {"Authorization": "Bearer " + access_token, "Content-Type": "image/jpeg"},
-                        "POST",
-                    )
-                    thumbnail_status = "uploaded" if thumb_status in (200, 201) else "failed"
-                    if thumbnail_status == "uploaded":
-                        print("YOUTUBE_THUMBNAIL_UPLOADED: custom Shorts cover accepted by YouTube.", flush=True)
+                print("YOUTUBE_THUMBNAIL_FAILED: OAuth scope does not permit thumbnails.set.", file=sys.stderr)
         except Exception as exc:
             thumbnail_status = "failed"
             print("YOUTUBE_THUMBNAIL_FAILED: " + str(exc)[:700], file=sys.stderr)
