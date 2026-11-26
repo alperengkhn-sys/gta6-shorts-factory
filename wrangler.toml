@@ -14,6 +14,8 @@ enabled = true
 [triggers]
 crons = ["0 */3 * * *"]
 
+# [initial-production] Recovery deployment: start an immediate automatic batch after the quality-gate fix.
+
 # Automated public Twitch clip discovery and Shorts publishing runs every three hours.
 
 # Worker Previews require their own binding declarations.
