@@ -23,9 +23,12 @@ class RendererPolicyTests(unittest.TestCase):
         self.assertNotIn("subtitles=", graph)
 
     def test_low_visual_activity_is_rejected(self):
-        metrics = {"scene_change_count": 2, "silence_ratio": 0.1, "mean_volume_db": -20}
+        metrics = {
+            "scene_change_count": 2, "silence_ratio": 0.1, "mean_volume_db": -20,
+            "frame_motion_mean": 0.2, "active_motion_ratio": 0.05, "max_static_seconds": 12.0
+        }
         with tempfile.TemporaryDirectory() as work:
-            with self.assertRaisesRegex(RuntimeError, "visual scene activity"):
+            with self.assertRaisesRegex(RuntimeError, "actual gameplay movement"):
                 render.vision_review("unused.mp4", Path(work), metrics, "GTA VI")
 
     def test_long_silence_is_rejected(self):
