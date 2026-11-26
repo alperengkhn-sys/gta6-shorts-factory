@@ -184,7 +184,7 @@ class RendererHelpersTest(unittest.TestCase):
             "max_static_seconds": 8.0,
         }
         with patch.dict(os.environ, {"OFFLINE_MIN_SCORE": "60"}, clear=False):
-            with self.assertRaisesRegex(RuntimeError, "Offline quality rules rejected"):
+            with self.assertRaisesRegex(RuntimeError, "too little actual gameplay movement"):
                 vision_review(None, None, metrics=metrics, title="GTA 6 loading screen")
 
 
