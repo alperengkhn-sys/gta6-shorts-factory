@@ -97,8 +97,8 @@ Hiçbir videoyu otomatik olarak silme, yeniden yükleme veya Content ID uyuşmaz
 4. Kaynak klip, yayıncı kullanım izni, izin verilen saniye ve ses/müzik lisansını eşleştirin.
 5. İzin süresi aşılmışsa yalnızca izin verilen süreye göre yeni bir kurgu hazırlayın; hak kanıtı yoksa videoyu yayıma geri döndürmeyin.
 6. Content ID müzik eşleşmesi varsa, hakkınız yoksa müziği YouTube'un izin verdiği yöntemle kaldırın/değiştirin veya klibi kullanmayın.
-7. Haklar doğrulandıktan sonra başlık, açıklama, etiket ve kapakları video başına özgünleştirin.
-8. Değişikliği kaydedip Studio'daki Restrictions durumunu tekrar kontrol edin.
+7. Bulguları kayıt altına alın. Bu denetim mevcut videoları otomatik olarak düzenlemez; yeni bir düzenleme için ayrıca açık talimat gerekir.
+8. Studio'daki Restrictions durumunu ve denetim sonucunu kaydedin; mevcut videoya müdahale etmeyin.
 9. Geçerli claim varsa yalnızca tüm gerekli haklara sahip olduğunuz veya claim'in yanlış olduğu kanıtlanabiliyorsa itiraz edin.
 10. Takedown/strike varsa sıradan Content ID claim gibi ele almayın; retraction veya geçerli counter-notification için resmî süreci izleyin.
 
@@ -143,6 +143,6 @@ https://support.google.com/youtube/answer/12220281
 
 ## 9. Bilinen entegrasyon sınırı
 
-Mevcut YouTube OAuth refresh token testi yalnızca `youtube.upload` iznini doğruladı. Böylece yeni video yükleme yapılabilir; fakat API ile Shorts işleme durumunu okumak, eski video metadata'sını güncellemek veya kanal Analytics API'sinden rapor çekmek için ek OAuth kapsamı gerekir. Gerekli kapsamları ekleyip kanala yeniden OAuth izni verilmeden 53 videoyu API üzerinden güvenli şekilde toplu düzenleme veya Analytics raporu çekme iddiasında bulunmayın.
+Mevcut YouTube OAuth refresh token testi `youtube.upload` iznini doğruladı. Bu yetki hem yeni video yüklemeye hem de `thumbnails.set` çağrısına yeterlidir. Ek `youtube.readonly`/`youtube.force-ssl` kapsamları yalnızca işleme durumunu API'den kesin olarak okumak için kullanılır; bunlar yoksa yeni videonun kapağı için 120 saniyelik bekleme yoluna geçilir. `youtube.force-ssl` ile mevcut video metadata düzenleme ve `yt-analytics.readonly` ile Analytics API raporları ayrı/opsiyonel işlemlerdir; mevcut 53 video bu otomasyon tarafından değiştirilmez.
 
 Eski videolardaki gerçek claim/strike ayrıntıları YouTube Studio'dan alınmalıdır. Yeni render filtresi önceki telif iddialarını ortadan kaldırmaz.
