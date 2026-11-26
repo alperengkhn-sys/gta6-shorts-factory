@@ -58,7 +58,7 @@ const HTML = String.raw`<!doctype html>
 <h2>YouTube Kanal ve SEO Merkezi</h2>
 <p class="muted">Kanal adını ve marka kimliğini sen belirleyeceksin. Bu bölüm kanal açıklaması, anahtar kelimeler ve her Shorts için İngilizce SEO paketi hazırlamak içindir.</p>
 <div class="detail-box"><h3>Kanal açıklaması (About)</h3>
-<textarea id="vrChannelAbout" style="min-height:130px">Welcome to our GTA VI channel. Discover memorable moments from Leonida, unexpected gameplay, wild encounters and details worth watching twice. New GTA VI Shorts regularly.</textarea>
+<textarea id="vrChannelAbout" style="min-height:130px">Welcome to VI RUSH — your destination for Grand Theft Auto VI (GTA 6) Shorts. Explore memorable moments from Leonida, intense encounters, surprising gameplay details, funny reactions and cinematic scenes. Every clip is selected and edited for a quick, focused watch, with creator credit and source context. Subscribe for more GTA VI moments.</textarea>
 <button type="button" class="secondary" id="vrCopyAbout">KANAL AÇIKLAMASINI KOPYALA</button>
 <h3>Varsayılan kanal anahtar kelimeleri</h3>
 <textarea id="vrChannelKeywords" style="min-height:85px">GTA 6, GTA VI, Grand Theft Auto VI, GTA 6 gameplay, GTA 6 clips, GTA 6 moments, GTA 6 shorts, gaming shorts, Vice City, Leonida, Rockstar Games</textarea>
