@@ -1,5 +1,6 @@
 {
   "task": "backfill_published_visual_fingerprints",
-  "reason": "retry_after_import_fix_and_temporal_sequence_matcher",
-  "retriggered_at": "2026-11-26T18:00:00+03:00"
+  "reason": "retry_after_opencv4_pin_json_marker_repair_and_safe_git_push",
+  "retriggered_at": "2026-11-26T18:00:00+03:00",
+  "retry": 2
 }
