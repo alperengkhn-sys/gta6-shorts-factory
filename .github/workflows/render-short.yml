@@ -128,10 +128,23 @@ jobs:
           PACKAGE_TEXT: ${{ inputs.package_text || steps.task.outputs.package_text }}
           OFFLINE_MIN_SCORE: "68"
         run: |
+          set +e
           python renderer/render.py \
             --source-url "$SOURCE_URL" \
             --title "$SHORT_TITLE" \
-            --output short.mp4
+            --output short.mp4 2>&1 | tee render.log
+          RENDER_EXIT=${PIPESTATUS[0]}
+          set -e
+          if [ "$RENDER_EXIT" -ne 0 ]; then
+            ERROR_LINE="$(grep -E 'RENDER_FAILED:|Quality gate rejected|Offline quality rules rejected|RuntimeError:' render.log | tail -n 1 || true)"
+            if [ -z "$ERROR_LINE" ]; then ERROR_LINE="Renderer exited with code $RENDER_EXIT."; fi
+            {
+              echo "error<<GTA6_RENDER_ERROR"
+              printf '%s\n' "$ERROR_LINE"
+              echo "GTA6_RENDER_ERROR"
+            } >> "$GITHUB_OUTPUT"
+            exit "$RENDER_EXIT"
+          fi
       - name: Build numbered delivery package
         if: steps.task.outputs.noop != 'true'
         env:
@@ -332,6 +345,7 @@ jobs:
           RENDER_ATTEMPT: ${{ inputs.render_attempt || steps.task.outputs.render_attempt }}
           CONCLUSION: ${{ job.status }}
           RENDER_CONCLUSION: ${{ steps.render.outcome }}
+          RENDER_ERROR: ${{ steps.render.outputs.error }}
           YOUTUBE_STATUS: ${{ steps.youtube.outputs.upload_status }}
           YOUTUBE_URL: ${{ steps.youtube.outputs.video_url }}
           YOUTUBE_ERROR: ${{ steps.youtube.outputs.error }}
@@ -354,7 +368,7 @@ jobs:
             "youtube_status": os.environ.get("YOUTUBE_STATUS", "") or "not_configured",
             "youtube_url": os.environ.get("YOUTUBE_URL", ""),
             "thumbnail_status": os.environ.get("THUMBNAIL_STATUS", "") or "not_available",
-            "error": os.environ.get("YOUTUBE_ERROR", "") or ("" if os.environ["RENDER_CONCLUSION"] == "success" else "GitHub Actions render failed; inspect the workflow run."),
+            "error": os.environ.get("YOUTUBE_ERROR", "") or os.environ.get("RENDER_ERROR", "") or ("" if os.environ["RENDER_CONCLUSION"] == "success" else "GitHub Actions render failed; inspect the workflow run."),
             "artifact_url": os.environ.get("ARTIFACT_URL", "") or os.environ.get("FALLBACK_ARTIFACT_URL", ""),
             "package_url": os.environ.get("PACKAGE_URL", ""),
             "run_url": os.environ.get("RUN_URL", "")
@@ -367,7 +381,7 @@ jobs:
               payload["media_analysis_error"] = "Analysis file could not be parsed."
           print(json.dumps(payload))
           PY
-          curl --fail-with-body --silent --show-error -X POST \
+          curl --retry 5 --retry-all-errors --retry-delay 2 --max-time 45 --fail-with-body --silent --show-error -X POST \
             "https://gta6-shorts-engine.alperen-gkhn.workers.dev/api/render/callback" \
             -H "Content-Type: application/json" \
             -H "X-Render-Secret: $WEBHOOK_SECRET" \
