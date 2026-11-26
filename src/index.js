@@ -7,7 +7,7 @@ import {
   batchCompletionStatus
 } from "./render-batch-policy.mjs";
 
-const VERSION = "GTA6-FACTORY-6.1-REPLACEMENT-BATCH";
+const VERSION = "GTA6-FACTORY-6.2-RIGHTS-VISUAL-DEDUP";
 const MIN_AUTOMATIC_PUBLISHES_PER_CYCLE = MIN_BATCH_PUBLISHES;
 const MAX_AUTOMATIC_RENDERS_PER_CYCLE = MAX_BATCH_PUBLISHES;
 const MAX_AUTOMATIC_ATTEMPTS_PER_CYCLE = MAX_BATCH_ATTEMPTS;
@@ -327,8 +327,35 @@ const rules=[{keys:["crash","car accident","collision","wreck","drift"],angle:"v
 rules.unshift({keys:["strip club","stripper","nightclub","bikini","swimsuit","underwear","hot tub","pole dance","adult scene","spicy","suggestive","seductive"],angle:"mature",hook:"GTA 6 is not holding back on its mature side. 👀",narration:"This clip highlights GTA 6's adult nightlife or suggestive content. Focus on what is actually visible and keep the commentary factual. How far do you think Rockstar should take the game's mature world?",captions:["GTA 6 AFTER DARK 👀","ROCKSTAR'S MATURE SIDE","TOO MUCH OR JUST GTA?"],question:"Should GTA 6 keep its mature edge?"},{keys:["relationship","dating","girlfriend","boyfriend","romance","couple"],angle:"relationship",hook:"GTA 6 could take player relationships to a whole new level.",narration:"This clip raises questions about relationships and character interactions in GTA 6. What does this suggest about player choice, and would you want a system like this in the game?",captions:["GTA 6 RELATIONSHIPS?","ROCKSTAR COULD GO THIS FAR?","WOULD YOU WANT THIS?"],question:"Should GTA 6 include deeper relationship systems?"});for(const rule of rules){if(rule.keys.some(k=>t.includes(k))){angle=rule.angle;hook=rule.hook;narration=rule.narration;captions=rule.captions;question=rule.question;break;}}
 const englishTitles={mature:"GTA 6 AFTER DARK… ROCKSTAR WENT THERE?! 👀",relationship:"GTA 6 COULD CHANGE RELATIONSHIPS?! 😳",vehicle:"UNREAL GTA 6 DRIVING MOMENT! 🚗",police:"GTA 6 POLICE CHASE GETS WILD! 🚔",comedy:"THE FUNNIEST GTA 6 MOMENT! 😂",discovery:"HIDDEN GTA 6 DETAIL YOU MISSED! 👀",explosion:"INSANE GTA 6 ACTION! 💥",combat:"EPIC GTA 6 FIGHT! 👊",detail:"INCREDIBLE GTA 6 DETAIL! 👀",mission:"INTENSE GTA 6 MISSION MOMENT! 🎯",character:"GTA 6 CHARACTER MOMENT! 🔥",moment:"YOU HAVE TO SEE THIS GTA 6 MOMENT! 👀"};
 const titleLeads={mature:"GTA 6 After Dark",relationship:"GTA 6 Relationships",vehicle:"GTA 6 Driving",police:"GTA 6 Police Chase",comedy:"GTA 6 Funny Moment",discovery:"GTA 6 Hidden Detail",explosion:"GTA 6 Action",combat:"GTA 6 Combat",detail:"GTA 6 Gameplay Detail",mission:"GTA 6 Mission",character:"GTA 6 Character",moment:"GTA 6 Gameplay"};
-const topic=clean.replace(/\b(grand theft auto|gta)\s*(vi|6)?\b/gi," ").replace(/[|:!?]+/g," ").replace(/\s+/g," ").trim();
-const title=(topic?((titleLeads[angle]||"GTA 6 Gameplay")+": "+topic+" | GTA 6 #Shorts"):(englishTitles[angle]||englishTitles.moment)).slice(0,100),captionText=captions.join("\n"),script="SHORTS EDITORIAL PRODUCTION PACKAGE · 3.6\n\nSOURCE: "+(source.source_url||"")+"\nCREATOR: "+(source.creator_name||"Unknown")+"\nORIGINAL CLIP TITLE: "+originalTitle+"\nEDITORIAL ANGLE: "+angle+"\n\nPROPOSED TITLE:\n"+title+"\n\nHOOK / OPENING:\n"+hook+"\n\nVOICEOVER: DISABLED\nNo AI narration is generated. Preserve the original clip audio.\n\nCAPTIONS: DISABLED\nNo second subtitle layer is generated.\n\nENDING QUESTION:\n"+question+"\n\n9:16 EDITING PLAN:\n1. Create a vertical 1080x1920 sequence.\n2. Open with the generated four-second cover card, then start the original clip.\n3. Keep the main subject inside the central safe area.\n4. Do not invent narration or visual claims from the clip title.\n5. Preserve the original clip audio; do not add AI narration.\n6. Do not add a second generated subtitle layer.\n7. Remove dead time while preserving the context of the clip.\n8. Finish with the question above and a clean final frame.\n\nEDITORIAL NOTE:\nThis package is tailored to the source title and its detected topic. The actual clip has not been visually or audibly analyzed by this Worker. Verify every statement against the footage before editing.\n\nPRODUCTION STATUS:\nEditorial package ready. This draft can be sent to the cloud MP4 renderer from the dashboard.\nThe Worker has not visually or audibly analyzed the actual clip; verify all claims against the footage before publication.";return{title,script};}
+const topic=clean.replace(/\b(grand theft auto|gta)\s*(vi|6)?\b/gi," ").replace(/[|:!?]+/g," ").replace(/[^\x20-\x7E]/g," ").replace(/\s+/g," ").trim();
+const genericTopic=/^(gameplay|gta|gta vi|grand theft auto|highlight|clip|moment|gta gameplay|gta vi gameplay)$/i.test(topic);
+const creator=String(source.creator_name||"").replace(/[^a-zA-Z0-9 _-]/g," ").replace(/\s+/g," ").trim().slice(0,24);
+const variants={
+ police:["A GTA 6 Police Chase That Escalates Fast | Shorts","This GTA 6 Escape Takes an Unexpected Turn | Shorts","A Split-Second GTA 6 Police Chase | Shorts"],
+ vehicle:["A GTA 6 Driving Moment Gone Sideways | Shorts","This GTA 6 Road Moment Gets Intense | Shorts","One Wild Turn in This GTA 6 Drive | Shorts"],
+ comedy:["An Unexpected GTA 6 Moment Caught on Stream | Shorts","This GTA 6 Moment Has Perfect Timing | Shorts","A Strange Turn in This GTA 6 Stream | Shorts"],
+ discovery:["A GTA 6 Detail Worth a Closer Look | Shorts","Did You Notice This GTA 6 Detail? | Shorts","One More Detail to Check in GTA 6 | Shorts"],
+ explosion:["A Sudden GTA 6 Action Moment | Shorts","This GTA 6 Scene Changes in Seconds | Shorts","A Huge Turn in This GTA 6 Moment | Shorts"],
+ combat:["A GTA 6 Fight That Turns Quickly | Shorts","One Split-Second in This GTA 6 Fight | Shorts","A Tense GTA 6 Combat Moment | Shorts"],
+ mission:["A GTA 6 Mission Moment to Watch | Shorts","One Choice Changes This GTA 6 Mission | Shorts","A Turn You Might Miss in GTA 6 | Shorts"],
+ character:["A GTA 6 Character Moment to Notice | Shorts","A Closer Look at This GTA 6 Scene | Shorts","One Character Detail in GTA 6 | Shorts"],
+ mature:["A GTA 6 Nightlife Moment Explained | Shorts","A Closer Look at GTA 6 After Dark | Shorts","GTA 6 Nightlife: What Stands Out? | Shorts"],
+ relationship:["A GTA 6 Character Interaction to Notice | Shorts","A Closer Look at GTA 6 Relationships | Shorts","What This GTA 6 Interaction Shows | Shorts"],
+ detail:["A GTA 6 Gameplay Detail Worth Seeing | Shorts","A Closer Look at This GTA 6 Moment | Shorts","One Small GTA 6 Detail to Notice | Shorts"],
+ moment:["A GTA 6 Stream Moment Worth a Second Look | Shorts","An Unexpected Moment in This GTA 6 Clip | Shorts","A GTA 6 Moment That Changes Quickly | Shorts"]
+};
+const seedText=String(source.id||source.source_url||originalTitle),seed=Array.from(seedText).reduce((n,ch)=>(n*31+ch.charCodeAt(0))>>>0,7);
+let title;
+if(topic.length>=5&&!genericTopic){
+ const base=(titleLeads[angle]||"GTA 6 Gameplay")+": "+topic;
+ title=(base.length<39?base+" | GTA 6 Shorts":base).slice(0,60).replace(/[ ,:;|—-]+$/,"").trim();
+}else if(creator){
+ title=("A GTA 6 Moment from "+creator+"'s Stream | Shorts").slice(0,60);
+}else{
+ title=(variants[angle]||variants.moment)[seed%(variants[angle]||variants.moment).length];
+}
+if(title.length<40)title=(title+" | GTA 6 Shorts").slice(0,60);
+const captionText=captions.join("\n"),script="SHORTS EDITORIAL PRODUCTION PACKAGE · 3.7\n\nSOURCE: "+(source.source_url||"")+"\nCREATOR: "+(source.creator_name||"Unknown")+"\nORIGINAL CLIP TITLE: "+originalTitle+"\nEDITORIAL ANGLE: "+angle+"\n\nPROPOSED TITLE:\n"+title+"\n\nHOOK / OPENING:\n"+hook+"\n\nVOICEOVER: DISABLED\nNo generated narration is added; source audio is retained only when the recorded usage permission covers it.\n\nCAPTIONS: DISABLED\nNo second subtitle layer is generated.\n\nENDING QUESTION:\n"+question+"\n\n9:16 EDITING PLAN:\n1. Use a sharp early gameplay frame for a 0.30-second branded opening.\n2. Start the selected gameplay immediately after the short cover transition.\n3. Keep the main gameplay subject inside the central safe area.\n4. Do not make factual claims that are not supported by the clip itself.\n5. Use only creator-authorized footage and stay within the recorded source-use time limit.\n6. Remove dead time without changing the meaning of the clip.\n7. Keep the final frame clean and readable.\n\nEDITORIAL NOTE:\nThis draft uses source-title signals only. The rendered footage is separately checked for face-cam overlays, blur and duplicate visual content.\n\nPRODUCTION STATUS:\nThis package can enter rendering only after creator permission and game-footage rights are recorded.";return{title,script};}
 function extractNarration(script){const m=String(script||"").match(/ORIGINAL VOICEOVER DRAFT:\s*([\s\S]*?)\n\nCAPTION TEXT DRAFT:/);return m?m[1].trim():"";}
 function buildYouTubeTags(sourceTitle,creatorName,angle){
  const base=["GTA 6","GTA VI","Grand Theft Auto VI","GTA 6 gameplay","GTA 6 clips","GTA 6 moments","GTA 6 shorts","gaming shorts","Vice City","Leonida","Rockstar Games"];
@@ -379,15 +406,17 @@ async function dispatchRender(db,env,draftId,evidenceReference,authorizationConf
  const original=String(row.source_title||row.draft_title||"GTA 6 moment").replace(/\s+/g," ").trim().slice(0,180);
  const angleMatch=String(row.script||"").match(/EDITORIAL ANGLE:\s*([a-z_]+)/i);
  const angle=angleMatch?angleMatch[1].toLowerCase():"moment";
- const topic=original.replace(/\b(grand theft auto|gta)\s*(vi|6)?\b/gi," ").replace(/[|:]+/g," ").replace(/\s+/g," ").trim()||"GTA VI gameplay";
+ const topic=original.replace(/\b(grand theft auto|gta)\s*(vi|6)?\b/gi," ").replace(/[^\x20-\x7E]/g," ").replace(/[|:]+/g," ").replace(/\s+/g," ").trim();
+ const safeTopic=topic.length>=5?topic:"a GTA 6 gameplay moment";
  const angleHashtag=({police:"#GTA6Police",vehicle:"#GTA6Cars",comedy:"#GTA6Funny",discovery:"#GTA6Secrets",explosion:"#GTA6Action",combat:"#GTA6Combat",mission:"#GTA6Missions",character:"#GTA6Characters",detail:"#GTA6Graphics",mature:"#GTA6Nightlife",relationship:"#GTA6Story"})[angle]||"#GTA6Gameplay";
+ const creatorCredit=String(row.creator_name||"Twitch creator").replace(/[^a-zA-Z0-9 _-]/g," ").replace(/\s+/g," ").trim().slice(0,80)||"Twitch creator";
  const description=[
-  topic+" — a "+angle+" moment from Grand Theft Auto VI (GTA 6).",
-  "Watch the clip, then tell us what you noticed or what you would do next.",
-  "Like this Short, subscribe to VI RUSH, and turn on notifications for more GTA VI gameplay and moments.",
-  "Original clip creator: "+String(row.creator_name||"Unknown").slice(0,100)+".",
-  "Original Twitch source: "+String(row.source_url||""),
-  "#GTA6 #GTAVI #GTA6Gameplay "+angleHashtag+" #GamingShorts #Shorts"
+  safeTopic+" in Grand Theft Auto VI (GTA 6).",
+  "What stood out in this clip, and what would you do next?",
+  "Subscribe to VI RUSH for more GTA VI clips and gameplay moments.",
+  "Clip creator: "+creatorCredit+".",
+  "Source: "+String(row.source_url||""),
+  "#GTA6 #GTAVI "+angleHashtag+" #Shorts"
  ].join("\n\n").slice(0,5000);
  const tags=buildYouTubeTags(original,row.creator_name,angle);
  const claim=await db.prepare("UPDATE jobs SET status='processing',batch_id=?,render_attempts=COALESCE(render_attempts,0)+1,last_error=NULL,dispatch_started_at=CURRENT_TIMESTAMP,editorial_note='Authorized render dispatched to GitHub Actions.',updated_at=CURRENT_TIMESTAMP WHERE id=? AND status IN ('queued_review','failed')").bind(batchId,row.job_id).run();
