@@ -248,5 +248,79 @@ class RendererHelpersTest(unittest.TestCase):
                 vision_review(None, None, metrics=metrics, title="GTA 6 loading screen")
 
 
+    def test_shorts_thumbnail_upload_works_with_youtube_upload_scope_only(self):
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+        from renderer.youtube_upload import upload_custom_thumbnail
+        upload_scope = "https://www.googleapis.com/auth/youtube.upload"
+        with TemporaryDirectory() as directory:
+            cover = Path(directory) / "cover.jpg"
+            cover.write_bytes(b"jpeg-test")
+            with patch("renderer.youtube_upload.request", return_value=(200, {}, b"{}")) as api, \\
+                 patch("renderer.youtube_upload.time.sleep") as sleep:
+                result = upload_custom_thumbnail("video123", cover, "access-token", {upload_scope})
+        self.assertEqual(result, "uploaded")
+        sleep.assert_called_once_with(120)
+        self.assertEqual(api.call_count, 1)
+        self.assertIn("/thumbnails/set?videoId=video123", api.call_args.args[0])
+        self.assertEqual(api.call_args.args[1], b"jpeg-test")
+        self.assertEqual(api.call_args.args[3], "POST")
+
+    def test_shorts_thumbnail_waits_for_processing_when_read_scope_exists(self):
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+        from renderer.youtube_upload import upload_custom_thumbnail
+        read_scope = "https://www.googleapis.com/auth/youtube.readonly"
+        status = json.dumps({"items": [{
+            "status": {"uploadStatus": "processed"},
+            "processingDetails": {"processingStatus": "succeeded"},
+        }]}).encode()
+        with TemporaryDirectory() as directory:
+            cover = Path(directory) / "cover.jpg"
+            cover.write_bytes(b"jpeg-test")
+            with patch("renderer.youtube_upload.request", side_effect=[
+                (200, {}, status), (200, {}, b"{}")
+            ]) as api, patch("renderer.youtube_upload.time.sleep") as sleep:
+                result = upload_custom_thumbnail("video123", cover, "access-token", {read_scope})
+        self.assertEqual(result, "uploaded")
+        self.assertEqual(api.call_count, 2)
+        self.assertIn("/videos?part=processingDetails,status&id=video123", api.call_args_list[0].args[0])
+        self.assertIn("/thumbnails/set?videoId=video123", api.call_args_list[1].args[0])
+        sleep.assert_not_called()
+
+    def test_shorts_thumbnail_does_not_upload_before_processing_when_read_scope_times_out(self):
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+        from renderer.youtube_upload import upload_custom_thumbnail
+        read_scope = "https://www.googleapis.com/auth/youtube.readonly"
+        status = json.dumps({"items": [{
+            "status": {"uploadStatus": "uploaded"},
+            "processingDetails": {"processingStatus": "processing"},
+        }]}).encode()
+        with TemporaryDirectory() as directory:
+            cover = Path(directory) / "cover.jpg"
+            cover.write_bytes(b"jpeg-test")
+            with patch("renderer.youtube_upload.request", return_value=(200, {}, status)) as api, \\
+                 patch("renderer.youtube_upload.time.sleep") as sleep:
+                result = upload_custom_thumbnail("video123", cover, "access-token", {read_scope})
+        self.assertEqual(result, "processing_timeout")
+        self.assertEqual(api.call_count, 40)
+        self.assertEqual(sleep.call_count, 40)
+
+    def test_shorts_thumbnail_rejects_unrelated_oauth_scope(self):
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+        from renderer.youtube_upload import upload_custom_thumbnail
+        with TemporaryDirectory() as directory:
+            cover = Path(directory) / "cover.jpg"
+            cover.write_bytes(b"jpeg-test")
+            with patch("renderer.youtube_upload.request") as api, \\
+                 patch("renderer.youtube_upload.time.sleep") as sleep:
+                result = upload_custom_thumbnail("video123", cover, "access-token", {"openid"})
+        self.assertEqual(result, "missing_thumbnail_upload_scope")
+        api.assert_not_called()
+        sleep.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()
