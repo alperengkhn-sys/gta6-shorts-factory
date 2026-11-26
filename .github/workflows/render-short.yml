@@ -93,44 +93,12 @@ jobs:
           PERMISSION_SECRET: ${{ secrets.RENDER_WEBHOOK_SECRET }}
           SOURCE_URL: ${{ inputs.source_url || steps.task.outputs.source_url }}
           JOB_ID: ${{ inputs.job_id || steps.task.outputs.job_id }}
-          RENDER_ATTEMPT: ${{ inputs.render_attempt || steps.task.outputs.render_attempt }}
           BROADCASTER_ID: ${{ inputs.broadcaster_id || steps.task.outputs.broadcaster_id }}
+          RENDER_ATTEMPT: ${{ inputs.render_attempt || steps.task.outputs.render_attempt }}
           PERMISSION_EXPIRES_AT: ${{ inputs.permission_expires_at || steps.task.outputs.permission_expires_at }}
           MAX_SOURCE_SECONDS: ${{ inputs.max_source_seconds || steps.task.outputs.max_source_seconds }}
           PERMISSION_ATTESTATION: ${{ inputs.permission_attestation || steps.task.outputs.permission_attestation }}
-        run: |
-          python - <<'PY'
-          import base64, datetime, hashlib, hmac, os, sys
-          secret = os.environ.get("PERMISSION_SECRET", "")
-          fields = [
-              os.environ.get("JOB_ID", ""),
-              os.environ.get("SOURCE_URL", ""),
-              os.environ.get("BROADCASTER_ID", ""),
-              os.environ.get("MAX_SOURCE_SECONDS", ""),
-              os.environ.get("PERMISSION_EXPIRES_AT", ""),
-          ]
-          signature = os.environ.get("PERMISSION_ATTESTATION", "")
-          if not secret or not all(fields[:4]) or not signature:
-              raise SystemExit("Permission attestation is missing; publishing is blocked.")
-          try:
-              maximum = float(fields[3])
-          except ValueError:
-              raise SystemExit("Permission time limit is invalid.")
-          if not 45 <= maximum <= 175:
-              raise SystemExit("Permission time limit is outside the allowed 45–175 second range.")
-          if fields[4]:
-              expiry = datetime.datetime.fromisoformat(fields[4].replace("Z", "+00:00"))
-              if expiry.tzinfo is None:
-                  expiry = expiry.replace(tzinfo=datetime.timezone.utc)
-              if expiry <= datetime.datetime.now(datetime.timezone.utc):
-                  raise SystemExit("Creator permission has expired; publishing is blocked.")
-          message = "\n".join(fields).encode("utf-8")
-          digest = hmac.new(secret.encode("utf-8"), message, hashlib.sha256).digest()
-          expected = base64.urlsafe_b64encode(digest).decode("ascii").rstrip("=")
-          if not hmac.compare_digest(expected, signature):
-              raise SystemExit("Permission attestation is invalid; publishing is blocked.")
-          print("PASS: creator-use permission, platform and source-duration attestation verified.")
-          PY
+        run: python renderer/permission_attestation.py
       - name: Check whether this Twitch clip was already published
         id: dedupe
         if: steps.task.outputs.noop != 'true' && steps.task.outputs.test_quality_rejection != 'true'
