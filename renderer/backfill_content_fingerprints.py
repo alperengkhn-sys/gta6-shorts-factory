@@ -7,7 +7,10 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from renderer.visual_quality import compute_content_fingerprint, compare_content_fingerprints
+try:
+    from .visual_quality import compute_content_fingerprint, compare_content_fingerprints
+except ImportError:
+    from visual_quality import compute_content_fingerprint, compare_content_fingerprints
 
 ROOT = Path(".github/published-clips")
 
