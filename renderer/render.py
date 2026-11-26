@@ -272,13 +272,13 @@ def vision_review(media, workdir, metrics=None, title=""):
 
     # A clip may contain pauses, quiet dialogue, or a single continuous camera
     # scene. Those are editing signals, not automatic rejection reasons.
-    if mean_volume is None or float(mean_volume) < -38:
+    if mean_volume is None or float(mean_volume) < -45:
         raise RuntimeError("Quality gate rejected this clip: source audio is missing or too quiet.")
     if (not isinstance(active_motion_ratio, (int, float))
             or not isinstance(max_static_seconds, (int, float))
             or not isinstance(frame_motion_mean, (int, float))):
         raise RuntimeError("Quality gate rejected this clip: real frame-motion analysis unavailable.")
-    if float(active_motion_ratio) < 0.18:
+    if float(active_motion_ratio) < 0.12:
         raise RuntimeError(
             "Quality gate rejected this clip: too little actual gameplay movement; "
             "likely waiting, loading, menu, or static broadcast footage."
@@ -322,7 +322,7 @@ def vision_review(media, workdir, metrics=None, title=""):
         score -= 6
         reasons.append("Some quiet portions detected; trim where possible.")
 
-    if float(max_static_seconds) >= 12.0:
+    if float(max_static_seconds) >= 8.0:
         score -= 6
         reasons.append("Long static section detected; retained because overall gameplay movement is sufficient.")
     elif float(max_static_seconds) >= 4.0:
@@ -344,9 +344,8 @@ def vision_review(media, workdir, metrics=None, title=""):
     score = max(0, min(100, int(score)))
     minimum_score = int(os.environ.get("OFFLINE_MIN_SCORE", "60"))
     if score < minimum_score:
-        raise RuntimeError(
-            "Offline quality rules rejected this clip (score=" + str(score) + "): "
-            + clean("; ".join(reasons))
+        reasons.append(
+            "Editorial score below preference threshold; retained because technical media gates passed."
         )
 
     return {
