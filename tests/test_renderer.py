@@ -14,6 +14,7 @@ from renderer.render import (
     video_filter,
     vision_review,
 )
+from renderer.visual_quality import compare_content_fingerprints, is_blurry, has_persistent_facecam
 
 
 class RendererHelpersTest(unittest.TestCase):
@@ -143,6 +144,37 @@ class RendererHelpersTest(unittest.TestCase):
         ):
             with self.subTest(url=url):
                 self.assertFalse(validate_source_url(url))
+
+    def test_content_fingerprint_detects_same_gameplay_across_different_sources(self):
+        import random
+        rng = random.Random(831)
+        shared = [f"{rng.getrandbits(64):016x}" for _ in range(30)]
+        first = {"frame_hashes": shared + [f"{rng.getrandbits(64):016x}" for _ in range(10)]}
+        second = {"frame_hashes": shared[5:] + [f"{rng.getrandbits(64):016x}" for _ in range(5)]}
+        result = compare_content_fingerprints(first, second)
+        self.assertTrue(result["duplicate"])
+        self.assertGreaterEqual(result["coverage"], 0.65)
+
+    def test_content_fingerprint_does_not_flag_unrelated_videos(self):
+        import random
+        rng_a, rng_b = random.Random(1), random.Random(2)
+        first = {"frame_hashes": [f"{rng_a.getrandbits(64):016x}" for _ in range(40)]}
+        second = {"frame_hashes": [f"{rng_b.getrandbits(64):016x}" for _ in range(40)]}
+        self.assertFalse(compare_content_fingerprints(first, second)["duplicate"])
+
+    def test_blur_gate_rejects_only_heavily_blurred_content(self):
+        self.assertTrue(is_blurry([2, 3, 5, 4, 6, 3]))
+        self.assertFalse(is_blurry([120, 100, 90, 130, 80, 110]))
+
+    def test_facecam_gate_requires_persistent_face_in_same_region(self):
+        detected, corner, hits, required = has_persistent_facecam(
+            {"top_right": 5, "bottom_left": 1}, 10
+        )
+        self.assertTrue(detected)
+        self.assertEqual(corner, "top_right")
+        self.assertEqual(hits, 5)
+        self.assertEqual(required, 4)
+        self.assertFalse(has_persistent_facecam({"top_right": 2}, 10)[0])
 
     def test_offline_review_scores_using_local_media_metadata(self):
         metrics = {
