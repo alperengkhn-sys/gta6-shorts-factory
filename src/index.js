@@ -108,6 +108,22 @@ async function ensureSchema(db){
  await ensureColumn(db,"jobs","last_error","TEXT");
  await ensureColumn(db,"jobs","dispatch_started_at","TEXT");
  await ensureColumn(db,"jobs","package_url","TEXT");
+ await db.prepare(`CREATE TABLE IF NOT EXISTS creator_usage_permissions (
+  broadcaster_id TEXT PRIMARY KEY,
+  broadcaster_name TEXT NOT NULL,
+  permission_status TEXT NOT NULL DEFAULT 'pending',
+  creator_permission_evidence TEXT NOT NULL,
+  max_source_seconds REAL NOT NULL,
+  permission_expires_at TEXT,
+  game_rights_basis TEXT NOT NULL,
+  game_rights_evidence_reference TEXT,
+  noncommercial_use INTEGER NOT NULL DEFAULT 0,
+  youtube_allowed INTEGER NOT NULL DEFAULT 1,
+  notes TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+ )`).run();
+ await ensureColumn(db,"sources","twitch_broadcaster_id","TEXT");
 
 }
 function cookieValue(request){const list=(request.headers.get("Cookie")||"").split(";"),found=list.find(x=>x.trim().startsWith("gta6_session="));return found?found.trim().slice(13):"";}
