@@ -34,7 +34,9 @@ const HTML = String.raw`<!doctype html>
 <div class="detail-box">
 <label for="permissionBroadcasterId">Twitch yayıncı ID</label><input id="permissionBroadcasterId" placeholder="Kaynak tablosundaki broadcaster ID">
 <label for="permissionBroadcasterName">Yayıncı adı</label><input id="permissionBroadcasterName" placeholder="Twitch kullanıcı adı">
-<label for="permissionCreatorEvidence">Yayıncının YouTube yeniden kullanım izni kanıtı (DM/izin belgesi bağlantısı veya kayıt referansı)</label><input id="permissionCreatorEvidence" placeholder="https://... veya izin kayıt referansı">
+<label for="permissionCreatorEvidence">Yayıncının video/YouTube yeniden kullanım izni kanıtı</label><input id="permissionCreatorEvidence" placeholder="Yazılı izin bağlantısı veya kayıt referansı">
+<label for="permissionAudioEvidence">Yayıncı sesi ve videodaki müzik/diğer seslerin YouTube kullanım hakkı kanıtı</label><input id="permissionAudioEvidence" placeholder="Müzik lisansı, ses izni veya sessiz/müziksiz kullanım teyidi referansı">
+<label style="display:flex;gap:8px;align-items:flex-start;margin:10px 0"><input id="permissionAudioConfirm" type="checkbox" style="width:auto;margin:2px 0"> Bu klibin yayıncı sesi ve tüm arka plan müzikleri YouTube'da yeniden kullanım için lisanslı/izinli; aksi durumda kaynak reddedilecek.</label>
 <label for="permissionMaxSeconds">İzin verilen en uzun kaynak kullanım süresi (saniye)</label><input id="permissionMaxSeconds" type="number" min="45" max="175" value="60">
 <label for="permissionExpiry">İzin bitiş tarihi (isteğe bağlı)</label><input id="permissionExpiry" type="datetime-local">
 <label for="permissionGameBasis">GTA VI oyun görüntüsü için hak dayanağı</label>
@@ -49,7 +51,7 @@ const HTML = String.raw`<!doctype html>
 <button type="button" id="saveCreatorPermission">İZİN KAYDINI ONAYLA</button>
 <div id="permissionMessage" class="notice hidden"></div>
 </div>
-<div class="wrap"><table><thead><tr><th>Yayıncı</th><th>Durum</th><th>İzin kapsamı</th><th>Hak dayanağı</th><th>İşlem</th></tr></thead><tbody id="permissionRows"></tbody></table></div>
+<div class="wrap"><table><thead><tr><th>Yayıncı</th><th>Durum</th><th>Görüntü/ses izni</th><th>Hak dayanağı</th><th>İşlem</th></tr></thead><tbody id="permissionRows"></tbody></table></div>
 </section>
 <section class="panel"><h2>Shorts üretim paketleri</h2><p class="muted">GTA VI olduğu doğrulanan kaynaklardan paketler otomatik hazırlanır. Kaynakları seçip topluca MP4 üretebilir, hazır olanları indirebilirsin.</p><div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0"><button type="button" id="selectAllDrafts" class="secondary">Tümünü seç</button><button type="button" id="clearDraftSelection" class="secondary">Seçimi temizle</button><button type="button" id="renderSelectedDrafts">SEÇİLENLERİ MP4 ÜRET</button></div><div id="bulkRenderStatus" class="notice hidden"></div><div class="wrap"><table><thead><tr><th>Seç</th><th>Kaynak</th><th>Başlık</th><th>Durum</th><th>İşlem</th></tr></thead><tbody id="draftRows"></tbody></table></div></section>
 <section class="panel" id="youtubeKit" style="border:1px solid #394150">
@@ -119,6 +121,8 @@ $("saveCreatorPermission").onclick=async()=>{
   broadcaster_id:$("permissionBroadcasterId").value.trim(),
   broadcaster_name:$("permissionBroadcasterName").value.trim(),
   creator_permission_evidence:$("permissionCreatorEvidence").value.trim(),
+  audio_rights_evidence:$("permissionAudioEvidence").value.trim(),
+  confirm_audio_rights:$("permissionAudioConfirm").checked,
   max_source_seconds:Number($("permissionMaxSeconds").value),
   permission_expires_at:$("permissionExpiry").value?new Date($("permissionExpiry").value).toISOString():"",
   game_rights_basis:$("permissionGameBasis").value,
@@ -179,12 +183,16 @@ async function ensureSchema(db){
   permission_expires_at TEXT,
   game_rights_basis TEXT NOT NULL,
   game_rights_evidence_reference TEXT,
+  audio_rights_evidence TEXT,
+  audio_rights_confirmed INTEGER NOT NULL DEFAULT 0,
   noncommercial_use INTEGER NOT NULL DEFAULT 0,
   youtube_allowed INTEGER NOT NULL DEFAULT 1,
   notes TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
  )`).run();
+ await ensureColumn(db,"creator_usage_permissions","audio_rights_evidence","TEXT");
+ await ensureColumn(db,"creator_usage_permissions","audio_rights_confirmed","INTEGER NOT NULL DEFAULT 0");
  await ensureColumn(db,"sources","twitch_broadcaster_id","TEXT");
 
 }
@@ -392,7 +400,7 @@ function buildYouTubeTags(sourceTitle,creatorName,angle){
 async function dispatchRender(db,env,draftId,evidenceReference,authorizationConfirmation,batchId=null){
  if(!env.GITHUB_TOKEN)return {error:"Cloudflare Worker'da GITHUB_TOKEN secret eksik. GitHub Actions workflow_dispatch yetkili token eklenmeli."};
  if(!env.RENDER_WEBHOOK_SECRET)return {error:"Render izin imzası için RENDER_WEBHOOK_SECRET eksik; güvenli render durduruldu."};
- const row=await db.prepare(`SELECT d.id AS draft_id,d.source_id,d.title AS draft_title,d.script,d.status AS draft_status,s.source_url,s.title AS source_title,s.creator_name,s.rights_status,s.relevance_status,s.twitch_game_id,s.twitch_broadcaster_id,s.twitch_clip_duration,p.broadcaster_id AS permission_broadcaster_id,p.max_source_seconds,p.permission_expires_at,p.game_rights_basis,p.noncommercial_use,j.id AS job_id,j.status AS job_status,j.output_key,j.last_error,j.render_attempts FROM shorts_drafts d JOIN sources s ON s.id=d.source_id LEFT JOIN creator_usage_permissions p ON p.broadcaster_id=s.twitch_broadcaster_id AND p.permission_status='approved' AND p.youtube_allowed=1 AND trim(coalesce(p.creator_permission_evidence,''))<>'' AND p.max_source_seconds>=45 AND ((p.game_rights_basis='publisher_written_permission' AND trim(coalesce(p.game_rights_evidence_reference,''))<>'') OR (p.game_rights_basis='rockstar_noncommercial_guidelines' AND p.noncommercial_use=1)) AND (p.permission_expires_at IS NULL OR datetime(p.permission_expires_at)>datetime('now')) LEFT JOIN jobs j ON j.source_id=s.id WHERE d.id=? ORDER BY j.created_at DESC LIMIT 1`).bind(draftId).first();
+ const row=await db.prepare(`SELECT d.id AS draft_id,d.source_id,d.title AS draft_title,d.script,d.status AS draft_status,s.source_url,s.title AS source_title,s.creator_name,s.rights_status,s.relevance_status,s.twitch_game_id,s.twitch_broadcaster_id,s.twitch_clip_duration,p.broadcaster_id AS permission_broadcaster_id,p.max_source_seconds,p.permission_expires_at,p.game_rights_basis,p.noncommercial_use,j.id AS job_id,j.status AS job_status,j.output_key,j.last_error,j.render_attempts FROM shorts_drafts d JOIN sources s ON s.id=d.source_id LEFT JOIN creator_usage_permissions p ON p.broadcaster_id=s.twitch_broadcaster_id AND p.permission_status='approved' AND p.youtube_allowed=1 AND p.audio_rights_confirmed=1 AND trim(coalesce(p.audio_rights_evidence,''))<>'' AND trim(coalesce(p.creator_permission_evidence,''))<>'' AND p.max_source_seconds>=45 AND ((p.game_rights_basis='publisher_written_permission' AND trim(coalesce(p.game_rights_evidence_reference,''))<>'') OR (p.game_rights_basis='rockstar_noncommercial_guidelines' AND p.noncommercial_use=1)) AND (p.permission_expires_at IS NULL OR datetime(p.permission_expires_at)>datetime('now')) LEFT JOIN jobs j ON j.source_id=s.id WHERE d.id=? ORDER BY j.created_at DESC LIMIT 1`).bind(draftId).first();
  if(!row)return {error:"Üretim paketi bulunamadı."};
  if(row.relevance_status!=="relevant"||!row.twitch_game_id)return {error:"Bu kaynak Twitch üzerinde GTA VI kategorisinde doğrulanmadı. Yalnızca GTA VI klipleri üretilebilir."};
  if(!row.permission_broadcaster_id)return {error:"Bu yayıncı için geçerli YouTube kullanım izni ve GTA VI görüntüsü hak dayanağı kaydı yok; yayın engellendi."};
@@ -484,7 +492,7 @@ async function renderCallback(request,env,db){
  }
  return json({ok:true,status,media_analysis_saved:mediaSaved,batch:batch||null});
 }
-async function prepareAll(db){const result=await db.prepare(`SELECT s.id,s.title,s.creator_name,s.source_url,s.rights_status,s.relevance_status,s.twitch_game_id,s.twitch_broadcaster_id,s.twitch_clip_duration,p.broadcaster_id AS permission_broadcaster_id,a.score FROM sources s LEFT JOIN clip_analysis a ON a.source_id=s.id LEFT JOIN creator_usage_permissions p ON p.broadcaster_id=s.twitch_broadcaster_id AND p.permission_status='approved' AND p.youtube_allowed=1 AND p.max_source_seconds>=45 AND trim(coalesce(p.creator_permission_evidence,''))<>'' AND ((p.game_rights_basis='publisher_written_permission' AND trim(coalesce(p.game_rights_evidence_reference,''))<>'') OR (p.game_rights_basis='rockstar_noncommercial_guidelines' AND p.noncommercial_use=1)) AND (p.permission_expires_at IS NULL OR datetime(p.permission_expires_at)>datetime('now')) ORDER BY s.created_at ASC`).all(),rows=result.results||[];let created=0,updated=0,existing=0,skippedIrrelevant=0,skippedPermission=0;const statements=[];
+async function prepareAll(db){const result=await db.prepare(`SELECT s.id,s.title,s.creator_name,s.source_url,s.rights_status,s.relevance_status,s.twitch_game_id,s.twitch_broadcaster_id,s.twitch_clip_duration,p.broadcaster_id AS permission_broadcaster_id,a.score FROM sources s LEFT JOIN clip_analysis a ON a.source_id=s.id LEFT JOIN creator_usage_permissions p ON p.broadcaster_id=s.twitch_broadcaster_id AND p.permission_status='approved' AND p.youtube_allowed=1 AND p.audio_rights_confirmed=1 AND trim(coalesce(p.audio_rights_evidence,''))<>'' AND p.max_source_seconds>=45 AND trim(coalesce(p.creator_permission_evidence,''))<>'' AND ((p.game_rights_basis='publisher_written_permission' AND trim(coalesce(p.game_rights_evidence_reference,''))<>'') OR (p.game_rights_basis='rockstar_noncommercial_guidelines' AND p.noncommercial_use=1)) AND (p.permission_expires_at IS NULL OR datetime(p.permission_expires_at)>datetime('now')) ORDER BY s.created_at ASC`).all(),rows=result.results||[];let created=0,updated=0,existing=0,skippedIrrelevant=0,skippedPermission=0;const statements=[];
 for(const source of rows){if(source.relevance_status==="irrelevant"){skippedIrrelevant++;continue;}const categoryConfirmed=!!source.twitch_game_id&&source.relevance_status==="relevant";if(!categoryConfirmed){skippedIrrelevant++;continue;}if(!source.permission_broadcaster_id){skippedPermission++;continue;}const pack=makeEditorialPackage(source),found=await db.prepare("SELECT id,status FROM shorts_drafts WHERE source_id=? LIMIT 1").bind(source.id).first();if(found){existing++;await db.prepare("UPDATE shorts_drafts SET title=?,script=?,source_url=?,creator_name=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(pack.title,pack.script,source.source_url,source.creator_name||"Unknown",found.id).run();const existingJob=await db.prepare("SELECT id FROM jobs WHERE source_id=? LIMIT 1").bind(source.id).first();if(!existingJob)await db.prepare("INSERT INTO jobs(id,source_id,status,target_format,editorial_note,output_key) VALUES(?,?,'queued_review','shorts_9_16','Legacy draft migrated to cloud render queue.',NULL)").bind(uid(),source.id).run();updated++;continue;}const draftId=uid();statements.push(db.prepare(`INSERT INTO shorts_drafts(id,source_id,status,title,script,created_at,updated_at,source_url,creator_name) VALUES (?,?,'queued_review',?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,?,?)`).bind(draftId,source.id,pack.title,pack.script,source.source_url,source.creator_name||"Unknown"));statements.push(db.prepare(`INSERT INTO jobs(id,source_id,status,target_format,editorial_note,output_key) VALUES (?,?,'queued_review','shorts_9_16',?,NULL)`).bind(uid(),source.id,"Editorial package prepared. Automatic rendering accepts verified GTA VI Twitch clips of at least 45 seconds; exports are capped at 180 seconds including the intro."));created++;}
 for(let i=0;i<statements.length;i+=40)await db.batch(statements.slice(i,i+40));const total=await db.prepare("SELECT COUNT(*) AS n FROM shorts_drafts WHERE status='queued_review'").first();return{checked:rows.length,created,updated,existing,skipped_irrelevant:skippedIrrelevant,skipped_permission:skippedPermission,total:Number(total?.n||0)};}
 async function fillRenderBatch(db,env,batchId){
@@ -643,7 +651,7 @@ if(path==="/api/twitch/downloads/status"&&method==="GET")return json(await getDo
 if(path==="/api/system/status"&&method==="GET")return json({version:VERSION,database:!!env.DB,appPassword:!!env.APP_PASSWORD,twitchClient:!!(env.TWITCH_CLIENT_ID&&env.TWITCH_CLIENT_SECRET),githubToken:!!env.GITHUB_TOKEN,renderWebhookSecret:!!env.RENDER_WEBHOOK_SECRET});
 if(path==="/api/data"&&method==="GET")return json(await getData(env.DB));
 if(path==="/api/permissions"&&method==="GET"){
- const rows=await env.DB.prepare("SELECT broadcaster_id,broadcaster_name,permission_status,creator_permission_evidence,max_source_seconds,permission_expires_at,game_rights_basis,game_rights_evidence_reference,noncommercial_use,notes,updated_at FROM creator_usage_permissions ORDER BY broadcaster_name COLLATE NOCASE").all();
+ const rows=await env.DB.prepare("SELECT broadcaster_id,broadcaster_name,permission_status,creator_permission_evidence,audio_rights_evidence,audio_rights_confirmed,max_source_seconds,permission_expires_at,game_rights_basis,game_rights_evidence_reference,noncommercial_use,notes,updated_at FROM creator_usage_permissions ORDER BY broadcaster_name COLLATE NOCASE").all();
  return json({permissions:rows.results||[]});
 }
 if(path==="/api/permissions/grant"&&method==="POST"){
@@ -651,14 +659,15 @@ if(path==="/api/permissions/grant"&&method==="POST"){
  const broadcasterId=String(data.broadcaster_id||"").trim();
  const broadcasterName=String(data.broadcaster_name||"").trim().slice(0,160);
  const creatorEvidence=String(data.creator_permission_evidence||"").trim().slice(0,2000);
+ const audioEvidence=String(data.audio_rights_evidence||"").trim().slice(0,2000);
  const gameBasis=String(data.game_rights_basis||"").trim();
  const gameEvidence=String(data.game_rights_evidence_reference||"").trim().slice(0,2000);
  const maxSeconds=Number(data.max_source_seconds);
  const expiry=String(data.permission_expires_at||"").trim();
  const noncommercial=data.noncommercial_use===true;
  if(data.confirm_authorization!==true)return json({error:"İzin kaydını onaylamak için açık teyit gerekiyor."},400);
- if(!broadcasterId||!broadcasterName||!creatorEvidence||!Number.isFinite(maxSeconds)||maxSeconds<45||maxSeconds>175)
-  return json({error:"Yayıncı ID/adı, yayıncı izin kanıtı ve 45–175 saniye arası azami kullanım süresi zorunludur."},400);
+ if(!broadcasterId||!broadcasterName||!creatorEvidence||!audioEvidence||data.confirm_audio_rights!==true||!Number.isFinite(maxSeconds)||maxSeconds<45||maxSeconds>175)
+  return json({error:"Yayıncı ID/adı, görüntü ve ses/müzik kullanım kanıtları, ses hakkı teyidi ve 45–175 saniye arası azami kullanım süresi zorunludur."},400);
  if(expiry&&(!Number.isFinite(Date.parse(expiry))||Date.parse(expiry)<=Date.now()))
   return json({error:"İzin bitiş tarihi geçerli ve gelecekte olmalı."},400);
  if(!["rockstar_noncommercial_guidelines","publisher_written_permission"].includes(gameBasis))
@@ -669,16 +678,17 @@ if(path==="/api/permissions/grant"&&method==="POST"){
   return json({error:"Yayıncıdan alınmış yazılı oyun görüntüsü izninin kanıtı zorunludur."},400);
  await env.DB.prepare(`INSERT INTO creator_usage_permissions(
   broadcaster_id,broadcaster_name,permission_status,creator_permission_evidence,max_source_seconds,
-  permission_expires_at,game_rights_basis,game_rights_evidence_reference,noncommercial_use,youtube_allowed,notes,updated_at
- ) VALUES(?,?,'approved',?,?,?,?,?,?,1,?,CURRENT_TIMESTAMP)
+  permission_expires_at,game_rights_basis,game_rights_evidence_reference,audio_rights_evidence,audio_rights_confirmed,noncommercial_use,youtube_allowed,notes,updated_at
+ ) VALUES(?,?,'approved',?,?,?,?,?,?,?,1,?,1,?,CURRENT_TIMESTAMP)
  ON CONFLICT(broadcaster_id) DO UPDATE SET
   broadcaster_name=excluded.broadcaster_name,permission_status='approved',
   creator_permission_evidence=excluded.creator_permission_evidence,
   max_source_seconds=excluded.max_source_seconds,permission_expires_at=excluded.permission_expires_at,
   game_rights_basis=excluded.game_rights_basis,
   game_rights_evidence_reference=excluded.game_rights_evidence_reference,
+  audio_rights_evidence=excluded.audio_rights_evidence,audio_rights_confirmed=1,
   noncommercial_use=excluded.noncommercial_use,youtube_allowed=1,notes=excluded.notes,updated_at=CURRENT_TIMESTAMP
- `).bind(broadcasterId,broadcasterName,creatorEvidence,maxSeconds,expiry||null,gameBasis,gameEvidence||null,noncommercial?1:0,String(data.notes||"").slice(0,1000)).run();
+ `).bind(broadcasterId,broadcasterName,creatorEvidence,maxSeconds,expiry||null,gameBasis,gameEvidence||null,audioEvidence,noncommercial?1:0,String(data.notes||"").slice(0,1000)).run();
  return json({ok:true,broadcaster_id:broadcasterId,permission_status:"approved"});
 }
 if(path==="/api/permissions/revoke"&&method==="POST"){
