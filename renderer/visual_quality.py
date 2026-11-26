@@ -173,36 +173,34 @@ def compare_content_fingerprints(first: dict[str,Any], second: dict[str,Any],
         aa,bb=[int(x,16) for x in a],[int(x,16) for x in b]
     except ValueError:
         return {"duplicate":False,"matched_frames":0,"coverage":0.0}
-    pairs=[]
+    distances=[[64]*len(b) for _ in range(len(a))]
     for i,left in enumerate(aa):
         for j,right in enumerate(bb):
-            distance=(left^right).bit_count()
-            if distance<=max_hamming:
-                pairs.append((distance,i,j))
-    pairs.sort()
-    used_a,used_b=set(),set()
-    selected=[]
-    for distance,i,j in pairs:
-        if i in used_a or j in used_b:
-            continue
-        used_a.add(i);used_b.add(j);selected.append((i,j,distance))
-    selected.sort()
-    # Require matching frames to appear in the same temporal order. This
-    # reduces false positives from common HUD pixels or repeated static scenes.
-    chains=[]
-    for index,(i,j,distance) in enumerate(selected):
-        best_length,best_distance=1,distance
-        for previous in range(index):
-            pi,pj,pdist=selected[previous]
-            if pi<i and pj<j and chains[previous][0]+1>best_length:
-                best_length=chains[previous][0]+1
-                best_distance=chains[previous][1]+distance
-        chains.append((best_length,best_distance))
-    if chains:
-        best_index=max(range(len(chains)),key=lambda k:chains[k][0])
-        matched,total_distance=chains[best_index]
-    else:
-        matched,total_distance=0,0
+            distances[i][j]=(left^right).bit_count()
+
+    # Longest common subsequence over near-identical frame hashes. This
+    # requires chronological agreement while remaining O(n*m) for <=100 frames.
+    counts=[[0]*(len(b)+1) for _ in range(len(a)+1)]
+    sums=[[0]*(len(b)+1) for _ in range(len(a)+1)]
+    for i in range(1,len(a)+1):
+        for j in range(1,len(b)+1):
+            best_count,best_sum=counts[i-1][j],sums[i-1][j]
+            if counts[i][j-1]>best_count or (
+                counts[i][j-1]==best_count and sums[i][j-1]<best_sum
+            ):
+                best_count,best_sum=counts[i][j-1],sums[i][j-1]
+            distance=distances[i-1][j-1]
+            diagonal_count=counts[i-1][j-1]+1
+            diagonal_sum=sums[i-1][j-1]+distance
+            if distance<=max_hamming and (
+                diagonal_count>best_count or
+                (diagonal_count==best_count and diagonal_sum<best_sum)
+            ):
+                best_count,best_sum=diagonal_count,diagonal_sum
+            counts[i][j],sums[i][j]=best_count,best_sum
+
+    matched=counts[len(a)][len(b)]
+    total_distance=sums[len(a)][len(b)]
     shorter=min(len(a),len(b))
     coverage=matched/shorter if shorter else 0.0
     required=max(12,int(math.ceil(shorter*min_coverage)))
