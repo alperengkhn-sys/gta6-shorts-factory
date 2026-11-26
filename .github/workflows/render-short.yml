@@ -134,7 +134,7 @@ jobs:
             ERROR_LINE="Quality gate rejected: synthetic test fixture"
             {
               echo "error<<GTA6_RENDER_ERROR"
-              printf '%s\\n' "$ERROR_LINE"
+              printf '%s\n' "$ERROR_LINE"
               echo "GTA6_RENDER_ERROR"
             } >> "$GITHUB_OUTPUT"
             echo "rejected=true" >> "$GITHUB_OUTPUT"
