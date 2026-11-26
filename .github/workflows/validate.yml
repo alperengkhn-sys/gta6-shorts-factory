@@ -1,5 +1,17 @@
 name: Validate GTA6 Shorts Factory
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'renderer/render.py'
+      - 'renderer/visual_quality.py'
+      - 'renderer/youtube_upload.py'
+      - 'tests/test_renderer.py'
+      - 'src/index.js'
+      - 'src/render-batch-policy.mjs'
+      - 'tests/test_render_batch_policy.mjs'
+      - '.github/workflows/render-short.yml'
+      - '.github/workflows/validate.yml'
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -42,14 +54,14 @@ jobs:
           NODE
           node --check /tmp/dashboard.js
       - name: Compile renderer scripts
-        run: python -m py_compile renderer/render.py renderer/youtube_upload.py renderer/prepare_branding.py tests/test_renderer.py
+        run: python -m py_compile renderer/render.py renderer/visual_quality.py renderer/youtube_upload.py renderer/prepare_branding.py tests/test_renderer.py
       - name: Run renderer unit tests
         run: python -m unittest discover -s tests -v
       - name: Install media tools for integration render
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends ffmpeg fonts-dejavu-core
-          python -m pip install pillow
+          python -m pip install pillow opencv-python-headless numpy
       - name: Render synthetic clip end-to-end
         timeout-minutes: 6
         env:
