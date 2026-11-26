@@ -34,9 +34,16 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          set -euo pipefail
+          mkdir -p /tmp/gta6-published-fingerprints
+          cp -a .github/published-clips/. /tmp/gta6-published-fingerprints/
           for attempt in 1 2 3 4 5; do
             git fetch origin main
-            git reset --soft origin/main
+            # Reset to the latest branch first, then restore only the marker files
+            # produced by this audit. This cannot stage/delete concurrent source or
+            # workflow files from the older checkout and needs only contents:write.
+            git reset --hard origin/main
+            cp -a /tmp/gta6-published-fingerprints/. .github/published-clips/
             git add .github/published-clips
             if git diff --cached --quiet; then
               echo "No historical markers needed updates."
