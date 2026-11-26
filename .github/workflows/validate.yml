@@ -5,8 +5,12 @@ on:
     paths:
       - 'renderer/render.py'
       - 'renderer/visual_quality.py'
+      - 'renderer/permission_attestation.py'
+      - 'renderer/backfill_content_fingerprints.py'
       - 'renderer/youtube_upload.py'
       - 'tests/test_renderer.py'
+      - 'tests/test_permission_attestation.py'
+      - '.github/workflows/backfill-published-fingerprints.yml'
       - 'src/index.js'
       - 'src/render-batch-policy.mjs'
       - 'tests/test_render_batch_policy.mjs'
