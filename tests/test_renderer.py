@@ -256,7 +256,7 @@ class RendererHelpersTest(unittest.TestCase):
         with TemporaryDirectory() as directory:
             cover = Path(directory) / "cover.jpg"
             cover.write_bytes(b"jpeg-test")
-            with patch("renderer.youtube_upload.request", return_value=(200, {}, b"{}")) as api, \\
+            with patch("renderer.youtube_upload.request", return_value=(200, {}, b"{}")) as api, \
                  patch("renderer.youtube_upload.time.sleep") as sleep:
                 result = upload_custom_thumbnail("video123", cover, "access-token", {upload_scope})
         self.assertEqual(result, "uploaded")
@@ -300,7 +300,7 @@ class RendererHelpersTest(unittest.TestCase):
         with TemporaryDirectory() as directory:
             cover = Path(directory) / "cover.jpg"
             cover.write_bytes(b"jpeg-test")
-            with patch("renderer.youtube_upload.request", return_value=(200, {}, status)) as api, \\
+            with patch("renderer.youtube_upload.request", return_value=(200, {}, status)) as api, \
                  patch("renderer.youtube_upload.time.sleep") as sleep:
                 result = upload_custom_thumbnail("video123", cover, "access-token", {read_scope})
         self.assertEqual(result, "processing_timeout")
@@ -314,7 +314,7 @@ class RendererHelpersTest(unittest.TestCase):
         with TemporaryDirectory() as directory:
             cover = Path(directory) / "cover.jpg"
             cover.write_bytes(b"jpeg-test")
-            with patch("renderer.youtube_upload.request") as api, \\
+            with patch("renderer.youtube_upload.request") as api, \
                  patch("renderer.youtube_upload.time.sleep") as sleep:
                 result = upload_custom_thumbnail("video123", cover, "access-token", {"openid"})
         self.assertEqual(result, "missing_thumbnail_upload_scope")
