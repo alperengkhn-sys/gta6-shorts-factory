@@ -272,12 +272,13 @@ def vision_review(media, workdir, metrics=None, title=""):
     active_motion_ratio = metrics.get("active_motion_ratio")
     max_static_seconds = metrics.get("max_static_seconds")
     frame_motion_mean = metrics.get("frame_motion_mean")
-    score = 50
+    score = 58
     reasons = ["Offline media-activity screening; no paid AI service was called."]
     if not isinstance(scene_count, (int, float)):
         raise RuntimeError("Quality gate rejected this clip: scene-change analysis unavailable.")
-    if scene_count < 4:
-        raise RuntimeError("Quality gate rejected this clip: too little visual scene activity.")
+    # Twitch gameplay often stays in one continuous camera scene. Scene cuts are
+    # a weak signal for Shorts quality, so do not reject continuous gameplay here;
+    # actual motion and long-static-section checks below remain mandatory.
     if silence_ratio > 0.50:
         raise RuntimeError("Quality gate rejected this clip: more than half the source is silent.")
     if mean_volume is None or float(mean_volume) < -38:
@@ -296,11 +297,10 @@ def vision_review(media, workdir, metrics=None, title=""):
             score += 12
             reasons.append("Good scene-change activity.")
         elif scene_count >= 3:
-            score += 6
+            score += 4
             reasons.append("Some scene changes detected.")
         else:
-            score -= 8
-            reasons.append("Low scene-change activity.")
+            reasons.append("Continuous gameplay scene; evaluated using actual frame motion instead of cut count.")
     if silence_ratio <= 0.08:
         score += 10
         reasons.append("Low dead-air ratio.")
