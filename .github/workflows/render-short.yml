@@ -124,7 +124,7 @@ jobs:
                   expiry = expiry.replace(tzinfo=datetime.timezone.utc)
               if expiry <= datetime.datetime.now(datetime.timezone.utc):
                   raise SystemExit("Creator permission has expired; publishing is blocked.")
-          message = "\\n".join(fields).encode("utf-8")
+          message = "\n".join(fields).encode("utf-8")
           digest = hmac.new(secret.encode("utf-8"), message, hashlib.sha256).digest()
           expected = base64.urlsafe_b64encode(digest).decode("ascii").rstrip("=")
           if not hmac.compare_digest(expected, signature):
