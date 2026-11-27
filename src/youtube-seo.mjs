@@ -79,9 +79,10 @@ export function buildYouTubeMetadata({
   const topic = getTopic(original);
   const usefulTopic = topic.length >= 3 && !GENERIC_TOPICS.has(topic.toLowerCase());
   const titleSuffix = " | VI RUSH #Shorts";
-  const titlePrefix = usefulTopic ? "GTA 6: " : creator ? "GTA 6 Stream Clip: " : "GTA 6 Gameplay Clip";
-  const titleSubject = usefulTopic ? topic : creator || "Gameplay Highlight";
-  const title = fitTitle(titlePrefix + titleSubject, 100 - titleSuffix.length) + titleSuffix;
+  const titleBase = usefulTopic
+    ? "GTA 6: " + topic
+    : creator ? "GTA 6 Stream Clip: " + creator : "GTA 6 Gameplay Clip";
+  const title = fitTitle(titleBase, 100 - titleSuffix.length) + titleSuffix;
 
   const descriptionParts = [
     "A Grand Theft Auto VI (GTA 6) gameplay clip from " + (creator || "a Twitch creator") + ".",
@@ -100,7 +101,11 @@ export function buildYouTubeMetadata({
   for (const tag of ANGLE_TAGS[angle] || []) appendUnique(tags, tag);
   if (usefulTopic) {
     appendUnique(tags, original);
-    if (topic.length <= 65) appendUnique(tags, "GTA 6 " + topic);
+    // Only prefix a translated-language keyword phrase when it is Latin-script;
+    // never fabricate broken combinations such as "GTA 6 радует".
+    if (topic.length <= 65 && /\\p{Script=Latin}/u.test(topic)) {
+      appendUnique(tags, "GTA 6 " + topic);
+    }
   }
   if (creator) {
     appendUnique(tags, creator);
