@@ -1,0 +1,51 @@
+{
+  "source_url": "https://www.twitch.tv/thimagroo/clip/MistyPlainFrogFloof-jCzhoJsFiZ6eVZxV",
+  "video_url": "https://www.youtube.com/watch?v=1kAfHFT7X9E",
+  "title": "GTA 6 Gameplay: Que loucura foi essa aqui | GTA 6 #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "00001090e0e0f0f0",
+      "80a0000202020000",
+      "b13d78387a7a74d9",
+      "69a1c9b762391d0f",
+      "696179274ef53a3f",
+      "2931299766303e47",
+      "6b63130f8ce1690f",
+      "d343934fcc637dcf",
+      "919092b0b0606030",
+      "804000000e0e0213",
+      "cfedefbf3f7e6eb6",
+      "37353523111c0c01",
+      "c7c2e2b221283920",
+      "3f371b0d87090908",
+      "40448006160200d0",
+      "016121a23a387971",
+      "000006171354e15b",
+      "0000000a43d7f4c2",
+      "02000203535b38c3",
+      "281f1e0f1f1f3f77",
+      "8cec0f4c943e2014",
+      "0f0dcc8c0202b208",
+      "fc3c1c1c3c6e6c20",
+      "b970329b2b3b3b13",
+      "6a6264e2e1e1e4cc",
+      "8485878480868097",
+      "220e0c838383838f"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 139.33,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 1,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
