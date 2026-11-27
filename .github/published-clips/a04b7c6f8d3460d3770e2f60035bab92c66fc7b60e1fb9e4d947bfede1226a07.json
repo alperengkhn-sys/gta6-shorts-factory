@@ -1,0 +1,51 @@
+{
+  "source_url": "https://www.twitch.tv/gtasty/clip/BreakableHeadstrongMouseDoggo-UrtadOf7YN0HWbAT",
+  "video_url": "https://www.youtube.com/watch?v=JBExYbThQqA",
+  "title": "GTA 6 Gameplay: AHA | GTA 6 #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 58.067,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "989134e6f153d7d6",
+      "38a17167cf7973dc",
+      "3896d3b39eb6fdfc",
+      "d8c46944f838f4f6",
+      "cd9babb3f373dbdb",
+      "88ba307c78792ca9",
+      "b93fff9ececc6276",
+      "ed9fff4f1784cd9d",
+      "f91fff8f8e8cc99d",
+      "fd1fff8f87d6c99f",
+      "f99fff0f97d6c98f",
+      "7f9ffb8b87c6c19f",
+      "bb1ffb8686c6c99a",
+      "5351291701080e97",
+      "90c16767467b2f1e",
+      "9ff4e075e793f30f",
+      "e1e8f0f24712f90b",
+      "d48090d95b5b676e",
+      "1f109c860a1c1844",
+      "4c00c043c3838080",
+      "0060d04edec2c045",
+      "06cad85400001004",
+      "0311179310233044",
+      "466ccc8000808387",
+      "c0c041230001009c",
+      "3cac2114180d0c45",
+      "00319d890b091887"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 84.8,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 1,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
