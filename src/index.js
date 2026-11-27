@@ -599,37 +599,6 @@ if(title.length<40)title=(title+" | GTA 6 Shorts").slice(0,60);
  title=buildYouTubeMetadata({originalTitle,creatorName:source.creator_name,sourceUrl:source.source_url,angle}).title;
 const captionText=captions.join("\n"),script="SHORTS EDITORIAL PRODUCTION PACKAGE · 3.7\n\nSOURCE: "+(source.source_url||"")+"\nCREATOR: "+(source.creator_name||"Unknown")+"\nORIGINAL CLIP TITLE: "+originalTitle+"\nEDITORIAL ANGLE: "+angle+"\n\nPROPOSED TITLE:\n"+title+"\n\nHOOK / OPENING:\n"+hook+"\n\nVOICEOVER: DISABLED\nNo generated narration is added; source audio is retained only when the recorded usage permission covers it.\n\nCAPTIONS: DISABLED\nNo second subtitle layer is generated.\n\nENDING QUESTION:\n"+question+"\n\n9:16 EDITING PLAN:\n1. Use a sharp early gameplay frame for a 0.30-second branded opening.\n2. Start the selected gameplay immediately after the short cover transition.\n3. Keep the main gameplay subject inside the central safe area.\n4. Do not make factual claims that are not supported by the clip itself.\n5. Use only creator-authorized footage and stay within the recorded source-use time limit.\n6. Remove dead time without changing the meaning of the clip.\n7. Keep the final frame clean and readable.\n\nEDITORIAL NOTE:\nThis draft uses source-title signals only. The rendered footage is separately checked for face-cam overlays, blur and duplicate visual content.\n\nPRODUCTION STATUS:\nThis package can enter rendering only after creator permission and game-footage rights are recorded.";return{title,script};}
 function extractNarration(script){const m=String(script||"").match(/ORIGINAL VOICEOVER DRAFT:\s*([\s\S]*?)\n\nCAPTION TEXT DRAFT:/);return m?m[1].trim():"";}
-function buildYouTubeTags(sourceTitle,creatorName,angle){
- const base=["GTA 6","GTA VI","Grand Theft Auto VI","GTA 6 gameplay","GTA 6 clips","GTA 6 moments","GTA 6 shorts","gaming shorts","Vice City","Leonida","Rockstar Games"];
- const byAngle={
-  police:["GTA 6 police chase","GTA 6 cops","GTA 6 wanted level"],
-  vehicle:["GTA 6 cars","GTA 6 driving","GTA 6 crash"],
-  comedy:["GTA 6 funny moments","GTA 6 fails"],
-  discovery:["GTA 6 secrets","GTA 6 hidden details","GTA 6 easter eggs"],
-  explosion:["GTA 6 explosions","GTA 6 action"],
-  combat:["GTA 6 fights","GTA 6 combat"],
-  detail:["GTA 6 graphics","GTA 6 details"],
-  mission:["GTA 6 missions","GTA 6 heists"],
-  character:["GTA 6 characters"],
-  mature:["GTA 6 nightlife"],
-  relationship:["GTA 6 relationships"]
- };
- const topic=String(sourceTitle||"").replace(/\b(grand theft auto|gta)\s*(vi|6)?\b/gi," ").replace(/[^\p{L}\p{N} ]/gu," ").trim();
-const words=topic.toLowerCase().split(/\s+/).filter(w=>w.length>=3&&!["the","and","with","this","that","from","into","just","clip","gta","grand","theft","auto"].includes(w));
- const derived=[];
- for(let i=0;i<words.length&&derived.length<5;i++)derived.push("GTA 6 "+words[i]);
- if(words.length>=2)derived.push("GTA 6 "+words.slice(0,2).join(" "));
- const creator=String(creatorName||"").trim().replace(/[^a-zA-Z0-9 _-]/g," ").replace(/\s+/g," ").slice(0,35);
- const candidates=[...base,...(byAngle[angle]||[]),...derived,...(topic.length>=5&&topic.length<=55?[topic]:[]),...(creator?[creator,creator+" Twitch"]:[])];
- const result=[];let total=0;
- for(const raw of candidates){
-  const tag=String(raw||"").trim().replace(/\s+/g," ");
-  if(!tag||result.some(x=>x.toLowerCase()===tag.toLowerCase())||result.length>=25)continue;
-  if(total+tag.length+1>480)continue;
-  result.push(tag);total+=tag.length+1;
- }
- return result;
-}
 async function dispatchRender(db,env,draftId,evidenceReference,authorizationConfirmation,batchId=null){
  if(!env.GITHUB_TOKEN)return {error:"Cloudflare Worker'da GITHUB_TOKEN secret eksik. GitHub Actions workflow_dispatch yetkili token eklenmeli."};
  if(!env.RENDER_WEBHOOK_SECRET)return {error:"Render izin imzası için RENDER_WEBHOOK_SECRET eksik; güvenli render durduruldu."};
