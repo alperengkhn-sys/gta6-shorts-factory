@@ -1,0 +1,46 @@
+{
+  "source_url": "https://www.twitch.tv/alanzoka/clip/InnocentEndearingMarrowTwitchRPG-GWOjKVk3ZLMOqDtb",
+  "video_url": "https://www.youtube.com/watch?v=qmpYi7OYC-4",
+  "title": "GTA 6: aaaa 👀",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 49.484,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "24a4c444c4c0c0a9",
+      "0606120747c5f4b7",
+      "0301818343e2fafe",
+      "180165894bd6c69e",
+      "80d3dfd3f3ab340b",
+      "81b4a6e7e30b551f",
+      "a6b6a7e34f39db9e",
+      "a6b6a7e34f2ddb94",
+      "a6b6a7e34f0d5bba",
+      "6e5747c79f493132",
+      "6e5747c79f493132",
+      "6e5747c79f493133",
+      "6e5747c79f493130",
+      "6e5747c79f593130",
+      "8397c3e33e39ecfa",
+      "c4c4848484c4e4a4",
+      "01c3c2068389190c",
+      "0282c22603a2e1e3",
+      "0d2c2b6f7f3b3827",
+      "c34547c5c290b8b4",
+      "4343c293b26aebf3",
+      "1f5b9b9f4ec7c723"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 628.89,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 0,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
