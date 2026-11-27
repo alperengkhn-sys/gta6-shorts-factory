@@ -14,8 +14,9 @@ on:
         required: false
         type: string
       download_url:
-        description: Short-lived direct MP4 URL returned by Twitch Clips Downloads API
-        required: true
+        description: Optional short-lived MP4 URL; blank uses the public Twitch clip downloader
+        required: false
+        default: ""
         type: string
       title:
         description: Short title
@@ -95,7 +96,7 @@ jobs:
           print(str(task.get("package_text", "")))
           print("GTA6_TASK_EOF")
           PY
-      - name: Verify creator-use permission attestation
+      - name: Verify signed Twitch source attestation
         if: steps.task.outputs.noop != 'true' && steps.task.outputs.test_quality_rejection != 'true'
         env:
           PERMISSION_SECRET: ${{ secrets.RENDER_WEBHOOK_SECRET }}
