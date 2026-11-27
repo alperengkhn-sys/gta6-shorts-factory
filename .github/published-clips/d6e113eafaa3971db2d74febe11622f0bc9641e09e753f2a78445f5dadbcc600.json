@@ -1,0 +1,38 @@
+{
+  "source_url": "https://www.twitch.tv/montanablack88/clip/EmpathicKathishPeanutTheRinger-wv5wLBedZtgN01zu",
+  "video_url": "https://www.youtube.com/watch?v=zUggW1ijbE0",
+  "title": "GTA 6 Gameplay: Leute fallen auf Wutköder Video rein | GTA 6 #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 33.001,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "ccdd44e68840e78c",
+      "ccddc4a68840468c",
+      "ccdd44c68840438e",
+      "ccdd44c68840460c",
+      "ccdde4a648c04608",
+      "ccdd44c688804378",
+      "ccdd5462d4684818",
+      "ccdd1452a46088b8",
+      "ccdd94f2a4489878",
+      "ccdd94e2d460c8b8",
+      "ccddd46224804c18",
+      "ccdd54e294888c18",
+      "ccdd547294c84c18",
+      "ccdd54e294c0cc98"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 217.74,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 0,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
