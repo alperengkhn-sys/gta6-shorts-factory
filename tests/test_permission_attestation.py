@@ -33,6 +33,29 @@ class PermissionAttestationTests(unittest.TestCase):
         self.assertEqual(result["broadcaster_id"], "987654321")
         self.assertEqual(result["render_attempt"], "1")
 
+    def test_accepts_public_clip_page_fallback_without_editor_download_url(self):
+        fields = {**self.fields, "download_url": "", "permission_expires_at": ""}
+        signature = make_permission_signature(self.secret, **fields)
+        result = verify_permission_attestation(
+            secret=self.secret,
+            signature=signature,
+            now=dt.datetime(2026, 11, 26, tzinfo=dt.timezone.utc),
+            **fields,
+        )
+        self.assertTrue(result["verified"])
+        self.assertEqual(result["download_host"], "public-twitch-page")
+
+    def test_public_fallback_rejects_non_twitch_source_urls(self):
+        fields = {**self.fields, "source_url": "https://example.com/not-a-twitch-clip", "download_url": ""}
+        signature = make_permission_signature(self.secret, **fields)
+        with self.assertRaisesRegex(ValueError, "real public HTTPS Twitch clip"):
+            verify_permission_attestation(
+                secret=self.secret,
+                signature=signature,
+                now=dt.datetime(2026, 11, 26, tzinfo=dt.timezone.utc),
+                **fields,
+            )
+
     def test_rejects_replay_on_a_different_render_attempt(self):
         with self.assertRaisesRegex(ValueError, "attestation is invalid"):
             verify_permission_attestation(
@@ -91,7 +114,7 @@ class PermissionAttestationTests(unittest.TestCase):
     def test_rejects_time_limit_outside_supported_render_range(self):
         invalid = {**self.fields, "max_source_seconds": "180"}
         signature = make_permission_signature(self.secret, **invalid)
-        with self.assertRaisesRegex(ValueError, "45–175"):
+        with self.assertRaisesRegex(ValueError, "25–175"):
             verify_permission_attestation(
                 secret=self.secret,
                 signature=signature,

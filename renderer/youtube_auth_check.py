@@ -64,7 +64,7 @@ def main():
     print("SHORTS_THUMBNAIL_UPLOAD: " +
           ("available" if not scopes or bool(scopes & thumbnail_scopes) else "missing_thumbnail_upload_scope"))
     print("SHORTS_PROCESSING_STATUS: " +
-          ("available" if not scopes or bool(scopes & read_scopes) else "fallback_120_second_wait"))
+          ("available" if not scopes or bool(scopes & read_scopes) else "fallback_120s_retry_until_accepted"))
     print("EXISTING_VIDEO_METADATA_UPDATE: " +
           ("available" if not scopes or bool(scopes & write_scopes) else "not_requested_for_new_uploads"))
     missing_analytics_scopes = analytics_scopes - scopes

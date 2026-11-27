@@ -28,7 +28,7 @@ def request(url, data=None, headers=None, method=None):
 
 
 def upload_custom_thumbnail(video_id, cover, access_token, granted_scopes):
-    """Upload a custom Shorts thumbnail with the narrowest available OAuth scope."""
+    """Set the 9:16 Shorts cover after YouTube has finished processing the upload."""
     scopes = set(granted_scopes or ())
     processing_read_scopes = {
         "https://www.googleapis.com/auth/youtube.readonly",
@@ -43,6 +43,18 @@ def upload_custom_thumbnail(video_id, cover, access_token, granted_scopes):
     }
     if scopes and not (scopes & thumbnail_upload_scopes):
         return "missing_thumbnail_upload_scope"
+
+    image_bytes = Path(cover).read_bytes()
+    if not image_bytes:
+        return "missing_thumbnail_file"
+    if len(image_bytes) > 2 * 1024 * 1024:
+        return "thumbnail_too_large"
+
+    thumbnail_url = (
+        "https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId="
+        + urllib.parse.quote(video_id)
+    )
+    headers = {"Authorization": "Bearer " + access_token, "Content-Type": "image/jpeg"}
 
     if scopes & processing_read_scopes:
         processing_ready = False
@@ -79,27 +91,47 @@ def upload_custom_thumbnail(video_id, cover, access_token, granted_scopes):
             time.sleep(15)
         if not processing_ready:
             return "processing_timeout"
-    else:
-        # Official thumbnails.set accepts youtube.upload. Read scope is only
-        # needed to poll processingDetails, so retain the working time-buffer
-        # path rather than skipping the user's requested cover altogether.
-        print(
-            "YOUTUBE_PROCESSING_WAIT: no read scope; waiting 120 seconds before thumbnails.set "
-            "using youtube.upload.",
-            flush=True,
-        )
-        time.sleep(120)
+        status, _, _ = request(thumbnail_url, image_bytes, headers, "POST")
+        if status not in (200, 201):
+            raise RuntimeError(f"YouTube thumbnails.set returned unexpected HTTP {status}.")
+        return "uploaded"
 
-    status, _, _ = request(
-        "https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId="
-        + urllib.parse.quote(video_id),
-        Path(cover).read_bytes(),
-        {"Authorization": "Bearer " + access_token, "Content-Type": "image/jpeg"},
-        "POST",
+    # Upload-only OAuth cannot read processingDetails. Wait, then retry only while
+    # YouTube explicitly reports that the uploaded Short is still being processed.
+    print(
+        "YOUTUBE_PROCESSING_WAIT: upload-only scope; waiting 120 seconds, then retrying "
+        "thumbnails.set until YouTube accepts the cover.",
+        flush=True,
     )
-    if status not in (200, 201):
-        raise RuntimeError(f"YouTube thumbnails.set returned unexpected HTTP {status}.")
-    return "uploaded"
+    time.sleep(120)
+    transient_markers = (
+        "processingnotcompleted",
+        "processingnotcomplete",
+        "videonotready",
+        "video_not_ready",
+        "video is still processing",
+        "processed before",
+        "processing has not completed",
+    )
+    for attempt in range(6):
+        try:
+            status, _, _ = request(thumbnail_url, image_bytes, headers, "POST")
+            if status in (200, 201):
+                return "uploaded"
+            raise RuntimeError(f"YouTube thumbnails.set returned unexpected HTTP {status}.")
+        except RuntimeError as exc:
+            message = str(exc).lower()
+            if not any(marker in message for marker in transient_markers):
+                raise
+            print(
+                f"YOUTUBE_THUMBNAIL_PENDING: YouTube is still processing the Short "
+                f"(attempt {attempt + 1}/6).",
+                flush=True,
+            )
+            if attempt == 5:
+                return "processing_timeout"
+            time.sleep(60)
+    return "processing_timeout"
 
 
 def main():
@@ -246,7 +278,7 @@ def main():
             elif thumbnail_status == "processing_timeout":
                 print("YOUTUBE_THUMBNAIL_PENDING: processing did not finish within ten minutes.", file=sys.stderr)
             else:
-                print("YOUTUBE_THUMBNAIL_FAILED: OAuth scope does not permit thumbnails.set.", file=sys.stderr)
+                print("YOUTUBE_THUMBNAIL_FAILED: " + thumbnail_status, file=sys.stderr)
         except Exception as exc:
             thumbnail_status = "failed"
             print("YOUTUBE_THUMBNAIL_FAILED: " + str(exc)[:700], file=sys.stderr)

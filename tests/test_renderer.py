@@ -7,6 +7,7 @@ from renderer.render import (
     auto_trim_silence,
     build_twitch_download_command,
     download_direct_twitch_mp4,
+    download_public_twitch_clip,
     check_audio_coverage,
     clean,
     split_caption,
@@ -28,6 +29,69 @@ class RendererHelpersTest(unittest.TestCase):
         self.assertEqual(command[command.index("--downloader") + 1], "m3u8:ffmpeg")
         self.assertIn("-analyzeduration 20000000 -probesize 50000000",
                       command[command.index("--downloader-args") + 1])
+
+    def test_public_twitch_clip_fallback_uses_yt_dlp_without_editor_login(self):
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+        from unittest.mock import patch
+
+        with TemporaryDirectory() as directory:
+            target = Path(directory) / "public-clip.mp4"
+
+            def fake_run(command):
+                self.assertEqual(command[0], "yt-dlp")
+                self.assertIn("https://www.twitch.tv/example/clip/TestClip", command)
+                target.write_bytes(b"public-mp4-bytes")
+                return ""
+
+            with patch("renderer.render.run", side_effect=fake_run) as mocked:
+                size = download_public_twitch_clip(
+                    "https://www.twitch.tv/example/clip/TestClip", target
+                )
+            self.assertEqual(size, len(b"public-mp4-bytes"))
+            self.assertEqual(target.read_bytes(), b"public-mp4-bytes")
+            mocked.assert_called_once()
+
+    def test_youtube_thumbnail_retries_until_processing_is_complete_without_read_scope(self):
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+        from unittest.mock import patch
+        from renderer.youtube_upload import upload_custom_thumbnail
+
+        with TemporaryDirectory() as directory:
+            cover = Path(directory) / "cover.jpg"
+            cover.write_bytes(b"jpeg-test-data")
+            transient = RuntimeError(
+                'HTTP 400: {"error":{"errors":[{"reason":"processingNotCompleted"}]}}'
+            )
+            with patch(
+                "renderer.youtube_upload.request",
+                side_effect=[transient, transient, (200, {}, b"{}")],
+            ) as mocked_request, patch("renderer.youtube_upload.time.sleep") as mocked_sleep:
+                status = upload_custom_thumbnail(
+                    "video-id", cover, "access-token",
+                    {"https://www.googleapis.com/auth/youtube.upload"},
+                )
+            self.assertEqual(status, "uploaded")
+            self.assertEqual(mocked_request.call_count, 3)
+            self.assertEqual([call.args[0] for call in mocked_sleep.call_args_list], [120, 60, 60])
+
+    def test_youtube_thumbnail_rejects_file_over_api_size_limit(self):
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+        from unittest.mock import patch
+        from renderer.youtube_upload import upload_custom_thumbnail
+
+        with TemporaryDirectory() as directory:
+            cover = Path(directory) / "large-cover.jpg"
+            cover.write_bytes(b"x" * (2 * 1024 * 1024 + 1))
+            with patch("renderer.youtube_upload.request") as mocked_request:
+                status = upload_custom_thumbnail(
+                    "video-id", cover, "access-token",
+                    {"https://www.googleapis.com/auth/youtube.upload"},
+                )
+            self.assertEqual(status, "thumbnail_too_large")
+            mocked_request.assert_not_called()
 
     def test_video_filter_renders_opening_hook_for_early_retention(self):
         from pathlib import Path
