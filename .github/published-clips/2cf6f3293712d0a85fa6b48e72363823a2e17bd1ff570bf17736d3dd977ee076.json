@@ -1,0 +1,51 @@
+{
+  "source_url": "https://www.twitch.tv/caseoh_/clip/PolishedDirtyOtterFunRun-Uz0aNrAhtbOQlzg7",
+  "video_url": "https://www.youtube.com/watch?v=odvoo_RwFQk",
+  "title": "GTA 6 Gameplay: kyle 2 | GTA 6 #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "80c0e040c0d4588c",
+      "00801b8606100222",
+      "138747befc3c6646",
+      "60eae3771c33e365",
+      "20070fcd8ebf67c3",
+      "2061230111111131",
+      "6061238141010120",
+      "445438d97b349e1d",
+      "2002b29686820104",
+      "049020e0e0c0f343",
+      "00960fdcfbfb7c4c",
+      "4010981be5e46c4e",
+      "400d081cd5e6ccc2",
+      "0940c6880c01230e",
+      "0b82c1caf9f2b1d5",
+      "040e1f1e0f06064e",
+      "073f01190c060247",
+      "004000b010903020",
+      "c636f2d0949cdf41",
+      "0521104791d0cf43",
+      "3e1454d4cc0b0fa9",
+      "7d55b4d4cc9cb0b8",
+      "7e161ed4cccfa4ad",
+      "7e55bcdccc8ca3ab",
+      "3138c0c7cb82cd85",
+      "bc3808c3cbc18985",
+      "8787f3cc80a08f8c"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 227.15,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 1,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
