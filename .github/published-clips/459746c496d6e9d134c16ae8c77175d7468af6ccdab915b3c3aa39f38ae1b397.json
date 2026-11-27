@@ -1,0 +1,39 @@
+{
+  "source_url": "https://www.twitch.tv/kaicenat/clip/SincereMoldyGaragePartyTime-C2fuK1XJ2UtVfHel",
+  "video_url": "https://www.youtube.com/watch?v=4DzgQPKw3Ic",
+  "title": "GTA 6: gtavi 👀",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 35.783,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "165090745c389319",
+      "00c4e1f1c92a180c",
+      "028f390f25e7ae26",
+      "008e118d09e5c594",
+      "0000fc98f96dfe3e",
+      "0f0f9d9cb0b0cc44",
+      "81943b0f79d8a8b0",
+      "85cc7c7573e3e0e0",
+      "9e82012261e3d2f0",
+      "5d1252a9e0f67eff",
+      "232f2c6cc3dbdce1",
+      "8485bcad87e9f8e0",
+      "07a3159c84d9d0e3",
+      "8ccc245486d765f1",
+      "c0e060c121b3f4cd"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 232.98,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 0,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
