@@ -56,7 +56,6 @@ def main():
         "https://www.googleapis.com/auth/youtube",
     }
     analytics_scopes = {
-        "https://www.googleapis.com/auth/youtube.readonly",
         "https://www.googleapis.com/auth/yt-analytics.readonly",
     }
     if scopes and upload_scope not in scopes:
