@@ -31,9 +31,9 @@ const HTML = String.raw`<!doctype html>
 <h2>Herkese açık Twitch klipleri</h2>
 <div id="twitchAccountStatus" class="notice">Gerçek Twitch hesapları ve GTA VI klipleri doğrulanarak taranır. Editör hesabı gerekmez.</div>
 <button type="button" id="twitchConnectBtn" style="display:none" aria-hidden="true">Optional Twitch API connection</button>
-<p class="muted">Öncelikli kadın yayıncı listesi Twitch üzerinde birebir hesap eşleşmesiyle doğrulanır; bulunmayan hesaplar atlanır. Resmî MP4 adresi yoksa yalnızca herkese açık klip sayfası yedek indirmeyle denenir. Gizli/aboneye özel klipler kullanılmaz.</p>
+<p class="muted">Öncelik, Twitch GTA VI kliplerindeki yayıncıların herkese açık biyografilerinde kadın içerik üreticisi olduklarını açıkça belirtmelerine göre verilir. Profilinde bunu belirtmeyen yayıncılar genel klip havuzunda kalır; isim veya görselden cinsiyet tahmin edilmez. Resmî MP4 adresi yoksa yalnızca herkese açık klip sayfası yedek indirmeyle denenir. Gizli/aboneye özel klipler kullanılmaz.</p>
 </section>
-<section class="panel"><h2>Twitch kaynak alma</h2><p class="muted">Önce doğrulanan kadın GTA VI yayıncıları, ardından GTA VI kategorisindeki diğer gerçek kanallar taranır. Yalnızca varlığı ve kategori bilgisi Twitch API ile doğrulanan 25–60 saniyelik klipler kuyruğa girer. Resmî MP4 adresi yoksa herkese açık klip sayfası yedek indirmeyle denenir. Üç saatlik otomatik üretim döngüsü devam eder.</p></section>
+<section class="panel"><h2>Twitch kaynak alma</h2><p class="muted">Twitch'in gerçek GTA VI kategori klip akışı sayfalı taranır. Biyografisinde kadın yayıncı/üretici olduğunu açıkça belirten kanallar öncelik alır; diğer doğrulanmış GTA VI kanalları da havuzda kalır. Yalnızca varlığı ve kategori bilgisi Twitch API ile doğrulanan 25–60 saniyelik klipler kuyruğa girer. Resmî MP4 adresi yoksa herkese açık klip sayfası yedek indirmeyle denenir. Üç saatlik otomatik üretim döngüsü devam eder.</p></section>
 
 <section class="panel"><h2>Manuel kaynak ekle</h2><input id="url" placeholder="Klip URL"><input id="creator" placeholder="Yayıncı adı"><input id="title" placeholder="Klip başlığı"><button id="add">Kaynak ekle</button></section>
 <section class="panel"><h2>Kaynaklar</h2><div class="wrap"><table><thead><tr><th>Yayıncı / Klip</th><th>Puan</th><th>Medya analizi</th><th>GTA VI durumu</th><th>Kaynak</th></tr></thead><tbody id="sourceRows"></tbody></table></div></section>
@@ -413,7 +413,6 @@ async function twitchGetPage(url,env,token){
  return{items:data.data||[],cursor:data.pagination?.cursor||null};
 }
 async function getGta6GameId(env,token){for(const name of["Grand Theft Auto VI","GTA VI"]){const games=await twitchGet("https://api.twitch.tv/helix/games?name="+encodeURIComponent(name),env,token),exact=games.find(g=>{const n=String(g.name||"").trim().toLowerCase();return n==="grand theft auto vi"||n==="gta vi"});if(exact)return exact.id;}return null;}
-const FEMALE_GTA6_STREAMERS=["ExtraEmily","Loserfruit","TheBonnetSimmer","MissMikkaa","JazzyGuns","vanillamace","yololaryy","Sweet_Anita"];
 async function discover(db,env){
  const token=await twitchToken(env),gameId=await getGta6GameId(env,token);
  let clips=0,saved=0,duplicates=0,refreshed_existing=0,filtered=0,short_duration=0,wrong_category=0,channel_fallback_clips=0;
