@@ -1,0 +1,41 @@
+{
+  "source_url": "https://www.twitch.tv/nickmercs/clip/MoldyPolishedSlothFUNgineer-zYpjxI8OIZnGqMWT",
+  "video_url": "https://www.youtube.com/watch?v=xvq1tM9JNWw",
+  "title": "GTA 6 Gameplay: MMMM | GTA 6 #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 38.435,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "9699e6e5dcdf5f4e",
+      "de99d012babf0f27",
+      "3761edb68f8e0c06",
+      "366be67e1e3e342f",
+      "8704e8b6d9e1c5e4",
+      "8786e8b2e8f1e4e4",
+      "0786e8b6e9e1c4e4",
+      "8784e8b6e9e1c4e4",
+      "8786e8b6c9e1c4e4",
+      "8782c8b6c9e1c4e4",
+      "0782c8b6e9e1c4e4",
+      "8780c8b6e9c184e4",
+      "bc9c9fb6668b6bff",
+      "ded65aab487c3e3e",
+      "95d4cbcaceefff3f",
+      "cb8f0c9f06effcff",
+      "4192c2b020101098"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 762.47,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 1,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
