@@ -14,7 +14,6 @@ import urllib.request
 TOKEN_URL = "https://oauth2.googleapis.com/token"
 REPORT_URL = "https://youtubeanalytics.googleapis.com/v2/reports"
 REQUIRED_SCOPES = {
-    "https://www.googleapis.com/auth/youtube.readonly",
     "https://www.googleapis.com/auth/yt-analytics.readonly",
 }
 METRICS = (
