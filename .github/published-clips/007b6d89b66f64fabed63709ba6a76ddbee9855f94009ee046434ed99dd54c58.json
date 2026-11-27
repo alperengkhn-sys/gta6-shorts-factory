@@ -1,0 +1,51 @@
+{
+  "source_url": "https://www.twitch.tv/alanzoka/clip/EagerSincereLettuceMingLee-4CytH6E0AA_X-_T5",
+  "video_url": "https://www.youtube.com/watch?v=POn4niboGQ0",
+  "title": "GTA 6 Gameplay: Rockstar | GTA 6 #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "3878dcccb4be2c54",
+      "f8f8c0c888482818",
+      "0107041414171609",
+      "070705242437350f",
+      "e1c5e4ac8c040210",
+      "0133ab33030b2303",
+      "fbe56488c9cd858d",
+      "c8ecfccccccdce4e",
+      "01023323e2981d0c",
+      "1f10901c1306191c",
+      "1e353539303d3118",
+      "3d63637361396332",
+      "2515050000000903",
+      "fff1631f1f1f1f3f",
+      "0c0c8c0624ce9e08",
+      "07070747c7676363",
+      "3f2303038368a008",
+      "1309008202020000",
+      "9fdf164c16fc0487",
+      "070f8b1b0b4f561e",
+      "f4fc381cbc7c4c2e",
+      "2df7e7873f77e74f",
+      "0449690121603047",
+      "0082122c88f2f081",
+      "0d0c08600102a000",
+      "0e0c7c7c3c3c7d07",
+      "0b0b2f4ab29ba745"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 213.85,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 0,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
