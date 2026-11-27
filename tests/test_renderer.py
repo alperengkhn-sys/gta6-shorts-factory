@@ -6,6 +6,7 @@ from unittest.mock import patch
 from renderer.render import (
     auto_trim_silence,
     build_twitch_download_command,
+    download_direct_twitch_mp4,
     check_audio_coverage,
     clean,
     split_caption,
@@ -27,6 +28,49 @@ class RendererHelpersTest(unittest.TestCase):
         self.assertEqual(command[command.index("--downloader") + 1], "m3u8:ffmpeg")
         self.assertIn("-analyzeduration 20000000 -probesize 50000000",
                       command[command.index("--downloader-args") + 1])
+
+    def test_production_download_uses_signed_twitch_api_mp4_url(self):
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+        from unittest.mock import patch
+
+        class FakeResponse:
+            headers = {"Content-Type": "video/mp4", "Content-Length": "9"}
+            def __init__(self):
+                self.data = b"fake-mp4"
+            def __enter__(self):
+                return self
+            def __exit__(self, *args):
+                return False
+            def geturl(self):
+                return "https://clips-media-assets2.twitch.tv/test-download.mp4?sig=test"
+            def read(self, size=-1):
+                if not self.data:
+                    return b""
+                chunk, self.data = self.data[:size], self.data[size:]
+                return chunk
+
+        with TemporaryDirectory() as directory:
+            target = Path(directory) / "source.mp4"
+            with patch("renderer.render.urllib.request.urlopen", return_value=FakeResponse()) as urlopen:
+                size = download_direct_twitch_mp4(
+                    "https://clips-media-assets2.twitch.tv/test-download.mp4?sig=test",
+                    target,
+                )
+        self.assertEqual(size, 8)
+        self.assertEqual(target.read_bytes(), b"fake-mp4")
+        self.assertEqual(urlopen.call_count, 1)
+
+    def test_production_download_rejects_twitch_page_url_and_non_https(self):
+        from unittest.mock import patch
+        with patch("renderer.render.urllib.request.urlopen") as urlopen:
+            with self.assertRaisesRegex(RuntimeError, "not a direct MP4"):
+                download_direct_twitch_mp4(
+                    "https://www.twitch.tv/tester/clip/TestClip", "/tmp/should-not-download.mp4"
+                )
+            with self.assertRaisesRegex(RuntimeError, "secure direct Twitch"):
+                download_direct_twitch_mp4("http://cdn.example/test.mp4", "/tmp/should-not-download.mp4")
+        urlopen.assert_not_called()
 
     def test_audio_coverage_rejects_truncated_source_before_render(self):
         fake_probe = json.dumps({
