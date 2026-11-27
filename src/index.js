@@ -424,7 +424,10 @@ async function dispatchRender(db,env,draftId,evidenceReference,authorizationConf
  const title=String(row.draft_title||row.source_title||"GTA 6 Short").slice(0,90);
  const maxSourceSeconds=Math.max(45,Math.min(175,Number(row.max_source_seconds)||45));
  const nextRenderAttempt=String(Number(row.render_attempts||0)+1);
- const permissionAttestationPayload=[row.job_id,row.source_url,row.twitch_broadcaster_id,String(maxSourceSeconds),row.permission_expires_at||"",nextRenderAttempt].join("\n");
+ const downloadAccess=await db.prepare("SELECT download_url FROM twitch_clip_access WHERE source_id=? AND access_status='downloadable' AND download_url IS NOT NULL AND datetime(checked_at)>datetime('now','-30 minutes')").bind(row.source_id).first();
+ if(!downloadAccess?.download_url)return{error:"Twitch Downloads API tarafından son 30 dakika içinde verilmiş doğrudan indirme URL'si yok; güvenli render durduruldu."};
+ const downloadUrl=String(downloadAccess.download_url);
+ const permissionAttestationPayload=[row.job_id,row.source_url,row.twitch_broadcaster_id,String(maxSourceSeconds),row.permission_expires_at||"",nextRenderAttempt,downloadUrl].join("\n");
  const permissionAttestation=await sign(permissionAttestationPayload,env.RENDER_WEBHOOK_SECRET);
  const questionMatch=String(row.script||"").match(/ENDING QUESTION:\s*([^\n]+)/);
  const original=String(row.source_title||row.draft_title||"GTA 6 moment").replace(/\s+/g," ").trim().slice(0,180);
@@ -451,22 +454,14 @@ const safeTopic=topic.length>=5?topic:"a GTA 6 gameplay moment";
  }
  await db.prepare("UPDATE shorts_drafts SET status='processing',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.draft_id).run();
  let response;
- try{response=await fetch("https://api.github.com/repos/alperengkhn-sys/gta6-shorts-factory/actions/workflows/render-short.yml/dispatches",{method:"POST",headers:{"Authorization":"Bearer "+env.GITHUB_TOKEN,"Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28","Content-Type":"application/json","User-Agent":"GTA6-Shorts-Factory"},body:JSON.stringify({ref:"main",inputs:{source_url:row.source_url,title,description,creator_name:String(row.creator_name||"Unknown"),source_title:String(row.source_title||title),package_text:String(row.script||""),tags:JSON.stringify(tags),max_source_seconds:String(maxSourceSeconds),broadcaster_id:String(row.twitch_broadcaster_id),permission_expires_at:String(row.permission_expires_at||""),permission_attestation:permissionAttestation,job_id:row.job_id,render_attempt:nextRenderAttempt}})});}
+ try{response=await fetch("https://api.github.com/repos/alperengkhn-sys/gta6-shorts-factory/actions/workflows/render-short.yml/dispatches",{method:"POST",headers:{"Authorization":"Bearer "+env.GITHUB_TOKEN,"Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28","Content-Type":"application/json","User-Agent":"GTA6-Shorts-Factory"},body:JSON.stringify({ref:"main",inputs:{source_url:row.source_url,download_url:downloadUrl,title,description,creator_name:String(row.creator_name||"Unknown"),source_title:String(row.source_title||title),package_text:String(row.script||""),tags:JSON.stringify(tags),max_source_seconds:String(maxSourceSeconds),broadcaster_id:String(row.twitch_broadcaster_id),permission_expires_at:String(row.permission_expires_at||""),permission_attestation:permissionAttestation,job_id:row.job_id,render_attempt:nextRenderAttempt}})});}
  catch(error){const detail=String(error&&error.message||error).slice(0,1000);await db.prepare("UPDATE jobs SET status='failed',editorial_note=?,last_error=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind("GitHub dispatch network error: "+detail,detail,row.job_id).run();await db.prepare("UPDATE shorts_drafts SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.draft_id).run();return {error:"GitHub Actions bağlantı hatası: "+detail};}
  if(response.status!==204){
   const detail=(await response.text()).slice(0,1200);
-  if(response.status===403||response.status===404){
-   try{
-    const task={source_url:row.source_url,title,description,creator_name:String(row.creator_name||"Unknown"),source_title:String(row.source_title||title),package_text:String(row.script||""),tags:JSON.stringify(tags),max_source_seconds:String(maxSourceSeconds),broadcaster_id:String(row.twitch_broadcaster_id),permission_expires_at:String(row.permission_expires_at||""),permission_attestation:permissionAttestation,job_id:row.job_id,render_attempt:String(Number(row.render_attempts||0)+1)};
-    const bytes=new TextEncoder().encode(JSON.stringify(task));let binary="";for(const byte of bytes)binary+=String.fromCharCode(byte);
-    const path="render-queue/"+encodeURIComponent(String(row.job_id))+".json";
-    const queued=await fetch("https://api.github.com/repos/alperengkhn-sys/gta6-shorts-factory/contents/"+path,{method:"PUT",headers:{"Authorization":"Bearer "+env.GITHUB_TOKEN,"Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28","Content-Type":"application/json","User-Agent":"GTA6-Shorts-Factory"},body:JSON.stringify({message:"Queue approved GTA6 render "+row.job_id,content:btoa(binary),branch:"main"})});
-    if(queued.ok)return {ok:true,job_id:row.job_id,status:"processing",queued_via:"repository_commit",message:"Render işi güvenli yedek kuyruğa alındı."};
-    const queueDetail=(await queued.text()).slice(0,800);
-    throw new Error("Repository queue fallback HTTP "+queued.status+": "+queueDetail);
-   }catch(fallbackError){const fallbackDetail=String(fallbackError&&fallbackError.message||fallbackError).slice(0,900);const full=detail+" | Fallback: "+fallbackDetail;await db.prepare("UPDATE jobs SET status='failed',editorial_note=?,last_error=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind("GitHub dispatch failed: "+full,full,row.job_id).run();await db.prepare("UPDATE shorts_drafts SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.draft_id).run();return {error:"GitHub Actions başlatılamadı; yedek kuyruk da yetki alamadı. "+full};}
-  }
-  await db.prepare("UPDATE jobs SET status='failed',editorial_note=?,last_error=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind("GitHub dispatch failed: HTTP "+response.status+" "+detail,detail,row.job_id).run();await db.prepare("UPDATE shorts_drafts SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.draft_id).run();return {error:"GitHub Actions işi başlatılamadı (HTTP "+response.status+"). "+detail};
+  await db.prepare("UPDATE jobs SET status='failed',editorial_note=?,last_error=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind("GitHub workflow_dispatch failed: HTTP "+response.status+" "+detail,detail,row.job_id).run();
+  await db.prepare("UPDATE shorts_drafts SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.draft_id).run();
+  // A signed, short-lived Twitch CDN URL must never be written into the public render-queue directory.
+  return {error:"GitHub Actions işi başlatılamadı (HTTP "+response.status+"). "+detail};
  }
  return {ok:true,job_id:row.job_id,status:"processing"};
 }
