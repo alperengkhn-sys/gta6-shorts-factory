@@ -1,0 +1,51 @@
+{
+  "source_url": "https://www.twitch.tv/ishowspeed/clip/PeppyWittyJaguarItsBoshyTime-Y7W5ETNtNFcXOjYn",
+  "video_url": "https://www.youtube.com/watch?v=PhMZ0nWCjfw",
+  "title": "GTA 6 Gameplay: here | GTA 6 #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "0c164f3b1d8bba8f",
+      "0c164f3b1d1bba8f",
+      "4c16cf3b158bba9f",
+      "4c16cf3b1d1bba87",
+      "4c164f3b0d8bba8f",
+      "4c164f3b0d1bba8f",
+      "4c164f3b1d8b9a17",
+      "4c164f3b1d0b9a8f",
+      "0c16cf3b1d8bba8f",
+      "0c16cf2b1d1bba8f",
+      "0c164f2b0d8b9a97",
+      "4c164f2b0d8b9a97",
+      "4c164f2b0d0b9a8f",
+      "4c164f3b0d1bba8f",
+      "2516e33a0dcbaa2b",
+      "3516e33a0dcb9a13",
+      "7516e33a0d899a93",
+      "0c00000000000000",
+      "0c00000000000000",
+      "0c0000000000001e",
+      "0c00000000000069",
+      "0c0000000000000f",
+      "0c00000000000000",
+      "cc593313e9d6c469",
+      "673e912749676bcb",
+      "a80f13136647072b",
+      "e7e4e52c66e8f000"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 927.52,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 0,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
