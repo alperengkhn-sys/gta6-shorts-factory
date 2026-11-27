@@ -345,9 +345,9 @@ const rules=[{keys:["crash","car accident","collision","wreck","drift"],angle:"v
 rules.unshift({keys:["strip club","stripper","nightclub","bikini","swimsuit","underwear","hot tub","pole dance","adult scene","spicy","suggestive","seductive"],angle:"mature",hook:"GTA 6 is not holding back on its mature side. 👀",narration:"This clip highlights GTA 6's adult nightlife or suggestive content. Focus on what is actually visible and keep the commentary factual. How far do you think Rockstar should take the game's mature world?",captions:["GTA 6 AFTER DARK 👀","ROCKSTAR'S MATURE SIDE","TOO MUCH OR JUST GTA?"],question:"Should GTA 6 keep its mature edge?"},{keys:["relationship","dating","girlfriend","boyfriend","romance","couple"],angle:"relationship",hook:"GTA 6 could take player relationships to a whole new level.",narration:"This clip raises questions about relationships and character interactions in GTA 6. What does this suggest about player choice, and would you want a system like this in the game?",captions:["GTA 6 RELATIONSHIPS?","ROCKSTAR COULD GO THIS FAR?","WOULD YOU WANT THIS?"],question:"Should GTA 6 include deeper relationship systems?"});for(const rule of rules){if(rule.keys.some(k=>t.includes(k))){angle=rule.angle;hook=rule.hook;narration=rule.narration;captions=rule.captions;question=rule.question;break;}}
 const englishTitles={mature:"GTA 6 AFTER DARK… ROCKSTAR WENT THERE?! 👀",relationship:"GTA 6 COULD CHANGE RELATIONSHIPS?! 😳",vehicle:"UNREAL GTA 6 DRIVING MOMENT! 🚗",police:"GTA 6 POLICE CHASE GETS WILD! 🚔",comedy:"THE FUNNIEST GTA 6 MOMENT! 😂",discovery:"HIDDEN GTA 6 DETAIL YOU MISSED! 👀",explosion:"INSANE GTA 6 ACTION! 💥",combat:"EPIC GTA 6 FIGHT! 👊",detail:"INCREDIBLE GTA 6 DETAIL! 👀",mission:"INTENSE GTA 6 MISSION MOMENT! 🎯",character:"GTA 6 CHARACTER MOMENT! 🔥",moment:"YOU HAVE TO SEE THIS GTA 6 MOMENT! 👀"};
 const titleLeads={mature:"GTA 6 After Dark",relationship:"GTA 6 Relationships",vehicle:"GTA 6 Driving",police:"GTA 6 Police Chase",comedy:"GTA 6 Funny Moment",discovery:"GTA 6 Hidden Detail",explosion:"GTA 6 Action",combat:"GTA 6 Combat",detail:"GTA 6 Gameplay Detail",mission:"GTA 6 Mission",character:"GTA 6 Character",moment:"GTA 6 Gameplay"};
-const topic=clean.replace(/\b(grand theft auto|gta)\s*(vi|6)?\b/gi," ").replace(/[|:!?]+/g," ").replace(/[^\x20-\x7E]/g," ").replace(/\s+/g," ").trim();
+const topic=clean.replace(/\b(grand theft auto|gta)\s*(vi|6)?\b/gi," ").replace(/[|:!?]+/g," ").replace(/[^\p{L}\p{N}\s'-]/gu," ").replace(/\s+/g," ").trim();
 const genericTopic=/^(gameplay|gta|gta vi|grand theft auto|highlight|clip|moment|gta gameplay|gta vi gameplay)$/i.test(topic);
-const creator=String(source.creator_name||"").replace(/[^a-zA-Z0-9 _-]/g," ").replace(/\s+/g," ").trim().slice(0,24);
+const creator=String(source.creator_name||"").replace(/[^\p{L}\p{N} _-]/gu," ").replace(/\s+/g," ").trim().slice(0,24);
 const variants={
  police:["A GTA 6 Police Chase That Escalates Fast | Shorts","This GTA 6 Escape Takes an Unexpected Turn | Shorts","A Split-Second GTA 6 Police Chase | Shorts"],
  vehicle:["A GTA 6 Driving Moment Gone Sideways | Shorts","This GTA 6 Road Moment Gets Intense | Shorts","One Wild Turn in This GTA 6 Drive | Shorts"],
@@ -391,8 +391,8 @@ function buildYouTubeTags(sourceTitle,creatorName,angle){
   mature:["GTA 6 nightlife"],
   relationship:["GTA 6 relationships"]
  };
- const topic=String(sourceTitle||"").replace(/\b(grand theft auto|gta)\s*(vi|6)?\b/gi," ").replace(/[^a-zA-Z0-9 ]/g," ").trim();
- const words=topic.toLowerCase().split(/\s+/).filter(w=>w.length>=3&&!["the","and","with","this","that","from","into","just","clip","gta","grand","theft","auto"].includes(w));
+ const topic=String(sourceTitle||"").replace(/\b(grand theft auto|gta)\s*(vi|6)?\b/gi," ").replace(/[^\p{L}\p{N} ]/gu," ").trim();
+const words=topic.toLowerCase().split(/\s+/).filter(w=>w.length>=3&&!["the","and","with","this","that","from","into","just","clip","gta","grand","theft","auto"].includes(w));
  const derived=[];
  for(let i=0;i<words.length&&derived.length<5;i++)derived.push("GTA 6 "+words[i]);
  if(words.length>=2)derived.push("GTA 6 "+words.slice(0,2).join(" "));
@@ -429,10 +429,10 @@ async function dispatchRender(db,env,draftId,evidenceReference,authorizationConf
  const original=String(row.source_title||row.draft_title||"GTA 6 moment").replace(/\s+/g," ").trim().slice(0,180);
  const angleMatch=String(row.script||"").match(/EDITORIAL ANGLE:\s*([a-z_]+)/i);
  const angle=angleMatch?angleMatch[1].toLowerCase():"moment";
- const topic=original.replace(/\b(grand theft auto|gta)\s*(vi|6)?\b/gi," ").replace(/[^\x20-\x7E]/g," ").replace(/[|:]+/g," ").replace(/\s+/g," ").trim();
- const safeTopic=topic.length>=5?topic:"a GTA 6 gameplay moment";
+ const topic=original.replace(/\b(grand theft auto|gta)\s*(vi|6)?\b/gi," ").replace(/[^\p{L}\p{N}\s'-]/gu," ").replace(/[|:]+/g," ").replace(/\s+/g," ").trim();
+const safeTopic=topic.length>=5?topic:"a GTA 6 gameplay moment";
  const angleHashtag=({police:"#GTA6Police",vehicle:"#GTA6Cars",comedy:"#GTA6Funny",discovery:"#GTA6Secrets",explosion:"#GTA6Action",combat:"#GTA6Combat",mission:"#GTA6Missions",character:"#GTA6Characters",detail:"#GTA6Graphics",mature:"#GTA6Nightlife",relationship:"#GTA6Story"})[angle]||"#GTA6Gameplay";
- const creatorCredit=String(row.creator_name||"Twitch creator").replace(/[^a-zA-Z0-9 _-]/g," ").replace(/\s+/g," ").trim().slice(0,80)||"Twitch creator";
+ const creatorCredit=String(row.creator_name||"Twitch creator").replace(/[^\p{L}\p{N} _-]/gu," ").replace(/\s+/g," ").trim().slice(0,80)||"Twitch creator";
  const description=[
   safeTopic+" in Grand Theft Auto VI (GTA 6).",
   "What stood out in this clip, and what would you do next?",
