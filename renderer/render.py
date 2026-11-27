@@ -83,6 +83,23 @@ def download_direct_twitch_mp4(download_url, destination):
         raise RuntimeError("Twitch API returned an empty MP4 download.")
     return total
 
+ 
+def download_public_twitch_clip(source_url, destination):
+    """Download a public Twitch clip page without account cookies or editor access."""
+    if not validate_source_url(source_url):
+        raise RuntimeError("Only an existing public HTTPS Twitch clip page can use the public downloader.")
+    target = Path(destination)
+    target.unlink(missing_ok=True)
+    run(build_twitch_download_command(source_url, target))
+    if not target.is_file() or target.stat().st_size == 0:
+        target.unlink(missing_ok=True)
+        raise RuntimeError("Public Twitch clip downloader returned no MP4 file.")
+    size = target.stat().st_size
+    if size > 500 * 1024 * 1024:
+        target.unlink(missing_ok=True)
+        raise RuntimeError("Public Twitch clip exceeds the 500 MB safety limit.")
+    return size
+
 
 def check_audio_coverage(media, label="Source"):
     info = json.loads(run([
@@ -104,13 +121,13 @@ def check_audio_coverage(media, label="Source"):
     return info
 
 def validate_source_quality(duration, video):
-    """Require at least 45s of HD-class source video at 30fps or better."""
+    """Require at least 25s of HD-class source video at 30fps or better."""
     duration = float(duration or 0)
     width = int(video.get("width") or 0)
     height = int(video.get("height") or 0)
     fps = float(video.get("fps") or 0)
-    if duration < 45.0:
-        raise RuntimeError(f"Source clip is only {duration:.1f} seconds. The channel minimum is 45 seconds; shorter clips are rejected.")
+    if duration < 25.0:
+        raise RuntimeError(f"Source clip is only {duration:.1f} seconds. The channel minimum is 25 seconds; shorter clips are rejected.")
     if min(width, height) < 720:
         raise RuntimeError(f"Source video is only {width}x{height}. Minimum accepted source quality is 720p.")
     if fps < 29.5:
@@ -538,7 +555,7 @@ def make_cover(video, title, duration, destination):
     vf = ("scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,"
           f"drawtext=fontfile={font}:text='{safe}':fontcolor=white:fontsize=66:"
           "borderw=4:bordercolor=black:box=1:boxcolor=black@0.48:boxborderw=24:"
-          "x=(w-text_w)/2:y=h-text_h-180")
+          "x=(w-text_w)/2:y=(h-text_h)/2+260")
     best_frame_time = select_sharp_frame_time(video, start_seconds=0.25, end_seconds=min(8.0, duration - 0.05))
     run(["ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error", "-y",
          "-ss", str(best_frame_time),
@@ -599,7 +616,7 @@ def auto_trim_silence(media, workdir, minimum_remaining=25.0):
         cursor=max(cursor,right)
     if duration-cursor>0.25: keep.append((cursor,duration))
     kept=sum(b-a for a,b in keep)
-    # Never cut a preferred 45-second Short below the requested floor.
+    # Never cut a valid Short below the requested 25-second floor.
     # For shorter valid Twitch clips, retain at least 25 seconds.
     if len(keep)<2 or kept<float(minimum_remaining) or duration-kept<1.5: return media,duration,0
     parts=[]
@@ -635,7 +652,7 @@ def main():
     ap.add_argument("--title",required=True)
     ap.add_argument("--hook-text", default="", help="Factual on-screen opening hook shown for the first 2.8 seconds.")
     ap.add_argument("--output",default="short.mp4")
-    ap.add_argument("--max-source-seconds",type=float,default=175.0,
+    ap.add_argument("--max-source-seconds",type=float,default=60.0,
                     help="Maximum permitted seconds of the creator's source footage in the final edit.")
     ap.add_argument("--test-local-source", help=argparse.SUPPRESS)
     a=ap.parse_args()
@@ -646,25 +663,25 @@ def main():
             raise SystemExit("Test source file does not exist.")
     elif not validate_source_url(a.source_url):
         raise SystemExit("Invalid source URL: production rendering accepts public HTTPS Twitch clip URLs only.")
-    elif not a.download_url:
-        raise SystemExit("Missing direct Twitch MP4 URL from Clips Downloads API; public page scraping is disabled.")
     title=clean(a.title)[:90]
     max_source_seconds=float(a.max_source_seconds)
-    if not math.isfinite(max_source_seconds) or max_source_seconds<45.0 or max_source_seconds>175.0:
+    if not math.isfinite(max_source_seconds) or max_source_seconds<25.0 or max_source_seconds>175.0:
         raise SystemExit("Permission limit must be between 45 and 175 seconds of source footage.")
     out=Path(a.output).resolve(); out.parent.mkdir(parents=True,exist_ok=True)
     with tempfile.TemporaryDirectory() as td:
         w=Path(td); media=w/"source.mp4"
         if a.test_local_source:
             shutil.copyfile(a.test_local_source, media)
-        else:
+        elif a.download_url:
             download_direct_twitch_mp4(a.download_url, media)
+        else:
+            download_public_twitch_clip(a.source_url, media)
         source_info=check_audio_coverage(media, "Downloaded Twitch clip")
         source_duration=float(source_info.get("format",{}).get("duration") or 0)
         streams=source_info.get("streams",[])
         has_source_audio=any(stream.get("codec_type")=="audio" for stream in streams)
-        if source_duration < 45:
-            raise RuntimeError(f"Source clip is only {source_duration:.1f} seconds. The channel minimum is 45 seconds; shorter clips are rejected.")
+        if source_duration < 25:
+            raise RuntimeError(f"Source clip is only {source_duration:.1f} seconds. The channel minimum is 25 seconds; shorter clips are rejected.")
         if not has_source_audio:
             raise RuntimeError("Source clip has no audio stream; refusing to add synthetic audio.")
         source_analysis=media_analysis(media)
@@ -678,12 +695,12 @@ def main():
         if source_duration>highlight_duration:
             selected_source=w/"selected-highlight.mp4"
             run(["ffmpeg","-nostdin","-hide_banner","-loglevel","error","-y","-ss",str(highlight_start),"-i",str(media),"-t",str(highlight_duration),"-map","0:v:0","-map","0:a:0","-c:v","libx264","-preset","medium","-crf","19","-profile:v","high","-pix_fmt","yuv420p","-c:a","aac","-b:a","192k",str(selected_source)])
-        preferred_minimum = 45.0
+        preferred_minimum = 25.0
         media_for_render,edited_duration,removed_silence=auto_trim_silence(
             selected_source,w,minimum_remaining=preferred_minimum
         )
         check_audio_coverage(media_for_render, "Edited Twitch clip")
-        if edited_duration < 45.0:
+        if edited_duration < 25.0:
             raise RuntimeError(
                 f"Edited gameplay is only {edited_duration:.1f} seconds. The minimum is 45 seconds; refusing to publish."
             )
@@ -795,7 +812,7 @@ def main():
     output_duration=float(check.get("format",{}).get("duration") or 0)
     audio_stream=next((x for x in check["streams"] if x.get("codec_type")=="audio"),{})
     audio_duration=float(audio_stream.get("duration") or output_duration)
-    if output_duration < 45.0 or output_duration > 180.0:
+    if output_duration < 25.0 or output_duration > 180.0:
         raise RuntimeError(f"Output validation failed: final vertical video is {output_duration:.1f}s; required range is 45-180 seconds including the 4-second intro.")
     if audio_duration < output_duration - 0.5:
         raise RuntimeError(f"Output validation failed: audio track ends early ({audio_duration:.1f}s of {output_duration:.1f}s).")
