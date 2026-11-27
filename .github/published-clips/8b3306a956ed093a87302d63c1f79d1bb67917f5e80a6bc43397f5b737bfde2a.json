@@ -1,0 +1,38 @@
+{
+  "source_url": "https://www.twitch.tv/wings667/clip/DiligentAnimatedCurryThisIsSparta-t0Jbkzvta7YrWPQF",
+  "video_url": "https://www.youtube.com/watch?v=LBSZ6I6S8wA",
+  "title": "GTA 6 Gameplay: EL TACONAZO | GTA 6 #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 33.502,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "2f27073537c6e365",
+      "056607130c0667e3",
+      "a030c2372643f1d1",
+      "02383463139acb8c",
+      "1b9e8f0b0d6c2032",
+      "1b9ecf4b0d6c3030",
+      "1b9d8f4b0d642032",
+      "1b9d8f0b09482032",
+      "1b9e8f0b0d6c3032",
+      "1b9d8f4b0d6c3032",
+      "4e47c78789cde060",
+      "696969e7891ad710",
+      "8080808082828280",
+      "848a8e0c08050105"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 46.94,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 0,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
