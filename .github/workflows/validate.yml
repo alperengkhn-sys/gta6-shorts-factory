@@ -12,6 +12,8 @@ on:
       - 'tests/test_permission_attestation.py'
       - '.github/workflows/backfill-published-fingerprints.yml'
       - 'src/index.js'
+      - 'src/youtube-seo.mjs'
+      - 'tests/test_youtube_seo.mjs'
       - 'src/streamer-priority.mjs'
       - 'tests/test_streamer_priority.mjs'
       - 'src/render-batch-policy.mjs'
@@ -52,6 +54,8 @@ jobs:
         run: node --input-type=module --check < src/index.js
       - name: Test automatic five-to-ten publish batch policy
         run: node --test tests/test_render_batch_policy.mjs
+      - name: Test per-video multilingual YouTube SEO metadata
+        run: node --test tests/test_youtube_seo.mjs
       - name: Test explicit Twitch creator profile priority
         run: node --test tests/test_streamer_priority.mjs
       - name: Check dashboard JavaScript syntax
@@ -175,3 +179,5 @@ jobs:
           test -s tests/test_renderer.py
           test -s tests/test_render_batch_policy.mjs
           test -s src/render-batch-policy.mjs
+          test -s src/youtube-seo.mjs
+          test -s tests/test_youtube_seo.mjs
