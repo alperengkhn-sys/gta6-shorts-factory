@@ -1,4 +1,5 @@
 import { isSelfDeclaredWomanProfile, SOURCED_GTA6_WOMAN_CHANNELS } from "./streamer-priority.mjs";
+import { buildYouTubeMetadata } from "./youtube-seo.mjs";
 
 import {
   MIN_BATCH_PUBLISHES,
@@ -9,7 +10,7 @@ import {
   batchCompletionStatus
 } from "./render-batch-policy.mjs";
 
-const VERSION = "GTA6-FACTORY-6.5-WOMEN-VERIFIED-DISCOVERY";
+const VERSION = "GTA6-FACTORY-6.6-SEO-DRAFT-PIPELINE";
 // The [initial-production] deployment marker runs one permission-gated bootstrap cycle after deploy.
 const MIN_AUTOMATIC_PUBLISHES_PER_CYCLE = MIN_BATCH_PUBLISHES;
 const MAX_AUTOMATIC_RENDERS_PER_CYCLE = MAX_BATCH_PUBLISHES;
@@ -120,8 +121,20 @@ $("draftRows").addEventListener("click",async e=>{const view=e.target.closest("b
 function vrCopy(id){const el=$(id);if(!el)return;const value=el.value||el.textContent||"";navigator.clipboard.writeText(value).then(()=>showMsg("Kopyalandı.")).catch(()=>{el.focus();el.select();showMsg("Metin seçildi; CTRL+C ile kopyala.")});}
 $("vrCopyAbout").onclick=()=>vrCopy("vrChannelAbout");
 $("vrCopyKeywords").onclick=()=>vrCopy("vrChannelKeywords");
-$("vrGenerateSeo").onclick=()=>{const subject=$("vrVideoSubject").value.trim(),hook=$("vrVideoHook").value.trim(),credit=$("vrVideoCredit").value.trim();if(!subject){showMsg("Önce klibin konusunu yaz.");return;}const clean=subject.replace(/[.!?]+$/g,"").trim(),titleBase=(hook?hook+" — ":"")+clean;const title=(titleBase+" | GTA 6 #Shorts").slice(0,100);const description=[clean+" in Grand Theft Auto VI. "+(hook?hook+". ":"")+"Watch till the end and tell us what you think.","\nSubscribe for more GTA VI moments from Leonida.",credit?"\nClip credit: "+credit:"","\n#GTA6 #GTAVI #GamingShorts #Shorts"].filter(Boolean).join("\n");$("vrSeoTitle").value=title;$("vrSeoDescription").value=description;$("vrSeoTags").value="GTA 6, GTA VI, Grand Theft Auto VI, GTA 6 gameplay, GTA 6 clips, GTA 6 moments, GTA 6 shorts, gaming shorts, Vice City, Leonida, Rockstar Games";$("vrSeoHashtags").value="#GTA6 #GTAVI #GamingShorts #Shorts";showMsg("YouTube SEO paketi hazır.");};
-$("vrCopyAllSeo").onclick=()=>{const all=["TITLE\n"+$("vrSeoTitle").value,"DESCRIPTION\n"+$("vrSeoDescription").value,"TAGS\n"+$("vrSeoTags").value,"HASHTAGS\n"+$("vrSeoHashtags").value].join("\n\n");navigator.clipboard.writeText(all).then(()=>showMsg("Başlık, açıklama, etiketler ve hashtagler kopyalandı.")).catch(()=>showMsg("Tarayıcı pano izni vermedi."));};$("loginBtn").onclick=async()=>{try{await api("/api/login",{password:$("password").value});$("password").value="";await loginCheck()}catch(e){$("loginMsg").textContent=e.message;$("loginMsg").classList.remove("hidden")}};
+$("vrGenerateSeo").onclick=async()=>{
+ const subject=$("vrVideoSubject").value.trim(),hook=$("vrVideoHook").value.trim(),credit=$("vrVideoCredit").value.trim();
+ if(!subject){showMsg("Önce klibin orijinal başlığını yaz.");return;}
+ const button=$("vrGenerateSeo");button.disabled=true;
+ try{
+  const metadata=await api("/api/seo/generate",{original_title:subject,hook,creator_name:credit});
+  $("vrSeoTitle").value=metadata.title;
+  $("vrSeoDescription").value=metadata.description;
+  $("vrSeoTags").value=metadata.tags.join(", ");
+  $("vrSeoHashtags").value=metadata.hashtags.join(" ");
+  showMsg("Otomatik yayın akışıyla aynı SEO paketi hazır.");
+ }catch(error){showMsg(error.message);}
+ finally{button.disabled=false;}
+};$("vrCopyAllSeo").onclick=()=>{const all=["TITLE\n"+$("vrSeoTitle").value,"DESCRIPTION\n"+$("vrSeoDescription").value,"TAGS\n"+$("vrSeoTags").value,"HASHTAGS\n"+$("vrSeoHashtags").value].join("\n\n");navigator.clipboard.writeText(all).then(()=>showMsg("Başlık, açıklama, etiketler ve hashtagler kopyalandı.")).catch(()=>showMsg("Tarayıcı pano izni vermedi."));};$("loginBtn").onclick=async()=>{try{await api("/api/login",{password:$("password").value});$("password").value="";await loginCheck()}catch(e){$("loginMsg").textContent=e.message;$("loginMsg").classList.remove("hidden")}};
 $("password").addEventListener("keydown",e=>{if(e.key==="Enter")$("loginBtn").click()});
 $("twitchConnectBtn").onclick=async()=>{
  const button=$("twitchConnectBtn"),popup=window.open("about:blank","viRushTwitchOAuth","popup,width=560,height=760");
@@ -138,7 +151,7 @@ $("refresh").onclick=async()=>{await refresh();showMsg("Panel yenilendi.")};
 $("logout").onclick=async()=>{await api("/api/logout",{});location.reload()};
 $("discover").onclick=async()=>{showMsg("GTA VI Twitch keşfi çalışıyor...");try{const r=await api("/api/discover",{});showMsg("GTA VI keşfi tamamlandı"+"\nYayıncı: "+r.creators+"\nAlınan klip: "+r.clips+"\nYeni kaynak: "+r.saved+"\nTekrar kayıt: "+r.duplicates+"\nAlakasız klip atlandı: "+r.filtered+"\nOyun kategorisi: "+(r.game_id?"Doğrulandı":"Başlık filtresi kullanıldı"));await refresh()}catch(e){showMsg(e.message)}};
 $("prepare").onclick=async()=>{showMsg("Paketler oluşturuluyor ve mevcut paketler güncelleniyor...");try{const r=await api("/api/prepare",{});showMsg("ÜRETİM HAZIRLIĞI TAMAMLANDI"+"\nKontrol edilen: "+r.checked+"\nYeni paket: "+r.created+"\nGüncellenen paket: "+r.updated+"\nÖnceden mevcut: "+r.existing+"\nAlakasız kaynak atlandı: "+r.skipped_irrelevant+"\nKuyruktaki toplam: "+r.total);await refresh()}catch(e){showMsg(e.message)}};
-$("quickClipProduce").onclick=async()=>{const b=$("quickClipProduce"),out=$("quickClipResult"),url=$("quickClipUrl").value.trim();if(!url){out.textContent="Paste a public Twitch clip URL first.";out.classList.remove("hidden");return;}b.disabled=true;b.textContent="SENDING TO FACTORY...";out.textContent="Checking GTA VI category, Twitch download access and creator rights...";out.classList.remove("hidden");try{const r=await api("/api/source/quick",{url});out.textContent="Factory job started. Job: "+r.job_id+" · Status: "+r.status+". MP4, ZIP and public YouTube link will appear in the dashboard when finished.";showMsg("Clip sent to the factory.");$("quickClipUrl").value="";await refresh()}catch(e){out.textContent=e.message;showMsg(e.message)}finally{b.disabled=false;b.textContent="SEND TO FACTORY & PUBLISH"}};
+$("quickClipProduce").onclick=async()=>{const b=$("quickClipProduce"),out=$("quickClipResult"),url=$("quickClipUrl").value.trim();if(!url){out.textContent="Paste a public Twitch clip URL first.";out.classList.remove("hidden");return;}b.disabled=true;b.textContent="SENDING TO FACTORY...";out.textContent="Checking GTA VI category and public Twitch clip availability...";out.classList.remove("hidden");try{const r=await api("/api/source/quick",{url});out.textContent="Factory job started. Job: "+r.job_id+" · Status: "+r.status+". MP4, ZIP and public YouTube link will appear in the dashboard when finished.";showMsg("Clip sent to the factory.");$("quickClipUrl").value="";await refresh()}catch(e){out.textContent=e.message;showMsg(e.message)}finally{b.disabled=false;b.textContent="SEND TO FACTORY & PUBLISH"}};
 $("add").onclick=async()=>{try{await api("/api/source/manual",{url:$("url").value,creator:$("creator").value,title:$("title").value});$("url").value="";$("creator").value="";$("title").value="";showMsg("Kaynak eklendi.");await refresh()}catch(e){showMsg(e.message)}};
 $("saveCreatorPermission").onclick=async()=>{
  const b=$("saveCreatorPermission"),out=$("permissionMessage");
@@ -583,39 +596,9 @@ if(topic.length>=5&&!genericTopic){
  title=(variants[angle]||variants.moment)[seed%(variants[angle]||variants.moment).length];
 }
 if(title.length<40)title=(title+" | GTA 6 Shorts").slice(0,60);
-const captionText=captions.join("\n"),script="SHORTS EDITORIAL PRODUCTION PACKAGE · 3.7\n\nSOURCE: "+(source.source_url||"")+"\nCREATOR: "+(source.creator_name||"Unknown")+"\nORIGINAL CLIP TITLE: "+originalTitle+"\nEDITORIAL ANGLE: "+angle+"\n\nPROPOSED TITLE:\n"+title+"\n\nHOOK / OPENING:\n"+hook+"\n\nVOICEOVER: DISABLED\nNo generated narration is added; source audio is retained only when the recorded usage permission covers it.\n\nCAPTIONS: DISABLED\nNo second subtitle layer is generated.\n\nENDING QUESTION:\n"+question+"\n\n9:16 EDITING PLAN:\n1. Use a sharp early gameplay frame for a 0.30-second branded opening.\n2. Start the selected gameplay immediately after the short cover transition.\n3. Keep the main gameplay subject inside the central safe area.\n4. Do not make factual claims that are not supported by the clip itself.\n5. Use only creator-authorized footage and stay within the recorded source-use time limit.\n6. Remove dead time without changing the meaning of the clip.\n7. Keep the final frame clean and readable.\n\nEDITORIAL NOTE:\nThis draft uses source-title signals only. The rendered footage is separately checked for face-cam overlays, blur and duplicate visual content.\n\nPRODUCTION STATUS:\nThis package can enter rendering only after creator permission and game-footage rights are recorded.";return{title,script};}
+ title=buildYouTubeMetadata({originalTitle,creatorName:source.creator_name,sourceUrl:source.source_url,angle}).title;
+const captionText=captions.join("\n"),script="SHORTS EDITORIAL PRODUCTION PACKAGE · 3.7\n\nSOURCE: "+(source.source_url||"")+"\nCREATOR: "+(source.creator_name||"Unknown")+"\nORIGINAL CLIP TITLE: "+originalTitle+"\nEDITORIAL ANGLE: "+angle+"\n\nPROPOSED TITLE:\n"+title+"\n\nHOOK / OPENING:\n"+hook+"\n\nVOICEOVER: DISABLED\nNo generated narration is added; the source clip audio is retained unchanged. Verify that the audio and footage are cleared for your intended reuse before publishing.\n\nCAPTIONS: DISABLED\nNo second subtitle layer is generated.\n\nENDING QUESTION:\n"+question+"\n\n9:16 EDITING PLAN:\n1. Use a sharp early gameplay frame for a 0.30-second branded opening.\n2. Start the selected gameplay immediately after the short cover transition.\n3. Keep the main gameplay subject inside the central safe area.\n4. Do not make factual claims that are not supported by the clip itself.\n5. Use only creator-authorized footage and stay within the recorded source-use time limit.\n6. Remove dead time without changing the meaning of the clip.\n7. Keep the final frame clean and readable.\n\nEDITORIAL NOTE:\nThis draft uses source-title signals only. The rendered footage is separately checked for face-cam overlays, blur and duplicate visual content.\n\nPRODUCTION STATUS:\nThis package can enter rendering only after creator permission and game-footage rights are recorded.";return{title,script};}
 function extractNarration(script){const m=String(script||"").match(/ORIGINAL VOICEOVER DRAFT:\s*([\s\S]*?)\n\nCAPTION TEXT DRAFT:/);return m?m[1].trim():"";}
-function buildYouTubeTags(sourceTitle,creatorName,angle){
- const base=["GTA 6","GTA VI","Grand Theft Auto VI","GTA 6 gameplay","GTA 6 clips","GTA 6 moments","GTA 6 shorts","gaming shorts","Vice City","Leonida","Rockstar Games"];
- const byAngle={
-  police:["GTA 6 police chase","GTA 6 cops","GTA 6 wanted level"],
-  vehicle:["GTA 6 cars","GTA 6 driving","GTA 6 crash"],
-  comedy:["GTA 6 funny moments","GTA 6 fails"],
-  discovery:["GTA 6 secrets","GTA 6 hidden details","GTA 6 easter eggs"],
-  explosion:["GTA 6 explosions","GTA 6 action"],
-  combat:["GTA 6 fights","GTA 6 combat"],
-  detail:["GTA 6 graphics","GTA 6 details"],
-  mission:["GTA 6 missions","GTA 6 heists"],
-  character:["GTA 6 characters"],
-  mature:["GTA 6 nightlife"],
-  relationship:["GTA 6 relationships"]
- };
- const topic=String(sourceTitle||"").replace(/\b(grand theft auto|gta)\s*(vi|6)?\b/gi," ").replace(/[^\p{L}\p{N} ]/gu," ").trim();
-const words=topic.toLowerCase().split(/\s+/).filter(w=>w.length>=3&&!["the","and","with","this","that","from","into","just","clip","gta","grand","theft","auto"].includes(w));
- const derived=[];
- for(let i=0;i<words.length&&derived.length<5;i++)derived.push("GTA 6 "+words[i]);
- if(words.length>=2)derived.push("GTA 6 "+words.slice(0,2).join(" "));
- const creator=String(creatorName||"").trim().replace(/[^a-zA-Z0-9 _-]/g," ").replace(/\s+/g," ").slice(0,35);
- const candidates=[...base,...(byAngle[angle]||[]),...derived,...(topic.length>=5&&topic.length<=55?[topic]:[]),...(creator?[creator,creator+" Twitch"]:[])];
- const result=[];let total=0;
- for(const raw of candidates){
-  const tag=String(raw||"").trim().replace(/\s+/g," ");
-  if(!tag||result.some(x=>x.toLowerCase()===tag.toLowerCase())||result.length>=25)continue;
-  if(total+tag.length+1>480)continue;
-  result.push(tag);total+=tag.length+1;
- }
- return result;
-}
 async function dispatchRender(db,env,draftId,evidenceReference,authorizationConfirmation,batchId=null){
  if(!env.GITHUB_TOKEN)return {error:"Cloudflare Worker'da GITHUB_TOKEN secret eksik. GitHub Actions workflow_dispatch yetkili token eklenmeli."};
  if(!env.RENDER_WEBHOOK_SECRET)return {error:"Render izin imzası için RENDER_WEBHOOK_SECRET eksik; güvenli render durduruldu."};
@@ -629,9 +612,10 @@ async function dispatchRender(db,env,draftId,evidenceReference,authorizationConf
  if(Number(row.render_attempts||0)>=10)return {error:"Bu iş için 10 render denemesi tamamlandı. Otomatik tekrar durduruldu."};
  // User-triggered render; no evidence URL prompt and no automatic rights-record mutation.
 
- const title=String(row.draft_title||row.source_title||"GTA 6 Short").slice(0,90);
- const hookMatch=String(row.script||"").match(/HOOK \/ OPENING:\s*([^\\n]+)/i);
- const hookText=hookMatch?String(hookMatch[1]).trim().slice(0,100):String(row.source_title||title).slice(0,100);
+ const draftTitle=String(row.draft_title||row.source_title||"GTA 6 Short").slice(0,90);
+ const hookMatch=String(row.script||"").match(/HOOK \/ OPENING:\s*([^\n]+)/i);
+ const hookText=hookMatch?String(hookMatch[1]).trim().slice(0,100):String(row.source_title||draftTitle).slice(0,100);
+ 
  const maxSourceSeconds=Math.max(25,Math.min(175,Number(row.max_source_seconds)||120));
  const nextRenderAttempt=String(Number(row.render_attempts||0)+1);
  const downloadAccess=await db.prepare("SELECT download_url FROM twitch_clip_access WHERE source_id=? AND access_status='downloadable' AND download_url IS NOT NULL AND datetime(checked_at)>datetime('now','-30 minutes')").bind(row.source_id).first();
@@ -639,23 +623,13 @@ async function dispatchRender(db,env,draftId,evidenceReference,authorizationConf
  const downloadUrl=String(downloadAccess?.download_url||"");
  const permissionAttestationPayload=[row.job_id,row.source_url,row.twitch_broadcaster_id,String(maxSourceSeconds),row.permission_expires_at||"",nextRenderAttempt,downloadUrl].join("\n");
  const permissionAttestation=await sign(permissionAttestationPayload,env.RENDER_WEBHOOK_SECRET);
- const questionMatch=String(row.script||"").match(/ENDING QUESTION:\s*([^\n]+)/);
  const original=String(row.source_title||row.draft_title||"GTA 6 moment").replace(/\s+/g," ").trim().slice(0,180);
  const angleMatch=String(row.script||"").match(/EDITORIAL ANGLE:\s*([a-z_]+)/i);
  const angle=angleMatch?angleMatch[1].toLowerCase():"moment";
- const topic=original.replace(/\b(grand theft auto|gta)\s*(vi|6)?\b/gi," ").replace(/[^\p{L}\p{N}\s'-]/gu," ").replace(/[|:]+/g," ").replace(/\s+/g," ").trim();
-const safeTopic=topic.length>=5?topic:"a GTA 6 gameplay moment";
- const angleHashtag=({police:"#GTA6Police",vehicle:"#GTA6Cars",comedy:"#GTA6Funny",discovery:"#GTA6Secrets",explosion:"#GTA6Action",combat:"#GTA6Combat",mission:"#GTA6Missions",character:"#GTA6Characters",detail:"#GTA6Graphics",mature:"#GTA6Nightlife",relationship:"#GTA6Story"})[angle]||"#GTA6Gameplay";
- const creatorCredit=String(row.creator_name||"Twitch creator").replace(/[^\p{L}\p{N} _-]/gu," ").replace(/\s+/g," ").trim().slice(0,80)||"Twitch creator";
- const description=[
-  safeTopic+" in Grand Theft Auto VI (GTA 6).",
-  "What stood out in this clip, and what would you do next?",
-  "Subscribe to VI RUSH for more GTA VI clips and gameplay moments.",
-  "Clip creator: "+creatorCredit+".",
-  "Source: "+String(row.source_url||""),
-  "#GTA6 #GTAVI "+angleHashtag+" #Shorts"
- ].join("\n\n").slice(0,5000);
- const tags=buildYouTubeTags(original,row.creator_name,angle);
+ const metadata=buildYouTubeMetadata({originalTitle:original,creatorName:row.creator_name,sourceUrl:row.source_url,angle});
+ const title=metadata.title,description=metadata.description,tags=metadata.tags,hashtags=metadata.hashtags;
+ const packageText=String(row.script||"").replace(/(PROPOSED TITLE:\s*\n)[\s\S]*?(\n\nHOOK \/ OPENING:)/,(_match,prefix,suffix)=>prefix+metadata.title+suffix);
+ 
  const claim=await db.prepare("UPDATE jobs SET status='processing',batch_id=?,render_attempts=COALESCE(render_attempts,0)+1,last_error=NULL,dispatch_started_at=CURRENT_TIMESTAMP,editorial_note='Authorized render dispatched to GitHub Actions.',updated_at=CURRENT_TIMESTAMP WHERE id=? AND status IN ('queued_review','failed')").bind(batchId,row.job_id).run();
  if(Number(claim?.meta?.changes||0)===0){
   const current=await db.prepare("SELECT status FROM jobs WHERE id=?").bind(row.job_id).first();
@@ -664,7 +638,7 @@ const safeTopic=topic.length>=5?topic:"a GTA 6 gameplay moment";
  }
  await db.prepare("UPDATE shorts_drafts SET status='processing',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.draft_id).run();
  let response;
- try{response=await fetch("https://api.github.com/repos/alperengkhn-sys/gta6-shorts-factory/actions/workflows/render-short.yml/dispatches",{method:"POST",headers:{"Authorization":"Bearer "+env.GITHUB_TOKEN,"Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28","Content-Type":"application/json","User-Agent":"GTA6-Shorts-Factory"},body:JSON.stringify({ref:"main",inputs:{source_url:row.source_url,download_url:downloadUrl,title,hook_text:hookText,description,creator_name:String(row.creator_name||"Unknown"),source_title:String(row.source_title||title),package_text:String(row.script||""),tags:JSON.stringify(tags),max_source_seconds:String(maxSourceSeconds),broadcaster_id:String(row.twitch_broadcaster_id),permission_expires_at:String(row.permission_expires_at||""),permission_attestation:permissionAttestation,job_id:row.job_id,render_attempt:nextRenderAttempt}})});}
+ try{response=await fetch("https://api.github.com/repos/alperengkhn-sys/gta6-shorts-factory/actions/workflows/render-short.yml/dispatches",{method:"POST",headers:{"Authorization":"Bearer "+env.GITHUB_TOKEN,"Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28","Content-Type":"application/json","User-Agent":"GTA6-Shorts-Factory"},body:JSON.stringify({ref:"main",inputs:{source_url:row.source_url,download_url:downloadUrl,title,hook_text:hookText,description,creator_name:String(row.creator_name||"Unknown"),source_title:String(row.source_title||title),package_text:packageText,tags:JSON.stringify(tags),hashtags:hashtags.join(" "),max_source_seconds:String(maxSourceSeconds),broadcaster_id:String(row.twitch_broadcaster_id),permission_expires_at:String(row.permission_expires_at||""),permission_attestation:permissionAttestation,job_id:row.job_id,render_attempt:nextRenderAttempt}})});}
  catch(error){const detail=String(error&&error.message||error).slice(0,1000);await db.prepare("UPDATE jobs SET status='failed',editorial_note=?,last_error=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind("GitHub dispatch network error: "+detail,detail,row.job_id).run();await db.prepare("UPDATE shorts_drafts SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.draft_id).run();return {error:"GitHub Actions bağlantı hatası: "+detail};}
  if(response.status!==204){
   const detail=(await response.text()).slice(0,1200);
@@ -710,9 +684,63 @@ async function renderCallback(request,env,db){
  }
  return json({ok:true,status,media_analysis_saved:mediaSaved,batch:batch||null});
 }
-async function prepareAll(db){const result=await db.prepare(`SELECT s.id,s.title,s.creator_name,s.source_url,s.rights_status,s.relevance_status,s.twitch_game_id,s.twitch_broadcaster_id,s.twitch_clip_duration,p.broadcaster_id AS permission_broadcaster_id,a.score FROM sources s LEFT JOIN clip_analysis a ON a.source_id=s.id LEFT JOIN creator_usage_permissions p ON p.broadcaster_id=s.twitch_broadcaster_id AND p.permission_status='approved' AND p.youtube_allowed=1 AND p.audio_rights_confirmed=1 AND trim(coalesce(p.audio_rights_evidence,''))<>'' AND p.max_source_seconds>=45 AND trim(coalesce(p.creator_permission_evidence,''))<>'' AND ((p.game_rights_basis='publisher_written_permission' AND trim(coalesce(p.game_rights_evidence_reference,''))<>'') OR (p.game_rights_basis='rockstar_noncommercial_guidelines' AND p.noncommercial_use=1)) AND (p.permission_expires_at IS NULL OR datetime(p.permission_expires_at)>datetime('now')) ORDER BY s.created_at ASC`).all(),rows=result.results||[];let created=0,updated=0,existing=0,skippedIrrelevant=0,skippedPermission=0;const statements=[];
- // Public clip acquisition has no editor invitation or per-channel dashboard permission step.
-for(let i=0;i<statements.length;i+=40)await db.batch(statements.slice(i,i+40));const total=await db.prepare("SELECT COUNT(*) AS n FROM shorts_drafts WHERE status='queued_review'").first();return{checked:rows.length,created,updated,existing,skipped_irrelevant:skippedIrrelevant,skipped_permission:skippedPermission,total:Number(total?.n||0)};}
+async function prepareAll(db){
+ const result=await db.prepare(`
+  SELECT s.id,s.platform,s.title,s.creator_name,s.source_url,s.relevance_status,
+   s.twitch_game_id,s.twitch_broadcaster_id,s.twitch_clip_duration,a.score,
+   d.id AS existing_draft_id,d.status AS existing_draft_status
+  FROM sources s
+  LEFT JOIN clip_analysis a ON a.source_id=s.id
+  LEFT JOIN shorts_drafts d ON d.id=(
+   SELECT d2.id FROM shorts_drafts d2 WHERE d2.source_id=s.id
+   ORDER BY d2.created_at DESC LIMIT 1
+  )
+  WHERE s.platform='twitch' AND s.relevance_status='relevant'
+   AND s.twitch_game_id IS NOT NULL AND s.twitch_broadcaster_id IS NOT NULL
+   AND COALESCE(s.twitch_clip_duration,0)>=25
+   AND (d.id IS NULL OR d.status IN ('draft','queued_review','failed'))
+  ORDER BY COALESCE(a.score,0) DESC,s.created_at ASC
+  LIMIT 200
+ `).all();
+ const rows=result.results||[];
+ let created=0,updated=0,existing=0,skippedIrrelevant=0,skippedPermission=0;
+ const statements=[];
+ for(const source of rows){
+  if(!source.twitch_game_id||source.relevance_status!=="relevant"||
+     !source.twitch_broadcaster_id||Number(source.twitch_clip_duration)<25||
+     !extractClipSlug(String(source.source_url||""))){
+   skippedIrrelevant++;continue;
+  }
+  const pack=makeEditorialPackage(source);
+  const job=await db.prepare("SELECT id,status,last_error FROM jobs WHERE source_id=? ORDER BY created_at DESC LIMIT 1").bind(source.id).first();
+  if(source.existing_draft_id){
+   if(job&&["processing","ready"].includes(job.status)){existing++;continue;}
+   if(job&&/Quality gate rejected|Offline quality rules rejected/i.test(String(job.last_error||""))){existing++;continue;}
+   await db.prepare("UPDATE shorts_drafts SET title=?,script=?,source_url=?,creator_name=?,updated_at=CURRENT_TIMESTAMP WHERE id=?")
+    .bind(pack.title,pack.script,source.source_url,source.creator_name||"Unknown",source.existing_draft_id).run();
+   if(!job){
+    statements.push(db.prepare("INSERT INTO jobs(id,source_id,status,target_format,editorial_note,output_key) VALUES(?,?,'queued_review','shorts_9_16','New public GTA VI source prepared for cloud rendering.',NULL)")
+     .bind(uid(),source.id));
+   }
+   updated++;continue;
+  }
+  if(job&&["processing","ready"].includes(job.status)){existing++;continue;}
+  if(job&&/Quality gate rejected|Offline quality rules rejected/i.test(String(job.last_error||""))){existing++;continue;}
+  const draftId=uid();
+  statements.push(db.prepare(`INSERT INTO shorts_drafts(id,source_id,status,title,script,created_at,updated_at,source_url,creator_name)
+   VALUES(?,?,'queued_review',?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,?,?)`)
+   .bind(draftId,source.id,pack.title,pack.script,source.source_url,source.creator_name||"Unknown"));
+  if(!job){
+   statements.push(db.prepare("INSERT INTO jobs(id,source_id,status,target_format,editorial_note,output_key) VALUES(?,?,'queued_review','shorts_9_16','New public GTA VI source prepared for cloud rendering.',NULL)")
+    .bind(uid(),source.id));
+  }
+  created++;
+ }
+ for(let i=0;i<statements.length;i+=40)await db.batch(statements.slice(i,i+40));
+ const total=await db.prepare("SELECT COUNT(*) AS n FROM shorts_drafts WHERE status='queued_review'").first();
+ return{checked:rows.length,created,updated,existing,skipped_irrelevant:skippedIrrelevant,
+  skipped_permission:skippedPermission,total:Number(total?.n||0)};
+}
 async function fillRenderBatch(db,env,batchId,discoveryAlreadyRefreshed=false){
  let attempted=0,dispatched=0,alreadyExisting=0,dispatchErrors=0;
  const errors=[];
@@ -870,8 +898,20 @@ async function runScheduled(env,event){
 }
 function makeZip(files){const enc=new TextEncoder(),local=[],central=[];let offset=0;const u16=n=>new Uint8Array([n&255,(n>>>8)&255]),u32=n=>new Uint8Array([n&255,(n>>>8)&255,(n>>>16)&255,(n>>>24)&255]),join=parts=>{const out=new Uint8Array(parts.reduce((n,p)=>n+p.length,0));let at=0;for(const p of parts){out.set(p,at);at+=p.length;}return out;},crc32=data=>{let c=0xffffffff;for(const b of data){c^=b;for(let k=0;k<8;k++)c=(c>>>1)^((c&1)?0xedb88320:0);}return(c^0xffffffff)>>>0;};for(const f of files){const name=enc.encode(f.name),data=f.data,crc=crc32(data),lh=join([u32(0x04034b50),u16(20),u16(0x0800),u16(0),u16(0),u16(0),u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),name]);local.push(lh,data);central.push(join([u32(0x02014b50),u16(20),u16(20),u16(0x0800),u16(0),u16(0),u16(0),u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),u16(0),u16(0),u16(0),u32(0),u32(offset),name]));offset+=lh.length+data.length;}const centralBytes=join(central),localBytes=join(local),end=join([u32(0x06054b50),u16(0),u16(0),u16(files.length),u16(files.length),u32(centralBytes.length),u32(localBytes.length),u16(0)]);return join([localBytes,centralBytes,end]);}
 function escHtml(v){return String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
-export default{async fetch(request,env){if(env.APP_ENV==="preview"){const previewPath=new URL(request.url).pathname;if(previewPath==="/__preview_health")return new Response(JSON.stringify({ok:true,environment:"preview",database:"disabled"}),{headers:{"Content-Type":"application/json","Cache-Control":"no-store"}});return new Response("Preview deployment is isolated. Database-backed routes are disabled until a dedicated staging D1 database is configured.",{status:503,headers:{"Content-Type":"text/plain; charset=utf-8","Cache-Control":"no-store"}});}try{if(!env.DB)return json({error:"D1 DB binding bulunamadı."},500);await ensureSchema(env.DB);await ensureTwitchSchema(env.DB);const url=new URL(request.url),path=url.pathname,method=request.method;
+export default{async fetch(request,env){if(env.APP_ENV==="preview"){const previewPath=new URL(request.url).pathname;if(previewPath==="/__preview_health")return new Response(JSON.stringify({ok:true,environment:"preview",database:"disabled"}),{headers:{"Content-Type":"application/json","Cache-Control":"no-store"}});return new Response("Preview deployment is isolated. Database-backed routes are disabled until a dedicated staging D1 database is configured.",{status:503,headers:{"Content-Type":"text/plain; charset=utf-8","Cache-Control":"no-store"}});}try{const url=new URL(request.url),path=url.pathname,method=request.method;
+if(path==="/api/system/status"&&method==="GET"){
+ const renderSecretAuthorized=!!env.RENDER_WEBHOOK_SECRET&&request.headers.get("X-Render-Secret")===env.RENDER_WEBHOOK_SECRET;
+ if(!await authorized(request,env)&&!renderSecretAuthorized)return json({error:"Giriş gerekli."},401);
+ return json({version:VERSION,database:!!env.DB,appPassword:!!env.APP_PASSWORD,twitchClient:!!(env.TWITCH_CLIENT_ID&&env.TWITCH_CLIENT_SECRET),githubToken:!!env.GITHUB_TOKEN,renderWebhookSecret:!!env.RENDER_WEBHOOK_SECRET});
+}
+if(path==="/api/seo/generate"&&method==="POST"){
+ if(!await authorized(request,env))return json({error:"Giriş gerekli."},401);
+ const data=await readBody(request);
+ return json(buildYouTubeMetadata({originalTitle:data.original_title,creatorName:data.creator_name,sourceUrl:data.source_url,angle:data.angle||"moment",hook:data.hook}));
+}
 if(path==="/")return new Response(HTML,{headers:{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store"}});
+if(!env.DB)return json({error:"D1 DB binding bulunamadı."},500);
+await ensureSchema(env.DB);await ensureTwitchSchema(env.DB);
 if(path==="/api/login"&&method==="POST"){const data=await readBody(request);if(!env.APP_PASSWORD||data.password!==env.APP_PASSWORD)return json({error:"Şifre hatalı."},401);const session=await makeSession(env.APP_PASSWORD);return new Response(JSON.stringify({ok:true,version:VERSION}),{headers:{"Content-Type":"application/json","Set-Cookie":"gta6_session="+session+"; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=43200"}});}
 if(path==="/api/logout"&&method==="POST")return new Response(JSON.stringify({ok:true}),{headers:{"Content-Type":"application/json","Set-Cookie":"gta6_session=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0"}});
 if(path==="/api/me"&&method==="GET"){if(!await authorized(request,env))return json({error:"Giriş gerekli."},401);return json({ok:true,version:VERSION});}
@@ -885,7 +925,6 @@ if(path==="/api/twitch/disconnect"&&method==="POST"){await env.DB.prepare("DELET
 if(path==="/api/twitch/clips/direct-download"&&method==="POST"){const data=await readBody(request),slug=extractClipSlug(String(data.url||"").trim());if(!slug)return json({error:"Geçerli bir Twitch klip bağlantısı gir."},400);const appToken=await twitchToken(env),clips=await twitchGet("https://api.twitch.tv/helix/clips?id="+encodeURIComponent(slug),env,appToken),clip=clips[0];if(!clip)return json({error:"Twitch klibi bulunamadı veya artık erişilebilir değil."},404);const gameId=await getGta6GameId(env,appToken),games=clip.game_id?await twitchGet("https://api.twitch.tv/helix/games?id="+encodeURIComponent(clip.game_id),env,appToken):[],gameName=String(games[0]?.name||"").trim().toLowerCase(),isGta6=(!!gameId&&String(clip.game_id||"")===String(gameId))||gameName==="grand theft auto vi"||gameName==="gta vi";if(!isGta6)return json({error:"Bu klip Twitch üzerinde GTA VI kategorisinde doğrulanmadı."},400);const connected=await userTwitchToken(env.DB,env);if(!connected)return json({error:"Önce Twitch hesabını bağla. İndirme Twitch hesabının klip erişimine bağlıdır."},401);const downloads=await fetchClipDownloads(env.DB,env,{...connected,broadcaster_id:clip.broadcaster_id},[clip.id]),entry=(downloads||[]).find(x=>x.clip_id===clip.id),downloadUrl=entry?.portrait_download_url||entry?.landscape_download_url;if(!downloadUrl)return json({error:"Twitch bu klip için MP4 indirme bağlantısı vermedi. Hesabının klip sahibi/yayıncı editörü erişimini kontrol et."},404);const file=await fetch(downloadUrl);if(!file.ok||!file.body)return json({error:"Twitch geçici MP4 bağlantısı çalışmıyor. Tekrar dene."},502);const safeName=String(clip.title||"Twitch_Klip").normalize("NFKD").replace(/[^a-zA-Z0-9_-]+/g,"_").replace(/^_+|_+$/g,"").slice(0,70)||"Twitch_Klip";return new Response(file.body,{headers:{"Content-Type":"video/mp4","Content-Disposition":"attachment; filename="+safeName+".mp4","Cache-Control":"no-store"}});}if(path==="/api/twitch/downloads/check"&&method==="POST"){const data=await readBody(request);return json(await checkTwitchDownloads(env.DB,env,data.limit||20));}
 if(path==="/api/twitch/downloads/bulk.zip"&&method==="POST"){const data=await readBody(request);await checkTwitchDownloads(env.DB,env,Math.min(100,Math.max(1,Number(data.limit)||100)));const available=(await env.DB.prepare("SELECT a.source_id,a.clip_id,a.broadcaster_id,a.broadcaster_name,a.download_url,a.reason,a.checked_at,s.title,s.creator_name,s.source_url FROM twitch_clip_access a JOIN sources s ON s.id=a.source_id WHERE a.access_status='downloadable' AND a.download_url IS NOT NULL AND datetime(a.checked_at)>datetime('now','-30 minutes') ORDER BY a.checked_at DESC LIMIT 10").all()).results||[];if(!available.length)return json({error:"İndirilebilir klip bulunamadı. Önce Twitch hesabının bağlı olduğunu ve klip erişim kontrolünün başarılı olduğunu doğrula."},404);const files=[];let total=0;for(let i=0;i<available.length;i++){const x=available[i],downloadUrl=x.portrait_download_url||x.landscape_download_url;const response=await fetch(downloadUrl);if(!response.ok)continue;const bytes=new Uint8Array(await response.arrayBuffer());if(!bytes.length||bytes.length>100*1024*1024||total+bytes.length>300*1024*1024)continue;total+=bytes.length;const base=String(x.title||("GTA6_KLIP_"+(i+1))).normalize("NFKD").replace(/[^a-zA-Z0-9_-]+/g,"_").replace(/^_+|_+$/g,"").slice(0,65)||("GTA6_KLIP_"+(i+1));const source={title:x.title||"GTA VI Moment",creator_name:x.broadcaster_name||x.creator_name||"Unknown",source_url:x.source_url||""};const editorial=makeEditorialPackage(source);const meta=editorial.script+"\n\nYOUTUBE SHORTS DESCRIPTION:\n"+editorial.title+"\n\nGTA 6 gameplay moment. Watch the clip and share your reaction.\n\nSOURCE: "+source.source_url+"\nCREATOR: "+source.creator_name+"\n\nHASHTAGS:\n#GTA6 #GTAVI #Shorts #Gaming\n\nTAGS:\nGTA 6, GTA VI, GTA 6 gameplay, GTA 6 clips, gaming shorts, YouTube Shorts";const prefix=String(i+1).padStart(2,"0");files.push({name:prefix+"_"+base+".mp4",data:bytes},{name:prefix+"_"+base+".txt",data:new TextEncoder().encode(meta)});}if(!files.length)return json({error:"Twitch indirme bağlantıları süresi dolmuş veya dosyalar çok büyük. Erişim kontrolünü yenileyip tekrar dene."},502);const zip=makeZip(files);return new Response(zip,{headers:{"Content-Type":"application/zip","Content-Disposition":"attachment; filename=GTA6_SHORTS_PAKET.zip","Cache-Control":"no-store"}});}
 if(path==="/api/twitch/downloads/status"&&method==="GET")return json(await getDownloadStatus(env.DB));
-if(path==="/api/system/status"&&method==="GET")return json({version:VERSION,database:!!env.DB,appPassword:!!env.APP_PASSWORD,twitchClient:!!(env.TWITCH_CLIENT_ID&&env.TWITCH_CLIENT_SECRET),githubToken:!!env.GITHUB_TOKEN,renderWebhookSecret:!!env.RENDER_WEBHOOK_SECRET});
 if(path==="/api/data"&&method==="GET")return json(await getData(env.DB));
 if(path==="/api/permissions"&&method==="GET"){
  const rows=await env.DB.prepare("SELECT broadcaster_id,broadcaster_name,permission_status,creator_permission_evidence,audio_rights_evidence,audio_rights_confirmed,max_source_seconds,permission_expires_at,game_rights_basis,game_rights_evidence_reference,noncommercial_use,notes,updated_at FROM creator_usage_permissions ORDER BY broadcaster_name COLLATE NOCASE").all();
