@@ -1,0 +1,51 @@
+{
+  "source_url": "https://www.twitch.tv/ohnepixel/clip/FragileTardySquidAMPEnergyCherry-sWGYVnxAPuBi_y1v",
+  "video_url": "https://www.youtube.com/watch?v=M5_UuIw2HTg",
+  "title": "GTA 6 Gameplay: Ohne Bricked Up | GTA 6 #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 59.983,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "fcf0ec9c14509232",
+      "fcf0f09c5470d234",
+      "c080103010a88889",
+      "0000c03130b0a000",
+      "0100c05928302010",
+      "5a9e9c1d1c3cd6ee",
+      "9a8d0e40480c71f8",
+      "5edf93e1d2f6e0c4",
+      "769b91e1abfaf0f0",
+      "0b13383861fd2d4c",
+      "8505342c65793c78",
+      "d883800808f9b931",
+      "f1f9684e7617ceaf",
+      "f1f9bc263e1b6a6b",
+      "f1f9c8161e9b5a6b",
+      "f1f8686f369bc88b",
+      "f8f0e8c7662bc889",
+      "f0f060676672da58",
+      "e020102410838a00",
+      "3e3d5998c948d5c4",
+      "c1221e0915cdec0f",
+      "e8a31e7644cc6c0d",
+      "f8f0f0cc5c4eda3c",
+      "fcf0f88e164a507c",
+      "ecf0f88c4a568d7a",
+      "e0010f07f7757139",
+      "c0830e06f0325d71"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 40.85,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 1,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
