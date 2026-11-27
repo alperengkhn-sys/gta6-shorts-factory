@@ -107,7 +107,7 @@ export function buildYouTubeMetadata({
     appendUnique(tags, original);
     // Only prefix a translated-language keyword phrase when it is Latin-script;
     // never fabricate broken combinations such as "GTA 6 радует".
-    if (topic.length <= 65 && /\\p{Script=Latin}/u.test(topic)) {
+    if (topic.length <= 65 && /\p{Script=Latin}/u.test(topic)) {
       appendUnique(tags, "GTA 6 " + topic);
     }
   }
