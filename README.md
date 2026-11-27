@@ -20,6 +20,8 @@ The visual face/blur checks are deterministic OpenCV heuristics, not a perfect A
 A Twitch download URL is not the same as permission to republish the clip on YouTube. A streamer's permission also does not, by itself, grant rights to Rockstar/Take-Two game footage or third-party music/audio inside the recording.
 
 The dashboard has a **Yayıncı ve oyun görüntüsü kullanım izinleri** panel. Record each broadcaster separately, including:
+The renderer supports source-footage windows up to 175 seconds. The default new permission value is 120 seconds; every published render is still capped by the specific creator's approved maximum and current authorization evidence.
+
 - the written creator permission evidence;
 - the maximum source-footage seconds allowed;
 - expiry date, if any;
