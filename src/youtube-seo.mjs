@@ -73,22 +73,25 @@ export function buildYouTubeMetadata({
   creatorName = "",
   sourceUrl = "",
   angle = "moment",
+  hook = "",
 } = {}) {
   const original = clean(originalTitle, 180) || "GTA 6 clip";
   const creator = clean(creatorName, 80);
   const topic = getTopic(original);
   const usefulTopic = topic.length >= 3 && !GENERIC_TOPICS.has(topic.toLowerCase());
   const titleSuffix = " | VI RUSH #Shorts";
+  const hookText = clean(hook, 40);
   const titleBase = usefulTopic
-    ? "GTA 6: " + topic
-    : creator ? "GTA 6 Stream Clip: " + creator : "GTA 6 Gameplay Clip";
+    ? "GTA 6: " + (hookText ? hookText + " — " : "") + topic
+    : creator ? "GTA 6 Stream Clip: " + (hookText ? hookText + " — " : "") + creator : "GTA 6 Gameplay Clip";
   const title = fitTitle(titleBase, 100 - titleSuffix.length) + titleSuffix;
 
   const descriptionParts = [
     "A Grand Theft Auto VI (GTA 6) gameplay clip from " + (creator || "a Twitch creator") + ".",
+    hookText ? hookText + "." : "",
     'Original clip title: "' + original + '".',
     "Follow VI RUSH for more GTA VI gameplay clips and creator highlights.",
-  ];
+  ].filter(Boolean);
   if (sourceUrl) descriptionParts.push("Original source: " + clean(sourceUrl, 500));
   const hashtags = ["#GTA6", "#GTAVI"];
   if (ANGLE_HASHTAGS[angle]) hashtags.push(ANGLE_HASHTAGS[angle]);
