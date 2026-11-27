@@ -7,6 +7,7 @@ try:
 except ImportError:
     from visual_quality import inspect_visual_quality, compute_content_fingerprint, find_published_duplicate, select_sharp_frame_time
 from urllib.parse import urlsplit
+import urllib.request
 
 ACTION_TERMS = (
     "gta", "police chase", "car chase", "chase", "explosion", "explosive",
@@ -37,6 +38,50 @@ def build_twitch_download_command(source_url, destination):
         "--merge-output-format", "mp4",
         "-o", str(destination), source_url
     ]
+
+
+def download_direct_twitch_mp4(download_url, destination):
+    """Download only the temporary MP4 URL returned by Twitch's Clips Downloads API."""
+    parsed = urlsplit(str(download_url or "").strip())
+    if (parsed.scheme != "https" or not parsed.hostname
+            or parsed.username or parsed.password or parsed.fragment):
+        raise RuntimeError("A secure direct Twitch MP4 download URL is required.")
+    if parsed.hostname.lower().rstrip(".") in {"twitch.tv", "www.twitch.tv", "clips.twitch.tv"}:
+        raise RuntimeError("A Twitch clip page is not a direct MP4 download URL.")
+    request = urllib.request.Request(
+        str(download_url),
+        headers={"User-Agent": "VI-RUSH-Shorts-Factory/1.0", "Accept": "video/mp4,video/*,application/octet-stream"},
+    )
+    total = 0
+    limit = 500 * 1024 * 1024
+    target = Path(destination)
+    try:
+        with urllib.request.urlopen(request, timeout=180) as response:
+            final_url = urlsplit(response.geturl())
+            if final_url.scheme != "https" or not final_url.hostname:
+                raise RuntimeError("Twitch download redirected to a non-HTTPS destination.")
+            content_type = str(response.headers.get("Content-Type", "")).lower()
+            if "text/html" in content_type or "application/json" in content_type:
+                raise RuntimeError("Twitch download endpoint returned a web page instead of MP4 bytes.")
+            declared = response.headers.get("Content-Length")
+            if declared and int(declared) > limit:
+                raise RuntimeError("Twitch MP4 exceeds the 500 MB safety limit.")
+            with target.open("wb") as output:
+                while True:
+                    chunk = response.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    total += len(chunk)
+                    if total > limit:
+                        raise RuntimeError("Twitch MP4 exceeded the 500 MB safety limit.")
+                    output.write(chunk)
+    except (OSError, ValueError) as exc:
+        target.unlink(missing_ok=True)
+        raise RuntimeError("Twitch API direct MP4 download failed: " + str(exc)[:500]) from exc
+    if total == 0:
+        target.unlink(missing_ok=True)
+        raise RuntimeError("Twitch API returned an empty MP4 download.")
+    return total
 
 
 def check_audio_coverage(media, label="Source"):
@@ -561,7 +606,8 @@ def trailing_silence_seconds(log, duration):
 
 def main():
     ap=argparse.ArgumentParser()
-    ap.add_argument("--source-url",required=True)
+    ap.add_argument("--source-url",required=True, help="Original Twitch clip URL retained for attribution.")
+    ap.add_argument("--download-url", help="Short-lived direct MP4 URL returned by Twitch Clips Downloads API.")
     ap.add_argument("--title",required=True)
     ap.add_argument("--output",default="short.mp4")
     ap.add_argument("--max-source-seconds",type=float,default=175.0,
@@ -575,6 +621,8 @@ def main():
             raise SystemExit("Test source file does not exist.")
     elif not validate_source_url(a.source_url):
         raise SystemExit("Invalid source URL: production rendering accepts public HTTPS Twitch clip URLs only.")
+    elif not a.download_url:
+        raise SystemExit("Missing direct Twitch MP4 URL from Clips Downloads API; public page scraping is disabled.")
     title=clean(a.title)[:90]
     max_source_seconds=float(a.max_source_seconds)
     if not math.isfinite(max_source_seconds) or max_source_seconds<45.0 or max_source_seconds>175.0:
@@ -585,11 +633,7 @@ def main():
         if a.test_local_source:
             shutil.copyfile(a.test_local_source, media)
         else:
-            run(build_twitch_download_command(a.source_url, media))
-            if not media.exists():
-                found=list(w.glob("source.*"))
-                if not found: raise RuntimeError("Source download produced no media file.")
-                media=found[0]
+            download_direct_twitch_mp4(a.download_url, media)
         source_info=check_audio_coverage(media, "Downloaded Twitch clip")
         source_duration=float(source_info.get("format",{}).get("duration") or 0)
         streams=source_info.get("streams",[])
