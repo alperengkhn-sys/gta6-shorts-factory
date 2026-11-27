@@ -1,0 +1,189 @@
+#!/usr/bin/env python3
+"""Fetch channel-owned Shorts analytics using an explicitly authorized YouTube OAuth token."""
+from __future__ import annotations
+
+import datetime as dt
+import json
+import os
+import sys
+import urllib.error
+import urllib.parse
+import urllib.request
+
+
+TOKEN_URL = "https://oauth2.googleapis.com/token"
+REPORT_URL = "https://youtubeanalytics.googleapis.com/v2/reports"
+REQUIRED_SCOPES = {
+    "https://www.googleapis.com/auth/youtube.readonly",
+    "https://www.googleapis.com/auth/yt-analytics.readonly",
+}
+METRICS = (
+    "engagedViews,views,estimatedMinutesWatched,averageViewDuration,"
+    "averageViewPercentage,likes,comments,shares,subscribersGained,subscribersLost"
+)
+
+
+def request_json(url: str, *, data: bytes | None = None, headers: dict | None = None) -> dict:
+    req = urllib.request.Request(url, data=data, headers=headers or {}, method="POST" if data else "GET")
+    try:
+        with urllib.request.urlopen(req, timeout=45) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", "replace")[:1200]
+        raise RuntimeError(f"YouTube API HTTP {exc.code}: {detail}") from None
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+        raise RuntimeError("YouTube Analytics request failed: " + str(exc)[:500]) from None
+
+
+def refresh_access_token() -> tuple[str, set[str]]:
+    names = ("YOUTUBE_CLIENT_ID", "YOUTUBE_CLIENT_SECRET", "YOUTUBE_REFRESH_TOKEN")
+    values = {name: os.environ.get(name, "").strip() for name in names}
+    missing = [name for name, value in values.items() if not value]
+    if missing:
+        raise RuntimeError("Missing GitHub Actions secret(s): " + ", ".join(missing))
+    body = urllib.parse.urlencode({
+        "client_id": values["YOUTUBE_CLIENT_ID"],
+        "client_secret": values["YOUTUBE_CLIENT_SECRET"],
+        "refresh_token": values["YOUTUBE_REFRESH_TOKEN"],
+        "grant_type": "refresh_token",
+    }).encode("utf-8")
+    payload = request_json(TOKEN_URL, data=body, headers={"Content-Type": "application/x-www-form-urlencoded"})
+    token = str(payload.get("access_token") or "")
+    if not token:
+        raise RuntimeError("Google OAuth returned no access token.")
+    return token, set(str(payload.get("scope", "")).split())
+
+
+def query_report(access_token: str, params: dict[str, str]) -> dict:
+    query = urllib.parse.urlencode(params)
+    return request_json(REPORT_URL + "?" + query, headers={"Authorization": "Bearer " + access_token})
+
+
+def as_number(value) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def fmt(value, digits=1) -> str:
+    number = as_number(value)
+    if number.is_integer():
+        return f"{int(number):,}"
+    return f"{number:,.{digits}f}"
+
+
+def markdown_table(headers: list[str], rows: list[list[str]]) -> str:
+    if not rows:
+        return "_No rows returned for this date range._"
+    esc = lambda value: str(value).replace("|", "\\|").replace("\n", " ")
+    top = "| " + " | ".join(esc(x) for x in headers) + " |"
+    sep = "| " + " | ".join("---" for _ in headers) + " |"
+    body = ["| " + " | ".join(esc(x) for x in row) + " |" for row in rows]
+    return "\n".join([top, sep, *body])
+
+
+def append_summary(markdown: str) -> None:
+    path = os.environ.get("GITHUB_STEP_SUMMARY", "").strip()
+    if path:
+        with open(path, "a", encoding="utf-8") as stream:
+            stream.write(markdown.rstrip() + "\n")
+    print(markdown)
+
+
+def main() -> int:
+    token, scopes = refresh_access_token()
+    missing = REQUIRED_SCOPES - scopes
+    if missing:
+        append_summary(
+            "# VI RUSH — YouTube Analytics\n\n"
+            "**REAUTHORIZATION REQUIRED**\n\n"
+            "The current refresh token can publish videos but cannot read private channel analytics. "
+            "Reauthorize the YouTube account with both scopes below, then replace the "
+            "`YOUTUBE_REFRESH_TOKEN` GitHub Actions secret.\n\n"
+            + "\n".join("- `" + scope + "`" for scope in sorted(missing))
+            + "\n\nNo analytics values were available to this run."
+        )
+        return 0
+
+    today = dt.datetime.now(dt.timezone.utc).date()
+    end_date = today - dt.timedelta(days=1)
+    start_date = end_date - dt.timedelta(days=27)
+    common = {
+        "ids": "channel==MINE",
+        "startDate": start_date.isoformat(),
+        "endDate": end_date.isoformat(),
+        "metrics": METRICS,
+    }
+
+    top = query_report(token, {
+        **common,
+        "dimensions": "video,creatorContentType",
+        "sort": "-views",
+        "maxResults": "200",
+    })
+    top_headers = [item.get("name", "") for item in top.get("columnHeaders", [])]
+    top_rows = []
+    for values in top.get("rows", []):
+        row = dict(zip(top_headers, values))
+        if str(row.get("creatorContentType", "")).upper() != "SHORTS":
+            continue
+        top_rows.append([
+            str(row.get("video", "")),
+            fmt(row.get("views")),
+            fmt(row.get("engagedViews")),
+            fmt(row.get("likes")),
+            fmt(row.get("comments")),
+            fmt(row.get("shares")),
+            fmt(row.get("subscribersGained")),
+            fmt(row.get("subscribersLost")),
+            fmt(row.get("estimatedMinutesWatched")),
+            fmt(row.get("averageViewDuration"), 2),
+            fmt(row.get("averageViewPercentage"), 1) + "%",
+        ])
+    top_rows.sort(key=lambda row: as_number(row[1].replace(",", "")), reverse=True)
+
+    daily = query_report(token, {
+        **common,
+        "dimensions": "day,creatorContentType",
+        "sort": "day",
+        "maxResults": "200",
+    })
+    daily_headers = [item.get("name", "") for item in daily.get("columnHeaders", [])]
+    daily_rows = []
+    for values in daily.get("rows", []):
+        row = dict(zip(daily_headers, values))
+        if str(row.get("creatorContentType", "")).upper() != "SHORTS":
+            continue
+        daily_rows.append([
+            str(row.get("day", "")),
+            fmt(row.get("views")),
+            fmt(row.get("likes")),
+            fmt(row.get("comments")),
+            fmt(row.get("shares")),
+            fmt(row.get("subscribersGained")),
+            fmt(row.get("subscribersLost")),
+            fmt(row.get("estimatedMinutesWatched")),
+        ])
+
+    append_summary(
+        "# VI RUSH — YouTube Shorts Analytics\n\n"
+        f"**Period:** {start_date.isoformat()} to {end_date.isoformat()} (UTC; latest complete day only)\n\n"
+        "## Best-performing Shorts\n\n"
+        + markdown_table(
+            ["Video ID", "Views", "Engaged", "Likes", "Comments", "Shares", "Subs +", "Subs −", "Watch min", "Avg sec", "Avg viewed"],
+            top_rows,
+        )
+        + "\n\n## Daily Shorts activity\n\n"
+        + markdown_table(["Date", "Views", "Likes", "Comments", "Shares", "Subs +", "Subs −", "Watch min"], daily_rows)
+        + "\n\n**Interpretation:** zero views means no measured views in this report window; it does not by itself identify the reason for low distribution. Use Shorts Feed shown-in-feed and chose-to-view metrics in YouTube Studio to separate low reach from weak opening retention."
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except Exception as exc:
+        print("YOUTUBE_ANALYTICS_FAILED: " + str(exc), file=sys.stderr)
+        sys.exit(1)
