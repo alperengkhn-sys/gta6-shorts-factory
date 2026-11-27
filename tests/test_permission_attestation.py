@@ -17,6 +17,7 @@ class PermissionAttestationTests(unittest.TestCase):
             "max_source_seconds": "60",
             "permission_expires_at": "2027-01-01T00:00:00.000Z",
             "render_attempt": "1",
+            "download_url": "https://clips-media-assets2.twitch.tv/test-download.mp4?sig=test",
         }
         self.signature = make_permission_signature(self.secret, **self.fields)
 
@@ -40,6 +41,27 @@ class PermissionAttestationTests(unittest.TestCase):
                 render_attempt="2",
                 now=dt.datetime(2026, 11, 26, tzinfo=dt.timezone.utc),
                 **{k: v for k, v in self.fields.items() if k != "render_attempt"},
+            )
+
+    def test_rejects_signature_replayed_for_another_direct_download_url(self):
+        with self.assertRaisesRegex(ValueError, "attestation is invalid"):
+            verify_permission_attestation(
+                secret=self.secret,
+                signature=self.signature,
+                download_url="https://clips-media-assets2.twitch.tv/different.mp4?sig=other",
+                now=dt.datetime(2026, 11, 26, tzinfo=dt.timezone.utc),
+                **{k: v for k, v in self.fields.items() if k != "download_url"},
+            )
+
+    def test_rejects_twitch_clip_page_instead_of_direct_download_url(self):
+        invalid = {**self.fields, "download_url": "https://www.twitch.tv/tester/clip/TestClip"}
+        signature = make_permission_signature(self.secret, **invalid)
+        with self.assertRaisesRegex(ValueError, "not a direct download URL"):
+            verify_permission_attestation(
+                secret=self.secret,
+                signature=signature,
+                now=dt.datetime(2026, 11, 26, tzinfo=dt.timezone.utc),
+                **invalid,
             )
 
     def test_rejects_signature_replayed_for_another_source(self):
