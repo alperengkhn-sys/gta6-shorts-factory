@@ -615,9 +615,10 @@ async function runScheduled(env,event){
   if(!env.DB)throw new Error("D1 binding missing");
   await ensureSchema(env.DB);
   await ensureTwitchSchema(env.DB);
-  let discovery,durationValidation;
+  let discovery,durationValidation,downloadAccess;
   try{discovery=await discover(env.DB,env);}catch(error){discovery={error:String(error&&error.message||error).slice(0,500)};}
   try{durationValidation=await validateResolvedClipDurations(env.DB,env,500);}catch(error){durationValidation={error:String(error&&error.message||error).slice(0,500)};}
+  try{downloadAccess=await checkTwitchDownloads(env.DB,env,500);}catch(error){downloadAccess={error:String(error&&error.message||error).slice(0,500)};}
   const staleJobs=await env.DB.prepare("SELECT batch_id,COUNT(*) AS n FROM jobs WHERE status='processing' AND dispatch_started_at IS NOT NULL AND dispatch_started_at<datetime('now','-45 minutes') AND batch_id IS NOT NULL GROUP BY batch_id").all();
   for(const stale of staleJobs.results||[]){
    const count=Math.max(0,Number(stale.n)||0);
@@ -633,6 +634,7 @@ async function runScheduled(env,event){
    duration_ms:Date.now()-started,
    discovery:discovery||null,
    duration_validation:durationValidation||null,
+   download_access:downloadAccess||null,
    prepared:prepared||null,
    render_batch:{
     target_minimum:rendering.target_minimum||MIN_AUTOMATIC_PUBLISHES_PER_CYCLE,
@@ -653,7 +655,7 @@ async function runScheduled(env,event){
    errors:rendering.errors||[]
   };
   console.log(JSON.stringify(summary));
-  return{discovery,duration_validation:durationValidation,prepared,...rendering};
+  return{discovery,duration_validation:durationValidation,download_access:downloadAccess,prepared,...rendering};
  }catch(error){
   const failure={type:"scheduled_run_failed",...runContext,duration_ms:Date.now()-started,error:String(error&&error.message||error).slice(0,1000)};
   console.error(JSON.stringify(failure));
@@ -727,7 +729,7 @@ if(path==="/api/permissions/revoke"&&method==="POST"){
 }
 if(path==="/api/discover"&&method==="POST")return json(await discover(env.DB,env));
 
-if(path==="/api/prepare"&&method==="POST"){let discovery;try{discovery=await discover(env.DB,env);}catch(error){discovery={error:String(error&&error.message||error).slice(0,500)};}const clipValidation=await resolveTwitchClips(env.DB,env,500);const durationValidation=await validateResolvedClipDurations(env.DB,env,500);const prepared=await prepareAll(env.DB);const rendering=await dispatchQueuedRenders(env.DB,env,10,true);return json({...prepared,discovery,clip_validation:clipValidation,duration_validation:durationValidation,rendering});}
+if(path==="/api/prepare"&&method==="POST"){let discovery,downloadAccess;try{discovery=await discover(env.DB,env);}catch(error){discovery={error:String(error&&error.message||error).slice(0,500)};}const clipValidation=await resolveTwitchClips(env.DB,env,500);const durationValidation=await validateResolvedClipDurations(env.DB,env,500);try{downloadAccess=await checkTwitchDownloads(env.DB,env,500);}catch(error){downloadAccess={error:String(error&&error.message||error).slice(0,500)};}const prepared=await prepareAll(env.DB);const rendering=await dispatchQueuedRenders(env.DB,env,10,true);return json({...prepared,discovery,clip_validation:clipValidation,duration_validation:durationValidation,download_access:downloadAccess,rendering});}
 if(path==="/api/render/dispatch"&&method==="POST"){const data=await readBody(request);const result=await dispatchRender(env.DB,env,String(data.draft_id||""),data.evidence_reference,data.authorization_confirmation);return result.error?json({error:result.error},400):json(result);}
 if(path==="/api/source/quick"&&method==="POST"){
 if(!await authorized(request,env))return json({error:"Giriş gerekli."},401);
