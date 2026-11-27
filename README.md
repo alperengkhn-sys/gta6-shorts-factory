@@ -28,6 +28,12 @@ The dashboard has a **Yayıncı ve oyun görüntüsü kullanım izinleri** panel
 
 Rockstar's public fan-use policy is generally limited to non-commercial use. A monetized or promotional channel should not rely on that general fan-use policy as a commercial licence; obtain written publisher permission or another valid rights basis. When rights are unclear, the source must not be published. See the [Rockstar policy](https://support.rockstargames.com/articles/7bNaeoMFTV0iUDGhStTXvz/policy-on-posting-copyrighted-rockstar-games-material).
 
+## Twitch discovery and creator prioritization
+
+The discovery worker paginates the actual GTA VI category clip feed (up to 1,000 clip records per cycle), removes duplicate clip IDs, and checks the corresponding public Twitch channel profiles in batches. Channels are only prioritized as women-led when the channel bio contains an explicit self-description such as "I'm a woman" or "female streamer/creator". The system does not infer gender from usernames, avatars, pronouns, or game category. Other verified GTA VI creators remain eligible in the general pool.
+
+This profile signal affects discovery order only. It is not evidence of permission to reuse a stream, creator voice, music, or game footage; the existing publishing rights checks remain in force.
+
 ## Publishing batch
 
 The Worker runs every three hours (`0 */3 * * *` UTC). Each batch targets **5–10 successful public YouTube uploads**, not merely 5–10 render attempts. It can try up to 50 candidates. Quality, visual-duplicate, permission, source and upload failures are replaced with the next eligible source. If fewer than five properly licensed and technically usable clips exist, the batch is marked underfilled rather than pretending the target was met.
