@@ -1,0 +1,49 @@
+{
+  "source_url": "https://www.twitch.tv/therealmarzaa/clip/SeductiveAltruisticRadicchioTheThing-N_q1C2fOmP-ix0LG",
+  "video_url": "https://www.youtube.com/watch?v=NOClp5s_6XY",
+  "title": "GTA 6 Gameplay: MARIOOO | GTA 6 #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 54.35,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "0b0f2b28b2b82d36",
+      "3f1f4e58756325bb",
+      "3cfa4a78687c3cb3",
+      "1f8b038f49b8ed2e",
+      "00010144a32b236f",
+      "80001849a5391f1c",
+      "784f4e4c414505a4",
+      "4c383ab272468707",
+      "0909191b30300001",
+      "be7e1e9dcf6858e8",
+      "befe3e6dcfb898ec",
+      "3e7636c3cb4cdcc8",
+      "bfef3f733359f9fa",
+      "3ffe1f1f277878f8",
+      "be9e9e9f169990b0",
+      "3e7e3e7e6cc5ecb8",
+      "3fff3e5c6744ecfa",
+      "3ef93a17cf49f8db",
+      "3cfd397b6b68ccee",
+      "3e7e35e6c74cccec",
+      "bef634c5d35cdcf4",
+      "3f7e1e1b2b391890",
+      "beff3a39fbb9f0f0",
+      "be7f74f399f0b0d0",
+      "36f73489a9acd8d8"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 140.99,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 0,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
