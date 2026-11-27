@@ -1,0 +1,45 @@
+{
+  "source_url": "https://www.twitch.tv/alanzoka/clip/SmallDeterminedTrollBloodTrail-zazo4PfHTAYNhgZ7",
+  "video_url": "https://www.youtube.com/watch?v=P6KbeUG15Ns",
+  "title": "GTA 6: que isso mandy? 👀",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 47.317,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "f6e16140001060f0",
+      "f683a0cc2c248580",
+      "697f74f260fcfefc",
+      "1e6771f2de78fcfc",
+      "80949ff1fee3c007",
+      "715ce19c0f092383",
+      "07333df0f8ef2001",
+      "c3d9cff09c876187",
+      "8998e13e6b705cce",
+      "f3bbeec79f17079b",
+      "b3bb3cbeb3e0c141",
+      "b3bb3cbe31e0c1c1",
+      "b3b93cbe31e1c1c1",
+      "b3b93cbc31e0c1c1",
+      "cfcf7f4f4f5c78c8",
+      "0d2fc7cc2c645050",
+      "46468f59468e9e58",
+      "0c0e93560edc6c77",
+      "0e0f93460ed07857",
+      "0e0f93460e587878",
+      "068f534616587878"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 555.64,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 3,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
