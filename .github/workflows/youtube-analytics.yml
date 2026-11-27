@@ -1,0 +1,25 @@
+name: VI RUSH YouTube Analytics
+on:
+  schedule:
+    - cron: "0 9 * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: vi-rush-youtube-analytics
+  cancel-in-progress: false
+jobs:
+  analytics:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Fetch Shorts views, retention, engagement and subscriber results
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: python renderer/youtube_analytics.py
