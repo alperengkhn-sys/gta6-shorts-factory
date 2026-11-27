@@ -10,7 +10,7 @@ import {
   batchCompletionStatus
 } from "./render-batch-policy.mjs";
 
-const VERSION = "GTA6-FACTORY-6.5-WOMEN-VERIFIED-DISCOVERY";
+const VERSION = "GTA6-FACTORY-6.6-SEO-DRAFT-PIPELINE";
 // The [initial-production] deployment marker runs one permission-gated bootstrap cycle after deploy.
 const MIN_AUTOMATIC_PUBLISHES_PER_CYCLE = MIN_BATCH_PUBLISHES;
 const MAX_AUTOMATIC_RENDERS_PER_CYCLE = MAX_BATCH_PUBLISHES;
@@ -647,7 +647,7 @@ async function dispatchRender(db,env,draftId,evidenceReference,authorizationConf
  const angle=angleMatch?angleMatch[1].toLowerCase():"moment";
  const metadata=buildYouTubeMetadata({originalTitle:original,creatorName:row.creator_name,sourceUrl:row.source_url,angle});
  const title=metadata.title,description=metadata.description,tags=metadata.tags,hashtags=metadata.hashtags;
- const packageText=String(row.script||"").replace(/(?<=PROPOSED TITLE:\s*\n)[\s\S]*?(?=\n\nHOOK \/ OPENING:)/,metadata.title);
+ const packageText=String(row.script||"").replace(/(PROPOSED TITLE:\s*\n)[\s\S]*?(\n\nHOOK \/ OPENING:)/,(_match,prefix,suffix)=>prefix+metadata.title+suffix);
  
  const claim=await db.prepare("UPDATE jobs SET status='processing',batch_id=?,render_attempts=COALESCE(render_attempts,0)+1,last_error=NULL,dispatch_started_at=CURRENT_TIMESTAMP,editorial_note='Authorized render dispatched to GitHub Actions.',updated_at=CURRENT_TIMESTAMP WHERE id=? AND status IN ('queued_review','failed')").bind(batchId,row.job_id).run();
  if(Number(claim?.meta?.changes||0)===0){
