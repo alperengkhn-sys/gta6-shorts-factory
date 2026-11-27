@@ -1,0 +1,51 @@
+{
+  "source_url": "https://www.twitch.tv/nogpyra/clip/DarkRichAniseHoneyBadger-74qqQLboZZlDuFNP",
+  "video_url": "https://www.youtube.com/watch?v=XWti4HGKxdI",
+  "title": "GTA 6 Gameplay: Развлечения в стрип-клубе (ГТА6) | GTA 6 #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "7a3e3918989bc939",
+      "7076f69e267868e4",
+      "081d1353706c4f06",
+      "0002121a191b0308",
+      "8080818284c1613f",
+      "080010949ccc2e0e",
+      "1f9e591131388fc1",
+      "6ce8f070f171d197",
+      "061d4dc1e34160c8",
+      "38e0e8ccd8380c02",
+      "70c1c9d1d9f1388e",
+      "718bd393b3e33008",
+      "c1828aa273e63009",
+      "020615130b062109",
+      "7f7fbddf4f5d1f7f",
+      "e3b3920603000406",
+      "1f1f1f1f0d1d0f27",
+      "051b1b33f3e161c1",
+      "800302c240070c01",
+      "3717050009090111",
+      "e0d2e3622a610230",
+      "c91f1f0f2d3d1f80",
+      "82928ac0a1c08043",
+      "0404453511743001",
+      "04042438d070a081",
+      "0400452d10f07019",
+      "0400052558b26118"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 55.97,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 1,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
