@@ -121,8 +121,20 @@ $("draftRows").addEventListener("click",async e=>{const view=e.target.closest("b
 function vrCopy(id){const el=$(id);if(!el)return;const value=el.value||el.textContent||"";navigator.clipboard.writeText(value).then(()=>showMsg("Kopyalandı.")).catch(()=>{el.focus();el.select();showMsg("Metin seçildi; CTRL+C ile kopyala.")});}
 $("vrCopyAbout").onclick=()=>vrCopy("vrChannelAbout");
 $("vrCopyKeywords").onclick=()=>vrCopy("vrChannelKeywords");
-$("vrGenerateSeo").onclick=()=>{const subject=$("vrVideoSubject").value.trim(),hook=$("vrVideoHook").value.trim(),credit=$("vrVideoCredit").value.trim();if(!subject){showMsg("Önce klibin konusunu yaz.");return;}const clean=subject.replace(/[.!?]+$/g,"").trim(),titleBase=(hook?hook+" — ":"")+clean;const title=(titleBase+" | GTA 6 #Shorts").slice(0,100);const description=[clean+" in Grand Theft Auto VI. "+(hook?hook+". ":"")+"Watch till the end and tell us what you think.","\nSubscribe for more GTA VI moments from Leonida.",credit?"\nClip credit: "+credit:"","\n#GTA6 #GTAVI #GamingShorts #Shorts"].filter(Boolean).join("\n");$("vrSeoTitle").value=title;$("vrSeoDescription").value=description;$("vrSeoTags").value="GTA 6, GTA VI, Grand Theft Auto VI, GTA 6 gameplay, GTA 6 clips, GTA 6 moments, GTA 6 shorts, gaming shorts, Vice City, Leonida, Rockstar Games";$("vrSeoHashtags").value="#GTA6 #GTAVI #GamingShorts #Shorts";showMsg("YouTube SEO paketi hazır.");};
-$("vrCopyAllSeo").onclick=()=>{const all=["TITLE\n"+$("vrSeoTitle").value,"DESCRIPTION\n"+$("vrSeoDescription").value,"TAGS\n"+$("vrSeoTags").value,"HASHTAGS\n"+$("vrSeoHashtags").value].join("\n\n");navigator.clipboard.writeText(all).then(()=>showMsg("Başlık, açıklama, etiketler ve hashtagler kopyalandı.")).catch(()=>showMsg("Tarayıcı pano izni vermedi."));};$("loginBtn").onclick=async()=>{try{await api("/api/login",{password:$("password").value});$("password").value="";await loginCheck()}catch(e){$("loginMsg").textContent=e.message;$("loginMsg").classList.remove("hidden")}};
+$("vrGenerateSeo").onclick=async()=>{
+ const subject=$("vrVideoSubject").value.trim(),hook=$("vrVideoHook").value.trim(),credit=$("vrVideoCredit").value.trim();
+ if(!subject){showMsg("Önce klibin orijinal başlığını yaz.");return;}
+ const button=$("vrGenerateSeo");button.disabled=true;
+ try{
+  const metadata=await api("/api/seo/generate",{original_title:subject,hook,creator_name:credit});
+  $("vrSeoTitle").value=metadata.title;
+  $("vrSeoDescription").value=metadata.description;
+  $("vrSeoTags").value=metadata.tags.join(", ");
+  $("vrSeoHashtags").value=metadata.hashtags.join(" ");
+  showMsg("Otomatik yayın akışıyla aynı SEO paketi hazır.");
+ }catch(error){showMsg(error.message);}
+ finally{button.disabled=false;}
+};$("vrCopyAllSeo").onclick=()=>{const all=["TITLE\n"+$("vrSeoTitle").value,"DESCRIPTION\n"+$("vrSeoDescription").value,"TAGS\n"+$("vrSeoTags").value,"HASHTAGS\n"+$("vrSeoHashtags").value].join("\n\n");navigator.clipboard.writeText(all).then(()=>showMsg("Başlık, açıklama, etiketler ve hashtagler kopyalandı.")).catch(()=>showMsg("Tarayıcı pano izni vermedi."));};$("loginBtn").onclick=async()=>{try{await api("/api/login",{password:$("password").value});$("password").value="";await loginCheck()}catch(e){$("loginMsg").textContent=e.message;$("loginMsg").classList.remove("hidden")}};
 $("password").addEventListener("keydown",e=>{if(e.key==="Enter")$("loginBtn").click()});
 $("twitchConnectBtn").onclick=async()=>{
  const button=$("twitchConnectBtn"),popup=window.open("about:blank","viRushTwitchOAuth","popup,width=560,height=760");
@@ -926,6 +938,7 @@ if(path==="/auth/twitch/callback"&&method==="GET"){const code=url.searchParams.g
 if(path==="/api/render/callback"&&method==="POST")return await renderCallback(request,env,env.DB);
 const renderWebhookAuthorized=!!env.RENDER_WEBHOOK_SECRET&&request.headers.get("X-Render-Secret")===env.RENDER_WEBHOOK_SECRET;
  if(!await authorized(request,env)&&!(renderWebhookAuthorized&&((path==="/api/prepare"&&method==="POST")||(path==="/api/system/status"&&method==="GET"))))return json({error:"Giriş gerekli."},401);
+if(path==="/api/seo/generate"&&method==="POST"){const data=await readBody(request);return json(buildYouTubeMetadata({originalTitle:data.original_title,creatorName:data.creator_name,sourceUrl:data.source_url,angle:data.angle||"moment",hook:data.hook}));}
 if(path==="/api/twitch/connect"&&method==="GET"){if(!env.TWITCH_CLIENT_ID||!env.TWITCH_CLIENT_SECRET)return json({error:"Twitch Client ID/Secret Worker secret olarak bulunamadı."},500);return json({url:await createTwitchOAuthUrl(request,env)});}
 if(path==="/api/twitch/status"&&method==="GET"){let row;try{row=await getTwitchOAuth(env.DB,env);}catch(error){return json({connected:false,download_scope_available:false,error:String(error&&error.message||error).slice(0,300),version:VERSION});}if(!row)return json({connected:false,download_scope_available:false,required_scopes:["editor:manage:clips","channel:manage:clips"],version:VERSION});let validation=null;try{validation=await twitchValidate(row.access_token);}catch(error){try{row=await refreshTwitchOAuth(env.DB,env,row);validation=await twitchValidate(row.access_token);}catch(refreshError){return json({connected:false,download_scope_available:false,error:String(refreshError&&refreshError.message||refreshError).slice(0,300),version:VERSION});}}const scopes=new Set([...(validation.scopes||[]),...(row.scopes||[])]),downloadScopeAvailable=["editor:manage:clips","channel:manage:clips"].some(scope=>scopes.has(scope));return json({connected:true,download_scope_available:downloadScopeAvailable,user_id:row.user_id,login:row.login,display_name:row.display_name,scopes:Array.from(scopes),required_scopes:["editor:manage:clips","channel:manage:clips"],expires_at:row.expires_at,updated_at:row.updated_at,version:VERSION});}
 if(path==="/api/twitch/disconnect"&&method==="POST"){await env.DB.prepare("DELETE FROM twitch_oauth WHERE id=1").run();return json({ok:true});}
