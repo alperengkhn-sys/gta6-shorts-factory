@@ -1,0 +1,51 @@
+{
+  "source_url": "https://www.twitch.tv/caseoh_/clip/LitigiousNaiveHorseradishPeteZaroll-8_k23aP-Jtri0HQd",
+  "video_url": "https://www.youtube.com/watch?v=TrXEMVF5R0U",
+  "title": "GTA 6 Gameplay: slight scratch | GTA 6 #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "3e1a5dc4f8352589",
+      "11f01afcf870e0e7",
+      "1dd7e0c221f0c38b",
+      "f4ce9dc9c2431991",
+      "9ff99fb3e4989081",
+      "fff3b1432c918401",
+      "15d384d9f8f856f0",
+      "3a31e7c7c5c1c8e0",
+      "928a85c081c4c26d",
+      "fa64c924606064e1",
+      "69077da03f90a00c",
+      "34e444beb5a3b098",
+      "5fb461d2e0c876e8",
+      "fddd32627848c080",
+      "ff753753e1e4b434",
+      "efe66e114c108002",
+      "2fdbd8b8c080b4b2",
+      "a6dfcef2c280a4b2",
+      "da479ba7e4b4a490",
+      "3997e84f79e8e0f0",
+      "d758363ff0f0d2b8",
+      "a78af87cf9d08381",
+      "57cef2ffe180d6d8",
+      "10300e9a00701871",
+      "783413b370dcd258",
+      "f1e6e961dcf0b8b0",
+      "1109071c1c100002"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 217.09,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 0,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
