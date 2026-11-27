@@ -34,8 +34,13 @@ jobs:
       - name: Verify deployed Worker build
         env:
           EXPECTED_WORKER_VERSION: GTA6-FACTORY-6.4-DYNAMIC-DISCOVERY
+          RENDER_WEBHOOK_SECRET: ${{ secrets.RENDER_WEBHOOK_SECRET }}
         run: |
-          STATUS="$(curl --retry 3 --retry-all-errors --retry-delay 2 --fail-with-body --silent --show-error --max-time 30 "https://gta6-shorts-engine.alperen-gkhn.workers.dev/api/system/status")"
+          if [ -z "$RENDER_WEBHOOK_SECRET" ]; then
+            echo "::error::RENDER_WEBHOOK_SECRET is required for the protected Worker version check."
+            exit 1
+          fi
+          STATUS="$(curl --retry 3 --retry-all-errors --retry-delay 2 --fail-with-body --silent --show-error --max-time 30 -H "X-Render-Secret: $RENDER_WEBHOOK_SECRET" "https://gta6-shorts-engine.alperen-gkhn.workers.dev/api/system/status")"
           printf '%s' "$STATUS" | python -c 'import json,os,sys; d=json.load(sys.stdin); actual=d.get("version",""); expected=os.environ["EXPECTED_WORKER_VERSION"]; print("Deployed Worker version:",actual); assert actual==expected, f"Expected {expected}, received {actual}"'
       - name: Start automatic production cycle after every Worker deployment
         if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'

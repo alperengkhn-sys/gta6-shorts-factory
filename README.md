@@ -35,7 +35,7 @@ Rockstar's public fan-use policy is generally limited to non-commercial use. A m
 The discovery worker paginates the actual GTA VI category clip feed (up to 1,000 clip records per cycle), removes duplicate clip IDs, and checks the corresponding public Twitch channel profiles in batches. Channels are only prioritized as women-led when the channel bio contains an explicit self-description such as "I'm a woman" or "female streamer/creator". The system does not infer gender from usernames, avatars, pronouns, or game category. Other verified GTA VI creators remain eligible in the general pool.
 
 This profile signal affects discovery order only. It is not evidence of permission to reuse a stream, creator voice, music, or game footage; the existing publishing rights checks remain in force.
-The deployment workflow also checks the live `/api/system/status` version after publishing and verifies that the production discovery response contains its pagination/profile-lookup metrics (unless Twitch itself returns a discovery error). This prevents a stale Worker response from being silently reported as a successful deployment.
+The deployment workflow checks the live `/api/system/status` version using the existing render webhook secret (the status endpoint is not opened publicly) and verifies that the production discovery response contains pagination/profile-lookup metrics (unless Twitch itself returns a discovery error). This prevents a stale Worker response from being silently reported as a successful deployment.
 
 ## Publishing batch
 
