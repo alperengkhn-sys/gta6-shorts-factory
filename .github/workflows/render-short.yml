@@ -30,6 +30,10 @@ on:
         description: Video-specific YouTube tags as a JSON array
         required: false
         type: string
+      hashtags:
+        description: Per-video hashtags included in the YouTube description and delivery package
+        required: false
+        type: string
       job_id:
         description: Permission-attested originating Worker job ID
         required: true
@@ -91,7 +95,7 @@ jobs:
           task = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
           print("noop=" + ("true" if task.get("noop") else "false"))
           print("test_quality_rejection=" + ("true" if task.get("test_quality_rejection") else "false"))
-          for key in ("source_url", "download_url", "title", "description", "tags", "job_id", "render_attempt", "creator_name", "source_title", "hook_text", "max_source_seconds", "broadcaster_id", "permission_expires_at", "permission_attestation"):
+          for key in ("source_url", "download_url", "title", "description", "tags", "hashtags", "job_id", "render_attempt", "creator_name", "source_title", "hook_text", "max_source_seconds", "broadcaster_id", "permission_expires_at", "permission_attestation"):
               print(f"{key}={str(task.get(key, '')).replace(chr(10), ' ')}")
           print("package_text<<GTA6_TASK_EOF")
           print(str(task.get("package_text", "")))
@@ -212,6 +216,7 @@ jobs:
           PACKAGE_TEXT: ${{ inputs.package_text || steps.task.outputs.package_text }}
           YOUTUBE_DESCRIPTION: ${{ inputs.description || steps.task.outputs.description }}
           YOUTUBE_TAGS: ${{ inputs.tags || steps.task.outputs.tags }}
+          YOUTUBE_HASHTAGS: ${{ inputs.hashtags || steps.task.outputs.hashtags }}
           RUN_NUMBER: ${{ github.run_number }}
         run: |
           python - <<'PY'
@@ -242,6 +247,7 @@ jobs:
               match = re.search(pattern, script)
               return match.group(1).strip() if match else "Review the full editorial package below."
           raw_tags = os.environ.get("YOUTUBE_TAGS", "").strip()
+          hashtags = os.environ.get("YOUTUBE_HASHTAGS", "").strip() or "#GTA6 #GTAVI #GamingShorts #Shorts"
           try:
               parsed_tags = json.loads(raw_tags) if raw_tags else []
           except json.JSONDecodeError:
@@ -261,10 +267,10 @@ jobs:
               "9:16 EDIT PLAN:", section("9:16 EDITING PLAN"), "",
               "YOUTUBE DESCRIPTION:", description, "",
               "YOUTUBE TAGS:", tags, "",
-              "HASHTAGS:", "#GTA6 #GTAVI #GTAVIGameplay #GamingShorts #Shorts", "",
+              "HASHTAGS:", hashtags, "",
               "FULL EDITORIAL PACKAGE:", script, "",
               *content_review,
-              "NOTE: Clip creator credit is included in the description. All generated titles, descriptions, tags and hashtags are English."
+              "NOTE: The source clip title is retained in its original language. Descriptions and tags use the verified GTA VI category, creator credit and source-title phrase. No unverified scene details are invented."
           ]
           Path(f"GTA6-Short-{number}.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
           Path(f"GTA6-Short-{number}.mp4").write_bytes(Path("short.mp4").read_bytes())
