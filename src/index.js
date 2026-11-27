@@ -32,7 +32,6 @@ const HTML = String.raw`<!doctype html>
 <p class="muted">Öncelikli kadın yayıncı listesi Twitch üzerinde birebir hesap eşleşmesiyle doğrulanır; bulunmayan hesaplar atlanır. Resmî MP4 adresi yoksa yalnızca herkese açık klip sayfası yedek indirmeyle denenir. Gizli/aboneye özel klipler kullanılmaz.</p>
 </section>
 <section class="panel"><h2>Twitch kaynak alma</h2><p class="muted">Önce doğrulanan kadın GTA VI yayıncıları, ardından GTA VI kategorisindeki diğer gerçek kanallar taranır. Yalnızca varlığı ve kategori bilgisi Twitch API ile doğrulanan 25–60 saniyelik klipler kuyruğa girer. Resmî MP4 adresi yoksa herkese açık klip sayfası yedek indirmeyle denenir. Üç saatlik otomatik üretim döngüsü devam eder.</p></section>
-Resmî MP4 bağlantısı yoksa yalnızca herkese açık klip sayfası üzerinden indirme denenir.
 
 <section class="panel"><h2>Manuel kaynak ekle</h2><input id="url" placeholder="Klip URL"><input id="creator" placeholder="Yayıncı adı"><input id="title" placeholder="Klip başlığı"><button id="add">Kaynak ekle</button></section>
 <section class="panel"><h2>Kaynaklar</h2><div class="wrap"><table><thead><tr><th>Yayıncı / Klip</th><th>Puan</th><th>Medya analizi</th><th>GTA VI durumu</th><th>Kaynak</th></tr></thead><tbody id="sourceRows"></tbody></table></div></section>
