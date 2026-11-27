@@ -33,7 +33,7 @@ const HTML = String.raw`<!doctype html>
 <button type="button" id="twitchConnectBtn" style="display:none" aria-hidden="true">Optional Twitch API connection</button>
 <p class="muted">Öncelik, Twitch GTA VI kliplerindeki yayıncıların herkese açık biyografilerinde kadın içerik üreticisi olduklarını açıkça belirtmelerine göre verilir. Profilinde bunu belirtmeyen yayıncılar genel klip havuzunda kalır; isim veya görselden cinsiyet tahmin edilmez. Resmî MP4 adresi yoksa yalnızca herkese açık klip sayfası yedek indirmeyle denenir. Gizli/aboneye özel klipler kullanılmaz.</p>
 </section>
-<section class="panel"><h2>Twitch kaynak alma</h2><p class="muted">Twitch'in gerçek GTA VI kategori klip akışı sayfalı taranır. Biyografisinde kadın yayıncı/üretici olduğunu açıkça belirten kanallar öncelik alır; diğer doğrulanmış GTA VI kanalları da havuzda kalır. Yalnızca varlığı ve kategori bilgisi Twitch API ile doğrulanan 25–60 saniyelik klipler kuyruğa girer. Resmî MP4 adresi yoksa herkese açık klip sayfası yedek indirmeyle denenir. Üç saatlik otomatik üretim döngüsü devam eder.</p></section>
+<section class="panel"><h2>Twitch kaynak alma</h2><p class="muted">Twitch'in gerçek GTA VI kategori klip akışı sayfalı taranır. Biyografisinde kadın yayıncı/üretici olduğunu açıkça belirten kanallar öncelik alır; diğer doğrulanmış GTA VI kanalları da havuzda kalır. Yalnızca varlığı ve kategori bilgisi Twitch API ile doğrulanan 25–175 saniyelik klipler kuyruğa girer. Resmî MP4 adresi yoksa herkese açık klip sayfası yedek indirmeyle denenir. Üç saatlik otomatik üretim döngüsü devam eder.</p></section>
 
 <section class="panel"><h2>Manuel kaynak ekle</h2><input id="url" placeholder="Klip URL"><input id="creator" placeholder="Yayıncı adı"><input id="title" placeholder="Klip başlığı"><button id="add">Kaynak ekle</button></section>
 <section class="panel"><h2>Kaynaklar</h2><div class="wrap"><table><thead><tr><th>Yayıncı / Klip</th><th>Puan</th><th>Medya analizi</th><th>GTA VI durumu</th><th>Kaynak</th></tr></thead><tbody id="sourceRows"></tbody></table></div></section>
@@ -46,7 +46,7 @@ id="creatorRightsPanel" style="display:none;border:1px solid #8b5cf6"
 <label for="permissionCreatorEvidence">Yayıncının video/YouTube yeniden kullanım izni kanıtı</label><input id="permissionCreatorEvidence" placeholder="Yazılı izin bağlantısı veya kayıt referansı">
 <label for="permissionAudioEvidence">Yayıncı sesi ve videodaki müzik/diğer seslerin YouTube kullanım hakkı kanıtı</label><input id="permissionAudioEvidence" placeholder="Müzik lisansı, ses izni veya sessiz/müziksiz kullanım teyidi referansı">
 <label style="display:flex;gap:8px;align-items:flex-start;margin:10px 0"><input id="permissionAudioConfirm" type="checkbox" style="width:auto;margin:2px 0"> Bu klibin yayıncı sesi ve tüm arka plan müzikleri YouTube'da yeniden kullanım için lisanslı/izinli; aksi durumda kaynak reddedilecek.</label>
-<label for="permissionMaxSeconds">İzin verilen en uzun kaynak kullanım süresi (saniye)</label><input id="permissionMaxSeconds" type="number" min="45" max="175" value="60">
+<label for="permissionMaxSeconds">İzin verilen en uzun kaynak kullanım süresi (saniye)</label><input id="permissionMaxSeconds" type="number" min="45" max="175" value="120">
 <label for="permissionExpiry">İzin bitiş tarihi (isteğe bağlı)</label><input id="permissionExpiry" type="datetime-local">
 <label for="permissionGameBasis">GTA VI oyun görüntüsü için hak dayanağı</label>
 <select id="permissionGameBasis" style="width:100%;padding:11px;background:#0d1119;color:white;border:1px solid #343d4d;border-radius:7px;margin:7px 0">
@@ -594,7 +594,7 @@ async function dispatchRender(db,env,draftId,evidenceReference,authorizationConf
  const title=String(row.draft_title||row.source_title||"GTA 6 Short").slice(0,90);
  const hookMatch=String(row.script||"").match(/HOOK \/ OPENING:\s*([^\\n]+)/i);
  const hookText=hookMatch?String(hookMatch[1]).trim().slice(0,100):String(row.source_title||title).slice(0,100);
- const maxSourceSeconds=Math.max(25,Math.min(60,Number(row.max_source_seconds)||60));
+ const maxSourceSeconds=Math.max(25,Math.min(175,Number(row.max_source_seconds)||120));
  const nextRenderAttempt=String(Number(row.render_attempts||0)+1);
  const downloadAccess=await db.prepare("SELECT download_url FROM twitch_clip_access WHERE source_id=? AND access_status='downloadable' AND download_url IS NOT NULL AND datetime(checked_at)>datetime('now','-30 minutes')").bind(row.source_id).first();
  // No official MP4 URL is okay: renderer falls back to the public clip page.
