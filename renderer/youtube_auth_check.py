@@ -55,7 +55,10 @@ def main():
         "https://www.googleapis.com/auth/youtube.force-ssl",
         "https://www.googleapis.com/auth/youtube",
     }
-    analytics_scope = "https://www.googleapis.com/auth/yt-analytics.readonly"
+    analytics_scopes = {
+        "https://www.googleapis.com/auth/youtube.readonly",
+        "https://www.googleapis.com/auth/yt-analytics.readonly",
+    }
     if scopes and upload_scope not in scopes:
         raise RuntimeError("The refreshed token does not include the YouTube upload scope.")
     print("PASS: Google accepted the refresh token; YouTube upload scope is present.")
@@ -65,8 +68,10 @@ def main():
           ("available" if not scopes or bool(scopes & read_scopes) else "fallback_120_second_wait"))
     print("EXISTING_VIDEO_METADATA_UPDATE: " +
           ("available" if not scopes or bool(scopes & write_scopes) else "not_requested_for_new_uploads"))
+    missing_analytics_scopes = analytics_scopes - scopes
     print("CHANNEL_ANALYTICS: " +
-          ("available" if analytics_scope in scopes else "optional_analytics_api_scope_not_configured"))
+          ("available" if not missing_analytics_scopes else
+           "reauthorization_required:" + ",".join(sorted(missing_analytics_scopes))) )
     print("No video was uploaded or modified. Token values are never printed.")
 
 
