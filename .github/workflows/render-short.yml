@@ -6,7 +6,11 @@ on:
   workflow_dispatch:
     inputs:
       source_url:
-        description: Public Twitch clip URL
+        description: Original public Twitch clip URL retained for creator attribution
+        required: true
+        type: string
+      download_url:
+        description: Short-lived direct MP4 URL returned by Twitch Clips Downloads API
         required: true
         type: string
       title:
@@ -81,7 +85,7 @@ jobs:
           task = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
           print("noop=" + ("true" if task.get("noop") else "false"))
           print("test_quality_rejection=" + ("true" if task.get("test_quality_rejection") else "false"))
-          for key in ("source_url", "title", "description", "tags", "job_id", "render_attempt", "creator_name", "source_title", "max_source_seconds", "broadcaster_id", "permission_expires_at", "permission_attestation"):
+          for key in ("source_url", "download_url", "title", "description", "tags", "job_id", "render_attempt", "creator_name", "source_title", "max_source_seconds", "broadcaster_id", "permission_expires_at", "permission_attestation"):
               print(f"{key}={str(task.get(key, '')).replace(chr(10), ' ')}")
           print("package_text<<GTA6_TASK_EOF")
           print(str(task.get("package_text", "")))
@@ -92,6 +96,7 @@ jobs:
         env:
           PERMISSION_SECRET: ${{ secrets.RENDER_WEBHOOK_SECRET }}
           SOURCE_URL: ${{ inputs.source_url || steps.task.outputs.source_url }}
+          DOWNLOAD_URL: ${{ inputs.download_url || steps.task.outputs.download_url }}
           JOB_ID: ${{ inputs.job_id || steps.task.outputs.job_id }}
           BROADCASTER_ID: ${{ inputs.broadcaster_id || steps.task.outputs.broadcaster_id }}
           RENDER_ATTEMPT: ${{ inputs.render_attempt || steps.task.outputs.render_attempt }}
@@ -153,6 +158,7 @@ jobs:
         id: render
         env:
           SOURCE_URL: ${{ inputs.source_url || steps.task.outputs.source_url }}
+          DOWNLOAD_URL: ${{ inputs.download_url || steps.task.outputs.download_url }}
           SHORT_TITLE: ${{ inputs.title || steps.task.outputs.title }}
           PACKAGE_TEXT: ${{ inputs.package_text || steps.task.outputs.package_text }}
           MAX_SOURCE_SECONDS: ${{ inputs.max_source_seconds || steps.task.outputs.max_source_seconds || '175' }}
@@ -166,6 +172,7 @@ jobs:
             set +e
             python renderer/render.py \
               --source-url "$SOURCE_URL" \
+              --download-url "$DOWNLOAD_URL" \
               --title "$SHORT_TITLE" \
               --max-source-seconds "$MAX_SOURCE_SECONDS" \
               --output short.mp4 2>&1 | tee render.log
