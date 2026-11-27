@@ -1,0 +1,52 @@
+{
+  "source_url": "https://www.twitch.tv/evelone2004/clip/EvilAgitatedKalePrimeMe-zOG9KJclQ_zUcQbw",
+  "video_url": "https://www.youtube.com/watch?v=kQK6c_ky9uM",
+  "title": "GTA 6 Gameplay: радует | GTA 6 #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.033,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "feef7f7f7b5d1fce",
+      "f2e29292907aa1c8",
+      "00c080c442424216",
+      "3878dc4c94a28c96",
+      "7e7c747464e47272",
+      "0107041414171608",
+      "fae29a9d93630191",
+      "e1c9dbdf3bd94180",
+      "1cd4b43d05078715",
+      "e3133352221ad380",
+      "3ed4b42119038b49",
+      "c7a77664a414d7c0",
+      "7e3e3e36370383c5",
+      "0a080c0d0bc88640",
+      "3f212d3121496754",
+      "0000848509b80044",
+      "f27363b3918e1807",
+      "0000600808002074",
+      "fcfcfcdcc8c6e7e7",
+      "031b3b6bc2c6e383",
+      "00011313002a2e44",
+      "0002225150c08282",
+      "e13a4a4c7e9b1820",
+      "07052537361d1a37",
+      "ffffcfcfdfce430b",
+      "2f3267371767e6ef",
+      "0449691162e4101f",
+      "02042424d030a003"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 470.37,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 0,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
