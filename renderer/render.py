@@ -464,9 +464,24 @@ def branding_assets():
     return [(root / name, scale, x, y, timing) for name, scale, x, y, timing in specs if (root / name).is_file()]
 
 
-def video_filter(duration, assets, mature=False):
+def _drawtext_escape(text):
+    return (clean(text)[:72].replace("\\", "\\\\").replace(":", "\\:")
+            .replace("'", "\\'").replace("%", "\\%").replace("[", "\\[")
+            .replace("]", "\\]").replace(",", "\\,").replace(";", "\\;"))
+
+
+def video_filter(duration, assets, mature=False, hook_text=""):
     base = "scale=1080:1920:force_original_aspect_ratio=increase:flags=lanczos,crop=1080:1920,setsar=1,unsharp=5:5:0.30:3:3:0.0"
+    hook = clean(hook_text).strip()
     if not assets:
+        if hook:
+            safe_hook = _drawtext_escape(hook)
+            base += (
+                f",drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:"
+                f"text='{safe_hook}':fontcolor=white:fontsize=58:borderw=4:bordercolor=black:"
+                "box=1:boxcolor=black@0.68:boxborderw=18:x=(w-text_w)/2:y=270:"
+                "enable='between(t,0,2.8)'"
+            )
         return base, []
     parts = [f"[0:v]{base}[base]"]
     inputs = []
@@ -488,6 +503,15 @@ def video_filter(duration, assets, mature=False):
         parts.append(f"[{current}][{label}]overlay=x={x}:y={y}:eof_action=pass:enable='{enable}'[{next_label}]")
         current = next_label
         inputs.extend(["-loop", "1", "-i", str(assets[index-1][0])])
+    if hook:
+        safe_hook = _drawtext_escape(hook)
+        parts.append(
+            f"[{current}]drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:"
+            f"text='{safe_hook}':fontcolor=white:fontsize=58:borderw=4:bordercolor=black:"
+            "box=1:boxcolor=black@0.68:boxborderw=18:x=(w-text_w)/2:y=270:"
+            "enable='between(t,0,2.8)'[hook]"
+        )
+        current = "hook"
     if mature:
         parts.append(
             f"[{current}]drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:"
@@ -609,6 +633,7 @@ def main():
     ap.add_argument("--source-url",required=True, help="Original Twitch clip URL retained for attribution.")
     ap.add_argument("--download-url", help="Short-lived direct MP4 URL returned by Twitch Clips Downloads API.")
     ap.add_argument("--title",required=True)
+    ap.add_argument("--hook-text", default="", help="Factual on-screen opening hook shown for the first 2.8 seconds.")
     ap.add_argument("--output",default="short.mp4")
     ap.add_argument("--max-source-seconds",type=float,default=175.0,
                     help="Maximum permitted seconds of the creator's source footage in the final edit.")
@@ -711,7 +736,7 @@ def main():
         intro_duration = 0.30
         brand_sting=create_brand_sting(w,duration=intro_duration)
         mature_edit=analysis["vision_review"].get("editing_treatment")=="mature_non_explicit"
-        vf,overlay_inputs=video_filter(duration,assets,mature=mature_edit)
+        vf,overlay_inputs=video_filter(duration,assets,mature=mature_edit,hook_text=a.hook_text)
         analysis["mature_content_editing"]={
             "applied":mature_edit,
             "opening_notice":"MATURE THEMES" if mature_edit else None,

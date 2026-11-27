@@ -29,6 +29,25 @@ class RendererHelpersTest(unittest.TestCase):
         self.assertIn("-analyzeduration 20000000 -probesize 50000000",
                       command[command.index("--downloader-args") + 1])
 
+    def test_video_filter_renders_opening_hook_for_early_retention(self):
+        from pathlib import Path
+
+        simple_filter, simple_inputs = video_filter(
+            30.0, [], hook_text="Unexpected police chase"
+        )
+        self.assertIn("text='Unexpected police chase'", simple_filter)
+        self.assertIn("between(t,0,2.8)", simple_filter)
+        self.assertEqual(simple_inputs, [])
+
+        branded_filter, branded_inputs = video_filter(
+            30.0,
+            [(Path("branding/logo.png"), "190:-1", "40", "40", "always")],
+            hook_text="Unexpected police chase",
+        )
+        self.assertIn("[hook]", branded_filter)
+        self.assertIn("between(t,0,2.8)", branded_filter)
+        self.assertIn("branding/logo.png", " ".join(branded_inputs))
+
     def test_production_download_uses_signed_twitch_api_mp4_url(self):
         from pathlib import Path
         from tempfile import TemporaryDirectory

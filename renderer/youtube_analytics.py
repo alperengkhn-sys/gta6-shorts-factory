@@ -9,6 +9,7 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+from pathlib import Path
 
 
 TOKEN_URL = "https://oauth2.googleapis.com/token"
@@ -82,6 +83,44 @@ def markdown_table(headers: list[str], rows: list[list[str]]) -> str:
     return "\n".join([top, sep, *body])
 
 
+def published_shorts(marker_dir: Path | None = None) -> dict[str, str]:
+    """Return published Shorts IDs/titles from the factory's upload markers."""
+    root = marker_dir or Path(".github/published-clips")
+    found: dict[str, str] = {}
+    for path in sorted(root.glob("*.json")):
+        try:
+            item = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        url = str(item.get("video_url") or item.get("youtube_url") or "").strip()
+        parsed = urllib.parse.urlparse(url)
+        video_id = ""
+        if parsed.hostname in {"youtu.be", "www.youtu.be"}:
+            video_id = parsed.path.strip("/").split("/")[0]
+        elif parsed.hostname and parsed.hostname.endswith("youtube.com"):
+            video_id = (urllib.parse.parse_qs(parsed.query).get("v") or [""])[0]
+            if not video_id:
+                parts = [part for part in parsed.path.split("/") if part]
+                if len(parts) >= 2 and parts[0] in {"shorts", "embed"}:
+                    video_id = parts[1]
+        if video_id:
+            found[video_id] = str(item.get("title") or video_id)
+    return found
+
+
+def build_video_report_params(common: dict[str, str], video_ids: list[str]) -> dict[str, str] | None:
+    """Google permits video dimension if the query filters on multiple video IDs."""
+    ids = [value for value in video_ids if value]
+    if not ids:
+        return None
+    return {
+        **common,
+        "dimensions": "video",
+        "filters": "video==" + ",".join(ids[:500]),
+        "maxResults": "200",
+    }
+
+
 def append_summary(markdown: str) -> None:
     path = os.environ.get("GITHUB_STEP_SUMMARY", "").strip()
     if path:
@@ -115,20 +154,17 @@ def main() -> int:
         "metrics": METRICS,
     }
 
-    top = query_report(token, {
-        **common,
-        "dimensions": "video,creatorContentType",
-        "sort": "-views",
-        "maxResults": "200",
-    })
+    shorts = published_shorts()
+    top_params = build_video_report_params(common, list(shorts))
+    top = query_report(token, top_params) if top_params else {"columnHeaders": [], "rows": []}
     top_headers = [item.get("name", "") for item in top.get("columnHeaders", [])]
     top_rows = []
     for values in top.get("rows", []):
         row = dict(zip(top_headers, values))
-        if str(row.get("creatorContentType", "")).upper() != "SHORTS":
-            continue
+        video_id = str(row.get("video", ""))
         top_rows.append([
-            str(row.get("video", "")),
+            shorts.get(video_id, video_id),
+            video_id,
             fmt(row.get("views")),
             fmt(row.get("engagedViews")),
             fmt(row.get("likes")),
@@ -140,7 +176,7 @@ def main() -> int:
             fmt(row.get("averageViewDuration"), 2),
             fmt(row.get("averageViewPercentage"), 1) + "%",
         ])
-    top_rows.sort(key=lambda row: as_number(row[1].replace(",", "")), reverse=True)
+    top_rows.sort(key=lambda row: as_number(row[2].replace(",", "")), reverse=True)
 
     daily = query_report(token, {
         **common,
@@ -170,12 +206,12 @@ def main() -> int:
         f"**Period:** {start_date.isoformat()} to {end_date.isoformat()} (UTC; latest complete day only)\n\n"
         "## Best-performing Shorts\n\n"
         + markdown_table(
-            ["Video ID", "Views", "Engaged", "Likes", "Comments", "Shares", "Subs +", "Subs −", "Watch min", "Avg sec", "Avg viewed"],
+            ["Short title", "Video ID", "Views", "Engaged", "Likes", "Comments", "Shares", "Subs +", "Subs −", "Watch min", "Avg sec", "Avg viewed"],
             top_rows,
         )
         + "\n\n## Daily Shorts activity\n\n"
         + markdown_table(["Date", "Views", "Likes", "Comments", "Shares", "Subs +", "Subs −", "Watch min"], daily_rows)
-        + "\n\n**Interpretation:** zero views means no measured views in this report window; it does not by itself identify the reason for low distribution. Use Shorts Feed shown-in-feed and chose-to-view metrics in YouTube Studio to separate low reach from weak opening retention."
+        + "\n\n**Interpretation:** zero views means no measured views in this report window; it does not by itself identify the reason for low distribution. YouTube Studio separately shows Shorts Feed appearances and viewed-versus-swiped-away metrics; these feed metrics are not returned by this Analytics API report."
     )
     return 0
 
