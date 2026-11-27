@@ -16,6 +16,8 @@ on:
       - 'tests/test_render_batch_policy.mjs'
       - '.github/workflows/render-short.yml'
       - '.github/workflows/validate.yml'
+      - '.github/workflows/youtube-analytics.yml'
+      - 'renderer/youtube_analytics.py'
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -60,7 +62,7 @@ jobs:
           NODE
           node --check /tmp/dashboard.js
       - name: Compile renderer scripts
-        run: python -m py_compile renderer/render.py renderer/visual_quality.py renderer/permission_attestation.py renderer/backfill_content_fingerprints.py renderer/youtube_upload.py renderer/prepare_branding.py tests/test_renderer.py tests/test_permission_attestation.py
+        run: python -m py_compile renderer/render.py renderer/visual_quality.py renderer/permission_attestation.py renderer/backfill_content_fingerprints.py renderer/youtube_upload.py renderer/youtube_analytics.py renderer/prepare_branding.py tests/test_renderer.py tests/test_permission_attestation.py
       - name: Run renderer unit tests
         run: python -m unittest discover -s tests -v
       - name: Install media tools for integration render
@@ -162,6 +164,8 @@ jobs:
           test -s renderer/prepare_branding.py
           test -s renderer/render.py
           test -s renderer/youtube_upload.py
+          test -s renderer/youtube_analytics.py
+          test -s .github/workflows/youtube-analytics.yml
           test -s tests/test_renderer.py
           test -s tests/test_render_batch_policy.mjs
           test -s src/render-batch-policy.mjs
