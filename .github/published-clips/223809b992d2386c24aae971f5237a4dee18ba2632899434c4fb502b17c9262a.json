@@ -1,0 +1,51 @@
+{
+  "source_url": "https://www.twitch.tv/ohnepixel/clip/UninterestedSoftLorisKlappa-60EV5Q5rHYYd9sc7",
+  "video_url": "https://www.youtube.com/watch?v=El1-5-cTeKw",
+  "title": "GTA 6 Gameplay: ohne just wants to see sum stuff | GTA 6 #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 59.983,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "1201030385841303",
+      "0c160d0f0e9c1142",
+      "06192d04179589a8",
+      "080203038b8b888c",
+      "084802038b0b1434",
+      "43192a268b0b840c",
+      "02130b4b86051508",
+      "030903079793848c",
+      "01c08282c2c19a9c",
+      "884685890d224d47",
+      "a5e1c0c0e244ccf8",
+      "0002020200000804",
+      "fbf3f3d108a84484",
+      "40b8bc2000090001",
+      "31b130b879e9e961",
+      "83c3272344d2884c",
+      "4081e0c0a281d0cb",
+      "2014808a82c3a024",
+      "66fe33868ac288c7",
+      "0e8c062f86c1a091",
+      "c0c0e0e0d0e8f0f0",
+      "c040c0d0b0902808",
+      "405b12928722232f",
+      "03ccc8c000911101",
+      "20919521f96874a8",
+      "0a0190a2e282a321",
+      "082666070787c3a3"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 51.24,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 0,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
