@@ -1,0 +1,51 @@
+{
+  "source_url": "https://www.twitch.tv/caseoh_/clip/CourageousGleamingCurry4Head-6iFyrD9BaXzZcwiU",
+  "video_url": "https://www.youtube.com/watch?v=AeqbJim85rc",
+  "title": "GTA 6 Gameplay: step away | GTA 6 #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "a6537e708d8e7ad3",
+      "85737e78cdddb9d8",
+      "27056aaf30c0c8a0",
+      "de12a876923363b1",
+      "5e12ac36225153a1",
+      "706ab038302153b9",
+      "9e12a87eb221f1a9",
+      "3970eccc258fdfdb",
+      "16c613038886b063",
+      "0008281f908347b9",
+      "08923c0203b00c61",
+      "08923d1223b0ac41",
+      "0c923c1227b0a441",
+      "0c123c7287f00489",
+      "524308c6b0e201a1",
+      "02c6a2c28188004f",
+      "4e4ecb9f8f90030f",
+      "963203c08f804043",
+      "3e3a268c8ece8f8f",
+      "f3d400ade7cdc880",
+      "040081484c3f3136",
+      "0033839486cf4100",
+      "1013038b80c7c140",
+      "8013038b80c7c380",
+      "8013038b80c7c180",
+      "00084964c0c080c0",
+      "0323ab8180c5454e"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 80.62,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 1,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
