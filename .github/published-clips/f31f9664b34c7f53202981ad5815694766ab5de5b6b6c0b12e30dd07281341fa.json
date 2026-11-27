@@ -1,0 +1,49 @@
+{
+  "source_url": "https://www.twitch.tv/joe_bartolozzi/clip/RudeSilkyHerdNotLikeThis-G4DngW3oQhoxBOfu",
+  "video_url": "https://www.youtube.com/watch?v=9yXgHo2iXn0",
+  "title": "GTA 6 Gameplay: JOE MEETS MANDY | GTA 6 #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 54.001,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "0f27af1f6555b12f",
+      "07074b43070f930d",
+      "0f0f13170fd64e51",
+      "0f0f93470ed26a0b",
+      "078f93170f526a49",
+      "8f8f4b4716da6a2b",
+      "070f330727b26a1f",
+      "070f13472793cb0b",
+      "80d21228c09d39e9",
+      "d3bbbcbeb1f1e1e1",
+      "d3bdbcfeb3f1e123",
+      "d3b9bcfeb1e1e143",
+      "dbb9fcdcf8f0e3a3",
+      "d3bdbcffb1f1e193",
+      "dbb9bcfeb1f0e103",
+      "d3b9bcffb1f1e121",
+      "dbb9bcffb1f1e12b",
+      "d3bbbefeb0f0e1e3",
+      "d3b9befed8f8f1a3",
+      "00f01ebcaee2fd27",
+      "fefef6ee5d201d0f",
+      "f8fcbace831dc82b",
+      "7078761e8719982b",
+      "6038b61e8701980f",
+      "d3b9bce759232307"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 343.76,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 3,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
