@@ -38,6 +38,7 @@ test("adds supported topic tags for an English police title", () => {
     angle: "police",
   });
   assert.match(metadata.title, /Police chase goes wrong/);
+  assert.doesNotMatch(metadata.title, /wrong in GTA 6/);
   assert.ok(metadata.tags.includes("GTA 6 police chase"));
   assert.ok(metadata.hashtags.includes("#GTA6Police"));
   assert.ok(metadata.description.includes("#GTA6Police"));
@@ -56,4 +57,15 @@ test("respects YouTube title and tag limits and has safe fallbacks", () => {
   const fallback = buildYouTubeMetadata({});
   assert.ok(fallback.title.startsWith("GTA 6 Gameplay Clip"));
   assert.ok(fallback.hashtags.includes("#Shorts"));
+});
+
+test("uses an optional supplied hook in the same shared SEO package", () => {
+  const metadata = buildYouTubeMetadata({
+    originalTitle: "Police chase in GTA 6",
+    creatorName: "ExampleStreamer",
+    hook: "Unexpected turn",
+    angle: "police",
+  });
+  assert.match(metadata.title, /Unexpected turn/);
+  assert.ok(metadata.description.includes("Unexpected turn."));
 });
