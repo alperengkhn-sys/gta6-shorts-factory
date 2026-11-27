@@ -35,7 +35,7 @@ class RendererHelpersTest(unittest.TestCase):
         from unittest.mock import patch
 
         class FakeResponse:
-            headers = {"Content-Type": "video/mp4", "Content-Length": "9"}
+            headers = {"Content-Type": "video/mp4", "Content-Length": "8"}
             def __init__(self):
                 self.data = b"fake-mp4"
             def __enter__(self):
