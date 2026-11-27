@@ -1,0 +1,51 @@
+{
+  "source_url": "https://www.twitch.tv/kaicenat/clip/SpikyAlertCookieDuDudu-o9wrV5cBrwlNKB_5",
+  "video_url": "https://www.youtube.com/watch?v=rtaccRCd7cc",
+  "title": "GTA 6: kai plays gta 6 first 👀",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "f7ff5977f0f9e8e4",
+      "d17f561a79f160e4",
+      "a367722a03686069",
+      "c3e3c9494068e8a4",
+      "23fbf4beb868eae9",
+      "4f9c707779e4eae9",
+      "010d8c0e6ce8f8c8",
+      "81d83878f16131a8",
+      "42040c3c61e831a9",
+      "62060e8ee1e831a9",
+      "2133031345e9e8e3",
+      "30b88290d3d9a8a1",
+      "c5060eac45e10a19",
+      "1c1e18d6c7ebe8e0",
+      "0041f3737a691b0b",
+      "00e1f3777c5c1825",
+      "00e4dc5cccc92943",
+      "00b66878acc95109",
+      "0024ac6c6cc91109",
+      "10c7e7e739123734",
+      "20e7e5e239123731",
+      "10e5f5e339923729",
+      "8426203c74b8b8ae",
+      "0c0fdc480f1f0f8f",
+      "06aa8251c0410e4b",
+      "ea8c2507034080c0",
+      "004e8c14280a091b"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 382.31,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 0,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
