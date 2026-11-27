@@ -26,7 +26,7 @@ test("keeps a non-Latin title intact and does not manufacture single-word keywor
   });
   assert.ok(metadata.title.includes("радует"));
   assert.ok(metadata.description.includes('Original clip title: "Gta6 радует".'));
-  assert.ok(metadata.tags.includes("радует"));
+  assert.ok(metadata.tags.includes("Gta6 радует"));
   assert.ok(!metadata.tags.includes("GTA 6 радует"));
   assert.ok(metadata.tags.includes("evelone2004 Twitch"));
 });
