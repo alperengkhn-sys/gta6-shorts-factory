@@ -57,9 +57,9 @@ class RendererHelpersTest(unittest.TestCase):
                     "https://clips-media-assets2.twitch.tv/test-download.mp4?sig=test",
                     target,
                 )
-        self.assertEqual(size, 8)
-        self.assertEqual(target.read_bytes(), b"fake-mp4")
-        self.assertEqual(urlopen.call_count, 1)
+                self.assertEqual(size, 8)
+                self.assertEqual(target.read_bytes(), b"fake-mp4")
+                self.assertEqual(urlopen.call_count, 1)
 
     def test_production_download_rejects_twitch_page_url_and_non_https(self):
         from unittest.mock import patch
