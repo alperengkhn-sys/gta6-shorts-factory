@@ -8,11 +8,12 @@ import hmac
 import math
 import os
 import sys
+from urllib.parse import urlsplit
 
 
 def permission_message(job_id: str, source_url: str, broadcaster_id: str,
                       max_source_seconds: str, permission_expires_at: str = "",
-                      render_attempt: str = "") -> bytes:
+                      render_attempt: str = "", download_url: str = "") -> bytes:
     return "\n".join((
         str(job_id),
         str(source_url),
@@ -20,17 +21,18 @@ def permission_message(job_id: str, source_url: str, broadcaster_id: str,
         str(max_source_seconds),
         str(permission_expires_at),
         str(render_attempt),
+        str(download_url),
     )).encode("utf-8")
 
 
 def make_permission_signature(secret: str, job_id: str, source_url: str,
                               broadcaster_id: str, max_source_seconds: str,
                               permission_expires_at: str = "",
-                              render_attempt: str = "") -> str:
+                              render_attempt: str = "", download_url: str = "") -> str:
     digest = hmac.new(
         str(secret).encode("utf-8"),
         permission_message(job_id, source_url, broadcaster_id,
-                           max_source_seconds, permission_expires_at, render_attempt),
+                           max_source_seconds, permission_expires_at, render_attempt, download_url),
         hashlib.sha256,
     ).digest()
     return base64.urlsafe_b64encode(digest).decode("ascii").rstrip("=")
@@ -39,11 +41,18 @@ def make_permission_signature(secret: str, job_id: str, source_url: str,
 def verify_permission_attestation(*, secret: str, job_id: str, source_url: str,
                                   broadcaster_id: str, max_source_seconds: str,
                                   permission_expires_at: str, render_attempt: str,
-                                  signature: str, now: dt.datetime | None = None) -> dict:
+                                  download_url: str, signature: str,
+                                  now: dt.datetime | None = None) -> dict:
     """Raise ValueError unless the signed source, broadcaster and time cap are valid."""
-    fields = (job_id, source_url, broadcaster_id, max_source_seconds, render_attempt, signature)
+    fields = (job_id, source_url, broadcaster_id, max_source_seconds, render_attempt, download_url, signature)
     if not secret or not all(str(value).strip() for value in fields):
         raise ValueError("Permission attestation is missing; publishing is blocked.")
+    parsed_download = urlsplit(str(download_url))
+    if (parsed_download.scheme != "https" or not parsed_download.hostname
+            or parsed_download.username or parsed_download.password or parsed_download.fragment):
+        raise ValueError("A secure direct Twitch download URL is required.")
+    if parsed_download.hostname.lower().rstrip(".") in {"twitch.tv", "www.twitch.tv", "clips.twitch.tv"}:
+        raise ValueError("A Twitch clip page URL is not a direct download URL.")
     try:
         maximum = float(max_source_seconds)
     except (TypeError, ValueError):
@@ -65,6 +74,7 @@ def verify_permission_attestation(*, secret: str, job_id: str, source_url: str,
     expected = make_permission_signature(
         secret, job_id, source_url, broadcaster_id, max_source_seconds, permission_expires_at,
         render_attempt,
+        download_url,
     )
     if not hmac.compare_digest(expected, str(signature)):
         raise ValueError("Permission attestation is invalid; publishing is blocked.")
@@ -74,6 +84,7 @@ def verify_permission_attestation(*, secret: str, job_id: str, source_url: str,
         "render_attempt": str(render_attempt),
         "max_source_seconds": maximum,
         "permission_expires_at": str(permission_expires_at or ""),
+        "download_host": parsed_download.hostname,
         "verified": True,
     }
 
@@ -88,6 +99,7 @@ def main() -> int:
             max_source_seconds=os.environ.get("MAX_SOURCE_SECONDS", ""),
             permission_expires_at=os.environ.get("PERMISSION_EXPIRES_AT", ""),
             render_attempt=os.environ.get("RENDER_ATTEMPT", ""),
+            download_url=os.environ.get("DOWNLOAD_URL", ""),
             signature=os.environ.get("PERMISSION_ATTESTATION", ""),
         )
     except ValueError as exc:
