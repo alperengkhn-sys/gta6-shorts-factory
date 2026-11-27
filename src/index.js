@@ -9,7 +9,7 @@ import {
   batchCompletionStatus
 } from "./render-batch-policy.mjs";
 
-const VERSION = "GTA6-FACTORY-6.3-FIRST-LIVE-BATCH";
+const VERSION = "GTA6-FACTORY-6.4-DYNAMIC-DISCOVERY";
 // The [initial-production] deployment marker runs one permission-gated bootstrap cycle after deploy.
 const MIN_AUTOMATIC_PUBLISHES_PER_CYCLE = MIN_BATCH_PUBLISHES;
 const MAX_AUTOMATIC_RENDERS_PER_CYCLE = MAX_BATCH_PUBLISHES;
