@@ -107,7 +107,7 @@ jobs:
           video = info["streams"][0]
           assert (video["width"], video["height"], video["codec_name"]) == (1080, 1920, "h264"), video
           duration = float(info["format"]["duration"])
-          assert 60.0 < duration <= 180.0, duration
+          assert 80.0 < duration <= 180.0, duration
           PY
           test -s render-analysis.json
           test -s short-cover.jpg
