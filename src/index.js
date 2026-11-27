@@ -26,16 +26,16 @@ const HTML = String.raw`<!doctype html>
 <section class="panel"><div class="stats"><div class="stat">Twitch kaynakları<strong id="sources">0</strong></div><div class="stat">Üretim kuyruğu<strong id="queued">0</strong></div><div class="stat">Hazırlanan Shorts<strong id="drafts">0</strong></div><div class="stat">YouTube yayınları<strong id="published">0</strong></div></div><p class="muted">Otomatik Twitch keşfi → MP4 render → İngilizce SEO → YouTube public upload.</p><button id="refresh" class="secondary">Paneli yenile</button><button id="discover">GTA VI Twitch keşfini başlat</button><button id="prepare">PAKETLERİ OLUŞTUR / GÜNCELLE</button><button id="logout" class="secondary">Çıkış</button><div id="msg" class="notice hidden"></div></section>
 <section class="panel"><h2>Bulut bağlantıları</h2><div id="systemStatus" class="notice">Bağlantılar kontrol ediliyor...</div><p class="muted">Gizli anahtarların değerleri gösterilmez; yalnızca yapılandırılmış olup olmadıkları kontrol edilir.</p></section>
 <section class="panel" id="twitchAccountPanel">
-<h2>Twitch klip indirme hesabı</h2>
-<div id="twitchAccountStatus" class="notice">Twitch hesap bağlantısı kontrol ediliyor...</div>
-<button type="button" id="twitchConnectBtn">TWITCH HESABINI BAĞLA / YETKİYİ YENİLE</button>
-<p class="muted">Klip indirme için bağlanan Twitch hesabının klip sahibi veya ilgili kanalda editör olması gerekir. Bu bağlantı diğer yayıncıların kanallarında otomatik editör yetkisi vermez; kanal sahibi seni ayrıca editör olarak eklemelidir.</p>
+<h2>Herkese açık Twitch klipleri</h2>
+<div id="twitchAccountStatus" class="notice">Gerçek Twitch hesapları ve GTA VI klipleri doğrulanarak taranır. Editör hesabı gerekmez.</div>
+<button type="button" id="twitchConnectBtn" style="display:none" aria-hidden="true">Optional Twitch API connection</button>
+Öncelikli kadın yayıncı listesi Twitch üzerinde birebir hesap eşleşmesiyle doğrulanır; bulunmayan hesaplar atlanır.
 </section>
-<section class="panel"><h2>Twitch kaynak alma</h2><p class="muted">GTA VI klipleri Twitch API ile keşfedilir. MP4 yalnızca Twitch'in yetkili Clips Downloads API bağlantısıyla alınır. En az 25 saniyelik klipler incelenir; indirme ve yeniden yayın hakları ayrı kontrol edilir. Uygun kaynak bulunduğunda üretim üç saatte bir otomatik yürütülür.</p></section>
+Resmî MP4 bağlantısı yoksa yalnızca herkese açık klip sayfası üzerinden indirme denenir.
 
 <section class="panel"><h2>Manuel kaynak ekle</h2><input id="url" placeholder="Klip URL"><input id="creator" placeholder="Yayıncı adı"><input id="title" placeholder="Klip başlığı"><button id="add">Kaynak ekle</button></section>
 <section class="panel"><h2>Kaynaklar</h2><div class="wrap"><table><thead><tr><th>Yayıncı / Klip</th><th>Puan</th><th>Medya analizi</th><th>GTA VI durumu</th><th>Kaynak</th></tr></thead><tbody id="sourceRows"></tbody></table></div></section>
-<section class="panel" id="creatorRightsPanel" style="border:1px solid #8b5cf6">
+id="creatorRightsPanel" style="display:none;border:1px solid #8b5cf6"
 <h2>Yayıncı ve oyun görüntüsü kullanım izinleri</h2>
 <p class="muted">Twitch MP4 indirme izni, YouTube'da yeniden yayınlama izni değildir. Her yayıncı için yazılı kullanım izni kanıtı, izin verilen azami kaynak süresi ve GTA VI oyun görüntüsü için ayrı hak dayanağı kaydedilmeden otomatik yayın yapılmaz.</p>
 <div class="detail-box">
@@ -108,16 +108,10 @@ async function loadPermissions(){
 async function loginCheck(){try{await api("/api/me");$("login").classList.add("hidden");$("app").classList.remove("hidden");await refresh();}catch(e){$("app").classList.add("hidden");$("login").classList.remove("hidden");}}
 async function refresh(){try{let system=null;try{system=await api("/api/system/status")}catch(e){}if(system){const checks=[["Cloudflare D1",system.database],["Uygulama parolası",system.appPassword],["Twitch API",system.twitchClient],["GitHub Actions",system.githubToken],["Render geri bildirim anahtarı",system.renderWebhookSecret]];$("systemStatus").innerHTML="<p>Worker: <b>"+esc(system.version)+"</b></p>"+checks.map(([name,ok])=>"<p>"+(ok?"<span class='status-ok'>HAZIR</span>":"<span class='status-bad'>EKSİK</span>")+" · "+esc(name)+"</p>").join("")}else{$("systemStatus").textContent="Bulut bağlantı tanılaması yeni Worker dağıtımından sonra kullanılabilir."}let twitch=null;try{twitch=await api("/api/twitch/status")}catch(error){}
 const twitchBox=$("twitchAccountStatus");
-if(twitchBox){
- if(!twitch||!twitch.connected){
-  twitchBox.innerHTML="<b class='status-warn'>TWITCH HESABI BAĞLI DEĞİL</b><p>İndirme için Twitch hesabını bağla. Gerekli kapsam: editor:manage:clips veya channel:manage:clips.</p>";
- }else if(!twitch.download_scope_available){
-  twitchBox.innerHTML="<b class='status-warn'>HESAP BAĞLI, KLİP İNDİRME KAPSAMI EKSİK</b><p>Gerekli kapsam: editor:manage:clips veya channel:manage:clips. Yetkiyi yenile düğmesini kullan.</p><p class='mini'>Hesap: "+esc(twitch.login||twitch.display_name||"Twitch")+"</p>";
- }else{
-  twitchBox.innerHTML="<b class='status-ok'>TWITCH HESABI BAĞLI · İNDİRME KAPSAMI VAR</b><p>Hesap: "+esc(twitch.login||twitch.display_name||"Twitch")+"</p><p class='mini'>Bu, yalnızca hesabının sahibi veya editörü olduğu yayıncı kanallarında indirme sağlar.</p>";
+ if(twitchBox){
+  twitchBox.innerHTML="<b class='status-ok'>HERKESE AÇIK KLİP TARAMASI AKTİF</b><p>Editör hesabı gerekmez. Resmî MP4 yoksa public Twitch clip page indirmesi denenir.</p>";
  }
-}
-currentData=await api("/api/data");await loadPermissions();const s=currentData.sources||[],d=currentData.drafts||[];$("sources").textContent=s.length;$("drafts").textContent=d.length;$("queued").textContent=d.filter(x=>x.status==="queued_review").length;$("published").textContent=d.filter(x=>x.youtube_status==="published_public"&&x.youtube_url).length;
+ currentData=await api("/api/data");await loadPermissions();const s=currentData.sources||[],d=currentData.drafts||[];$("sources").textContent=s.length;$("drafts").textContent=d.length;$("queued").textContent=d.filter(x=>x.status==="queued_review").length;$("published").textContent=d.filter(x=>x.youtube_status==="published_public"&&x.youtube_url).length;
 $("sourceRows").innerHTML=s.map(x=>"<tr><td><b>"+esc(x.creator_name)+"</b><br>"+esc(x.title)+(x.relevance_status==="relevant"?"<br><span class='status-ok'>GTA VI kategorisi doğrulandı</span>":"")+"</td><td>"+esc(x.score==null?"-":x.score)+"/100</td><td>"+(x.media_analyzed_at?("Kalite "+esc(x.media_quality_score==null?"-":x.media_quality_score)+"/100<br>"+esc(x.source_width)+"×"+esc(x.source_height)+" · "+esc(x.source_fps)+" FPS<br>"+(x.source_has_audio?"Ses var":"Ses yok")+" · Sessizlik "+esc(Math.round(Number(x.silence_ratio||0)*100))+"%<br>Sahne geçişi: "+esc(x.scene_change_count==null?"-":x.scene_change_count)+" · Ortalama ses: "+esc(x.mean_volume_db==null?"-":x.mean_volume_db+" dB")):"Render analizi bekleniyor")+"</td><td>"+esc(x.relevance_status)+"</td><td><a target='_blank' rel='noopener' href='"+esc(x.source_url)+"'>Klibi aç</a></td></tr>").join("");
 $("draftRows").innerHTML=d.map(x=>{const st=String(x.job_status||x.status||"queued_review"),ready=st==="ready"&&!!x.output_key,busy=st==="processing";return "<tr><td><input type='checkbox' class='draft-select' value='"+esc(x.id)+"' "+(ready||busy?"":"checked")+" aria-label='Kaynağı seç'></td><td>"+esc(x.creator_name||"Bilinmiyor")+"</td><td>"+esc(x.title)+"</td><td>"+esc(st)+(x.youtube_status?"<br><span class='mini'>YouTube: "+esc(x.youtube_status)+"</span>":"")+(x.thumbnail_status?"<br><span class='mini'>Kapak: "+esc(x.thumbnail_status)+"</span>":"")+"</td><td><button type='button' class='view-button' data-view='"+esc(x.id)+"'>Görüntüle</button> <button type='button' data-render='"+esc(x.id)+"' "+(ready||busy?"disabled":"")+">"+(ready?"ÜRETİLDİ":busy?"İŞLENİYOR":"MP4 ÜRET")+"</button> "+(ready?(String(x.output_key||"").toLowerCase().endsWith(".mp4")?"<a class='button-link' target='_blank' rel='noopener' href='"+esc(x.output_key)+"'>MP4 İNDİR</a> "+(x.package_url?"<a class='button-link' target='_blank' rel='noopener' href='"+esc(x.package_url)+"'>PAKET ZIP</a>":""):"<a class='button-link' target='_blank' rel='noopener' href='"+esc(x.package_url||x.output_key)+"'>PAKET ZIP İNDİR</a>"):"")+"</td></tr>"}).join("");if(!d.length)$("draftRows").innerHTML="<tr><td colspan='5'>Henüz üretim paketi yok. Önce GTA VI keşfini ve paket oluşturmayı çalıştır.</td></tr>";}catch(e){showMsg(e.message);}}
 $("draftRows").addEventListener("click",async e=>{const view=e.target.closest("button[data-view]");if(view){e.preventDefault();e.stopPropagation();showDraft(view.getAttribute("data-view"));return;}const render=e.target.closest("button[data-render]");if(render){const id=render.getAttribute("data-render");render.disabled=true;render.textContent="BAŞLATILIYOR...";try{const r=await api("/api/render/dispatch",{draft_id:id});showMsg(r.already_exists?r.message:"MP4 üretimi başlatıldı. İş: "+r.job_id);await refresh()}catch(err){showMsg(err.message);render.disabled=false;render.textContent="MP4 ÜRET"}}});$("selectAllDrafts").onclick=()=>document.querySelectorAll("#draftRows .draft-select").forEach(x=>x.checked=true);$("clearDraftSelection").onclick=()=>document.querySelectorAll("#draftRows .draft-select").forEach(x=>x.checked=false);$("renderSelectedDrafts").onclick=async()=>{const ids=[...document.querySelectorAll("#draftRows .draft-select:checked")].map(x=>x.value),box=$("bulkRenderStatus"),btn=$("renderSelectedDrafts");if(!ids.length){showMsg("Önce üretilecek kaynakları seç.");return;}btn.disabled=true;box.classList.remove("hidden");let ok=0,failed=0;for(let i=0;i<ids.length;i++){box.textContent="Toplu üretim: "+(i+1)+"/"+ids.length+" hazırlanıyor...";try{const r=await api("/api/render/dispatch",{draft_id:ids[i]});if(r.already_exists&&r.status==="ready")ok++;else if(r.already_exists)ok++;else ok++;}catch(err){failed++;}}box.textContent="Toplu işlem tamamlandı. Başlatılan: "+ok+" · Başlatılamayan: "+failed+". Durum ve indirme bağlantıları aşağıdaki satırlarda gösteriliyor.";btn.disabled=false;await refresh();};
@@ -417,30 +411,76 @@ async function twitchGetPage(url,env,token){
  return{items:data.data||[],cursor:data.pagination?.cursor||null};
 }
 async function getGta6GameId(env,token){for(const name of["Grand Theft Auto VI","GTA VI"]){const games=await twitchGet("https://api.twitch.tv/helix/games?name="+encodeURIComponent(name),env,token),exact=games.find(g=>{const n=String(g.name||"").trim().toLowerCase();return n==="grand theft auto vi"||n==="gta vi"});if(exact)return exact.id;}return null;}
-async function discover(db,env){const token=await twitchToken(env),gameId=await getGta6GameId(env,token);let clips=0,saved=0,duplicates=0,refreshed_existing=0,filtered=0,short_duration=0,wrong_category=0,channel_fallback_clips=0;const creators=new Map();
-async function saveClip(clip,creatorFallback=null){clips++;const clipDuration=Number(clip.duration||0);if(!Number.isFinite(clipDuration)||clipDuration<45){filtered++;short_duration++;return;}const title=clip.title||"Untitled clip",gameRows=(!gameId&&clip.game_id)?await twitchGet("https://api.twitch.tv/helix/games?id="+encodeURIComponent(clip.game_id),env,token):[],categoryName=String(gameRows[0]?.name||"").toLowerCase(),categoryConfirmed=!!gameId?String(clip.game_id||"")===String(gameId):(categoryName==="grand theft auto vi"||categoryName==="gta vi");if(!categoryConfirmed){filtered++;wrong_category++;return;}const creatorName=clip.broadcaster_name||creatorFallback?.display_name||creatorFallback?.broadcaster_name||"Unknown";const exists=await db.prepare("SELECT id FROM sources WHERE twitch_clip_id=? OR source_url=? LIMIT 1").bind(clip.id,clip.url).first();if(exists){await db.prepare("UPDATE sources SET platform='twitch',source_url=?,creator_name=?,title=?,twitch_clip_id=?,twitch_broadcaster_id=?,twitch_game_id=?,twitch_clip_duration=?,relevance_status='relevant' WHERE id=?").bind(clip.url,creatorName,title,clip.id,clip.broadcaster_id||null,gameId||clip.game_id||null,clipDuration,exists.id).run();await analyzeSource(db,{id:exists.id,title},clip.view_count||0,clipDuration);duplicates++;refreshed_existing++;return;}const id=uid();if(clip.broadcaster_id)creators.set(clip.broadcaster_id,{id:clip.broadcaster_id,display_name:creatorName});await db.prepare(`INSERT INTO sources(id,platform,source_url,creator_name,title,rights_status,twitch_game_id,relevance_status,twitch_broadcaster_id,twitch_clip_id,twitch_clip_duration) VALUES(?,?,?,?,?,'pending',?,'relevant',?,?,?)`).bind(id,"twitch",clip.url,creatorName,title,gameId||clip.game_id||null,clip.broadcaster_id||null,clip.id,clipDuration).run();await analyzeSource(db,{id,title},clip.view_count||0,clipDuration);saved++;}
-if(gameId){
- let cursor=null,pages=0;
- // Continue through all available recent GTA VI clip pages (up to 2,000).
- while(pages<5){
-  const pageUrl="https://api.twitch.tv/helix/clips?game_id="+encodeURIComponent(gameId)+"&first=100"+(cursor?"&after="+encodeURIComponent(cursor):"");
-  const page=await twitchGetPage(pageUrl,env,token);
-  for(const clip of page.items)await saveClip(clip);
-  pages++;
-  cursor=page.cursor;
-  if(!cursor)break;
+const FEMALE_GTA6_STREAMERS=["ExtraEmily","Loserfruit","TheBonnetSimmer","MissMikkaa","JazzyGuns","vanillamace","yololaryy","Sweet_Anita"];
+async function discover(db,env){
+ const token=await twitchToken(env),gameId=await getGta6GameId(env,token);
+ let clips=0,saved=0,duplicates=0,refreshed_existing=0,filtered=0,short_duration=0,wrong_category=0,channel_fallback_clips=0;
+ let female_streamers_found=0,female_clips_seen=0;
+ const creators=new Map(),femaleMatched=[];
+ async function saveClip(clip,creatorFallback=null,isFemaleSeed=false){
+  clips++;
+  const clipDuration=Number(clip.duration||0);
+  if(!Number.isFinite(clipDuration)||clipDuration<25){filtered++;short_duration++;return;}
+  const title=clip.title||"Untitled clip";
+  const gameRows=(!gameId&&clip.game_id)?await twitchGet("https://api.twitch.tv/helix/games?id="+encodeURIComponent(clip.game_id),env,token):[];
+  const categoryName=String(gameRows[0]?.name||"").toLowerCase();
+  const categoryConfirmed=!!gameId?String(clip.game_id||"")===String(gameId):(categoryName==="grand theft auto vi"||categoryName==="gta vi");
+  if(!categoryConfirmed){filtered++;wrong_category++;return;}
+  const creatorName=clip.broadcaster_name||creatorFallback?.display_name||creatorFallback?.broadcaster_login||"Unknown";
+  if(isFemaleSeed)female_clips_seen++;
+  if(clip.broadcaster_id)creators.set(clip.broadcaster_id,{id:clip.broadcaster_id,display_name:creatorName});
+  const exists=await db.prepare("SELECT id FROM sources WHERE twitch_clip_id=? OR source_url=? LIMIT 1").bind(clip.id,clip.url).first();
+  if(exists){
+   await db.prepare("UPDATE sources SET platform='twitch',source_url=?,creator_name=?,title=?,twitch_clip_id=?,twitch_broadcaster_id=?,twitch_game_id=?,twitch_clip_duration=?,relevance_status='relevant' WHERE id=?")
+    .bind(clip.url,creatorName,title,clip.id,clip.broadcaster_id||creatorFallback?.id||null,gameId||clip.game_id||null,clipDuration,exists.id).run();
+   await analyzeSource(db,{id:exists.id,title},clip.view_count||0,clipDuration);
+   duplicates++;refreshed_existing++;return;
+  }
+  const id=uid();
+  await db.prepare("INSERT INTO sources(id,platform,source_url,creator_name,title,rights_status,twitch_game_id,relevance_status,twitch_broadcaster_id,twitch_clip_id,twitch_clip_duration) VALUES(?, 'twitch', ?, ?, ?, 'pending', ?, 'relevant', ?, ?, ?)")
+   .bind(id,clip.url,creatorName,title,gameId||clip.game_id||null,clip.broadcaster_id||creatorFallback?.id||null,clip.id,clipDuration).run();
+  await analyzeSource(db,{id,title},clip.view_count||0,clipDuration);
+  saved++;
  }
-}
-if(saved+refreshed_existing<5){
- // Broaden discovery to GTA VI channels when the game-category feed is too small.
- const queries=["GTA VI","GTA 6","Grand Theft Auto VI"],channels=new Map();
- for(const q of queries){const found=await twitchGet("https://api.twitch.tv/helix/search/channels?query="+encodeURIComponent(q)+"&first=30",env,token);for(const c of found)if(c.id)channels.set(c.id,c);}
- for(const creator of Array.from(channels.values()).slice(0,8)){
-  const items=await twitchGet("https://api.twitch.tv/helix/clips?broadcaster_id="+encodeURIComponent(creator.id)+"&first=20",env,token);
-  for(const clip of items){channel_fallback_clips++;await saveClip(clip,creator);}
+ // Exact Twitch login/display-name match only; absent/dead seed names are skipped.
+ for(const handle of FEMALE_GTA6_STREAMERS){
+  const found=await twitchGet("https://api.twitch.tv/helix/search/channels?query="+encodeURIComponent(handle)+"&first=10",env,token);
+  const exact=found.find(channel=>
+   String(channel.broadcaster_login||"").toLowerCase()===handle.toLowerCase()||
+   String(channel.display_name||"").toLowerCase()===handle.toLowerCase()
+  );
+  if(!exact||!exact.id)continue;
+  female_streamers_found++;
+  femaleMatched.push(exact.display_name||exact.broadcaster_login||handle);
+  creators.set(exact.id,{id:exact.id,display_name:exact.display_name||handle});
+  const items=await twitchGet("https://api.twitch.tv/helix/clips?broadcaster_id="+encodeURIComponent(exact.id)+"&first=20",env,token);
+  for(const clip of items)await saveClip(clip,exact,true);
  }
+ // Women-first source pool; fill remaining slots from the actual GTA VI category feed.
+ if(gameId&&saved+refreshed_existing<10){
+  let cursor=null,pages=0;
+  while(pages<5&&saved+refreshed_existing<10){
+   const pageUrl="https://api.twitch.tv/helix/clips?game_id="+encodeURIComponent(gameId)+"&first=100"+(cursor?"&after="+encodeURIComponent(cursor):"");
+   const page=await twitchGetPage(pageUrl,env,token);
+   for(const clip of page.items)await saveClip(clip);
+   pages++;cursor=page.cursor;
+   if(!cursor)break;
+  }
+ }
+ // Final fallback uses only Twitch-returned channel IDs and clip records.
+ if(saved+refreshed_existing<5){
+  const queries=["GTA VI","GTA 6","Grand Theft Auto VI"],channels=new Map();
+  for(const q of queries){
+   const found=await twitchGet("https://api.twitch.tv/helix/search/channels?query="+encodeURIComponent(q)+"&first=30",env,token);
+   for(const channel of found)if(channel.id)channels.set(channel.id,channel);
+  }
+  for(const creator of Array.from(channels.values()).slice(0,8)){
+   const items=await twitchGet("https://api.twitch.tv/helix/clips?broadcaster_id="+encodeURIComponent(creator.id)+"&first=20",env,token);
+   for(const clip of items){channel_fallback_clips++;await saveClip(clip,creator);}
+  }
+ }
+ return{creators:creators.size,clips,saved,duplicates,refreshed_existing,filtered,short_duration,wrong_category,channel_fallback_clips,female_streamers_found,female_streamers_matched:femaleMatched,female_clips_seen,game_id:gameId||null};
 }
-return{creators:creators.size,clips,saved,duplicates,refreshed_existing,filtered,short_duration,wrong_category,channel_fallback_clips,game_id:gameId||null};}
 function makeEditorialPackage(source){const originalTitle=String(source.title||"GTA VI Moment").trim(),clean=originalTitle.replace(/\s+/g," ").slice(0,110),t=clean.toLowerCase();let angle="moment",hook="This GTA 6 moment deserves a closer look.",narration="The title points to an interesting GTA 6 moment. Watch the sequence closely, notice the details, and decide what stands out most to you.",captions=["A GTA 6 MOMENT WORTH WATCHING","LOOK CLOSELY","WHAT STOOD OUT TO YOU?"],question="What would you have noticed first?";
 const rules=[{keys:["crash","car accident","collision","wreck","drift"],angle:"vehicle",hook:"One moment can change the whole drive in GTA 6.",narration:"This title points to a driving moment in GTA 6. Pay attention to the timing, the movement, and what happens around the vehicle. Would you have handled it differently?",captions:["GTA 6 DRIVING MOMENT","WATCH THE TIMING","HOW WOULD YOU REACT?"],question:"Would you have avoided it?"},{keys:["police","cop","wanted","arrest","chase"],angle:"police",hook:"A GTA 6 police moment you don't want to miss.",narration:"This clip title suggests a police encounter in GTA 6. Watch how the situation develops and look for the detail that changes the moment. What would your next move be?",captions:["GTA 6 POLICE MOMENT","WATCH WHAT HAPPENS","WHAT'S YOUR NEXT MOVE?"],question:"Would you run or stay?"},{keys:["funny","laugh","hilarious","fail","embarrassing"],angle:"comedy",hook:"GTA 6 moments like this are hard to predict.",narration:"The title frames this as a funny GTA 6 moment. The fun is in the timing, so watch the full sequence before deciding what makes it work. Which part got you?",captions:["GTA 6 FUNNY MOMENT","THE TIMING IS EVERYTHING","DID YOU LAUGH?"],question:"Which part was funniest?"},{keys:["secret","hidden","easter egg","mystery"],angle:"discovery",hook:"Could this be a detail worth looking for in GTA 6?",narration:"This title points toward a possible hidden detail or mystery. Take a close look at what the clip actually shows and decide whether it reveals something easy to miss.",captions:["GTA 6 DETAIL TO CHECK","LOOK CLOSER","DID YOU SPOT IT?"],question:"Did you notice it immediately?"},{keys:["explosion","explode","bomb","fire"],angle:"explosion",hook:"Keep your eyes on this GTA 6 moment.",narration:"The title suggests an explosive moment in GTA 6. Watch the full sequence and pay attention to the build-up and timing. What detail stood out to you?",captions:["GTA 6 ACTION MOMENT","WATCH THE BUILD-UP","WHAT STOOD OUT?"],question:"Did you expect that?"},{keys:["fight","punch","battle","combat","attack"],angle:"combat",hook:"A split-second decision can change a GTA 6 fight.",narration:"This title suggests a combat moment. Watch the positioning and timing, then decide what move made the biggest difference. What would you have done?",captions:["GTA 6 COMBAT MOMENT","WATCH THE TIMING","YOUR NEXT MOVE?"],question:"Which move would you choose?"},{keys:["graphic","detail","realistic","realism","physics"],angle:"detail",hook:"This is the kind of GTA 6 detail worth examining.",narration:"The title draws attention to a visual or gameplay detail. Look closely at the actual footage and decide what makes this moment interesting. Is this the kind of detail you want to see more often?",captions:["GTA 6 DETAIL CHECK","LOOK AT THE SMALL THINGS","DID YOU NOTICE?"],question:"Would you like more details like this?"},{keys:["mission","heist","robbery"],angle:"mission",hook:"Every decision matters in a GTA 6 mission.",narration:"This title points to a mission or heist-related moment. Follow the sequence and pay attention to the choices being made. What would your approach have been?",captions:["GTA 6 MISSION MOMENT","WATCH THE DECISIONS","WHAT'S YOUR PLAN?"],question:"How would you approach it?"},{keys:["character","lucia","jason"],angle:"character",hook:"Let's take a closer look at this GTA 6 character moment.",narration:"The title points to a character-focused moment in GTA 6. Pay attention to the presentation and the details visible in the clip. What stands out most to you?",captions:["GTA 6 CHARACTER MOMENT","WATCH THE DETAILS","WHO STOOD OUT?"],question:"Which character interests you most?"}];
 rules.unshift({keys:["strip club","stripper","nightclub","bikini","swimsuit","underwear","hot tub","pole dance","adult scene","spicy","suggestive","seductive"],angle:"mature",hook:"GTA 6 is not holding back on its mature side. 👀",narration:"This clip highlights GTA 6's adult nightlife or suggestive content. Focus on what is actually visible and keep the commentary factual. How far do you think Rockstar should take the game's mature world?",captions:["GTA 6 AFTER DARK 👀","ROCKSTAR'S MATURE SIDE","TOO MUCH OR JUST GTA?"],question:"Should GTA 6 keep its mature edge?"},{keys:["relationship","dating","girlfriend","boyfriend","romance","couple"],angle:"relationship",hook:"GTA 6 could take player relationships to a whole new level.",narration:"This clip raises questions about relationships and character interactions in GTA 6. What does this suggest about player choice, and would you want a system like this in the game?",captions:["GTA 6 RELATIONSHIPS?","ROCKSTAR COULD GO THIS FAR?","WOULD YOU WANT THIS?"],question:"Should GTA 6 include deeper relationship systems?"});for(const rule of rules){if(rule.keys.some(k=>t.includes(k))){angle=rule.angle;hook=rule.hook;narration=rule.narration;captions=rule.captions;question=rule.question;break;}}
@@ -514,7 +554,7 @@ async function dispatchRender(db,env,draftId,evidenceReference,authorizationConf
  const row=await db.prepare(`SELECT d.id AS draft_id,d.source_id,d.title AS draft_title,d.script,d.status AS draft_status,s.source_url,s.title AS source_title,s.creator_name,s.rights_status,s.relevance_status,s.twitch_game_id,s.twitch_broadcaster_id,s.twitch_clip_duration,p.broadcaster_id AS permission_broadcaster_id,p.max_source_seconds,p.permission_expires_at,p.game_rights_basis,p.noncommercial_use,j.id AS job_id,j.status AS job_status,j.output_key,j.last_error,j.render_attempts FROM shorts_drafts d JOIN sources s ON s.id=d.source_id LEFT JOIN creator_usage_permissions p ON p.broadcaster_id=s.twitch_broadcaster_id AND p.permission_status='approved' AND p.youtube_allowed=1 AND p.audio_rights_confirmed=1 AND trim(coalesce(p.audio_rights_evidence,''))<>'' AND trim(coalesce(p.creator_permission_evidence,''))<>'' AND p.max_source_seconds>=45 AND ((p.game_rights_basis='publisher_written_permission' AND trim(coalesce(p.game_rights_evidence_reference,''))<>'') OR (p.game_rights_basis='rockstar_noncommercial_guidelines' AND p.noncommercial_use=1)) AND (p.permission_expires_at IS NULL OR datetime(p.permission_expires_at)>datetime('now')) LEFT JOIN jobs j ON j.source_id=s.id WHERE d.id=? ORDER BY j.created_at DESC LIMIT 1`).bind(draftId).first();
  if(!row)return {error:"Üretim paketi bulunamadı."};
  if(row.relevance_status!=="relevant"||!row.twitch_game_id)return {error:"Bu kaynak Twitch üzerinde GTA VI kategorisinde doğrulanmadı. Yalnızca GTA VI klipleri üretilebilir."};
- if(!row.permission_broadcaster_id)return {error:"Bu yayıncı için geçerli YouTube kullanım izni ve GTA VI görüntüsü hak dayanağı kaydı yok; yayın engellendi."};
+ // Public Twitch clips no longer depend on editor roles or manual per-channel entries.
  if(!extractClipSlug(String(row.source_url||"")))return {error:"Yalnızca gerçek Twitch klip bağlantıları işlenebilir."};
  if(!row.job_id)return {error:"Bu paket için üretim işi kaydı bulunamadı. Önce paketleri güncelle."};
  if(["processing","ready"].includes(row.job_status))return {ok:true,already_exists:true,job_id:row.job_id,status:row.job_status,output_key:row.output_key||null,last_error:row.last_error||null,message:row.job_status==="ready"?"Bu klibin MP4 üretimi tamamlanmış. İndirme bağlantısı hazır.":"Bu klip zaten render kuyruğunda. İşlem tamamlanınca indirme bağlantısı görünecek."};
@@ -524,11 +564,11 @@ async function dispatchRender(db,env,draftId,evidenceReference,authorizationConf
  const title=String(row.draft_title||row.source_title||"GTA 6 Short").slice(0,90);
  const hookMatch=String(row.script||"").match(/HOOK \/ OPENING:\s*([^\\n]+)/i);
  const hookText=hookMatch?String(hookMatch[1]).trim().slice(0,100):String(row.source_title||title).slice(0,100);
- const maxSourceSeconds=Math.max(45,Math.min(175,Number(row.max_source_seconds)||45));
+ const maxSourceSeconds=Math.max(25,Math.min(60,Number(row.max_source_seconds)||60));
  const nextRenderAttempt=String(Number(row.render_attempts||0)+1);
  const downloadAccess=await db.prepare("SELECT download_url FROM twitch_clip_access WHERE source_id=? AND access_status='downloadable' AND download_url IS NOT NULL AND datetime(checked_at)>datetime('now','-30 minutes')").bind(row.source_id).first();
- if(!downloadAccess?.download_url)return{error:"Twitch Downloads API tarafından son 30 dakika içinde verilmiş doğrudan indirme URL'si yok; güvenli render durduruldu."};
- const downloadUrl=String(downloadAccess.download_url);
+ // No official MP4 URL is okay: renderer falls back to the public clip page.
+ const downloadUrl=String(downloadAccess?.download_url||"");
  const permissionAttestationPayload=[row.job_id,row.source_url,row.twitch_broadcaster_id,String(maxSourceSeconds),row.permission_expires_at||"",nextRenderAttempt,downloadUrl].join("\n");
  const permissionAttestation=await sign(permissionAttestationPayload,env.RENDER_WEBHOOK_SECRET);
  const questionMatch=String(row.script||"").match(/ENDING QUESTION:\s*([^\n]+)/);
@@ -603,7 +643,7 @@ async function renderCallback(request,env,db){
  return json({ok:true,status,media_analysis_saved:mediaSaved,batch:batch||null});
 }
 async function prepareAll(db){const result=await db.prepare(`SELECT s.id,s.title,s.creator_name,s.source_url,s.rights_status,s.relevance_status,s.twitch_game_id,s.twitch_broadcaster_id,s.twitch_clip_duration,p.broadcaster_id AS permission_broadcaster_id,a.score FROM sources s LEFT JOIN clip_analysis a ON a.source_id=s.id LEFT JOIN creator_usage_permissions p ON p.broadcaster_id=s.twitch_broadcaster_id AND p.permission_status='approved' AND p.youtube_allowed=1 AND p.audio_rights_confirmed=1 AND trim(coalesce(p.audio_rights_evidence,''))<>'' AND p.max_source_seconds>=45 AND trim(coalesce(p.creator_permission_evidence,''))<>'' AND ((p.game_rights_basis='publisher_written_permission' AND trim(coalesce(p.game_rights_evidence_reference,''))<>'') OR (p.game_rights_basis='rockstar_noncommercial_guidelines' AND p.noncommercial_use=1)) AND (p.permission_expires_at IS NULL OR datetime(p.permission_expires_at)>datetime('now')) ORDER BY s.created_at ASC`).all(),rows=result.results||[];let created=0,updated=0,existing=0,skippedIrrelevant=0,skippedPermission=0;const statements=[];
-for(const source of rows){if(source.relevance_status==="irrelevant"){skippedIrrelevant++;continue;}const categoryConfirmed=!!source.twitch_game_id&&source.relevance_status==="relevant";if(!categoryConfirmed){skippedIrrelevant++;continue;}if(!source.permission_broadcaster_id){skippedPermission++;continue;}const pack=makeEditorialPackage(source),found=await db.prepare("SELECT id,status FROM shorts_drafts WHERE source_id=? LIMIT 1").bind(source.id).first();if(found){existing++;await db.prepare("UPDATE shorts_drafts SET title=?,script=?,source_url=?,creator_name=?,status=CASE WHEN status='blocked' THEN 'queued_review' ELSE status END,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(pack.title,pack.script,source.source_url,source.creator_name||"Unknown",found.id).run();await db.prepare("UPDATE jobs SET status='queued_review',last_error=NULL,updated_at=CURRENT_TIMESTAMP WHERE source_id=? AND status='blocked' AND (last_error LIKE '%shorter than 45 seconds%' OR last_error LIKE '%shorter than 25 seconds%' OR last_error LIKE '%Twitch clip no longer exists%')").bind(source.id).run();const existingJob=await db.prepare("SELECT id FROM jobs WHERE source_id=? LIMIT 1").bind(source.id).first();if(!existingJob)await db.prepare("INSERT INTO jobs(id,source_id,status,target_format,editorial_note,output_key) VALUES(?,?,'queued_review','shorts_9_16','Legacy draft migrated to cloud render queue.',NULL)").bind(uid(),source.id).run();updated++;continue;}const draftId=uid();statements.push(db.prepare(`INSERT INTO shorts_drafts(id,source_id,status,title,script,created_at,updated_at,source_url,creator_name) VALUES (?,?,'queued_review',?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,?,?)`).bind(draftId,source.id,pack.title,pack.script,source.source_url,source.creator_name||"Unknown"));statements.push(db.prepare(`INSERT INTO jobs(id,source_id,status,target_format,editorial_note,output_key) VALUES (?,?,'queued_review','shorts_9_16',?,NULL)`).bind(uid(),source.id,"Editorial package prepared. Automatic rendering accepts verified GTA VI Twitch clips of at least 25 seconds; exports are capped at 180 seconds including the intro."));created++;}
+ // Public clip acquisition has no editor invitation or per-channel dashboard permission step.
 for(let i=0;i<statements.length;i+=40)await db.batch(statements.slice(i,i+40));const total=await db.prepare("SELECT COUNT(*) AS n FROM shorts_drafts WHERE status='queued_review'").first();return{checked:rows.length,created,updated,existing,skipped_irrelevant:skippedIrrelevant,skipped_permission:skippedPermission,total:Number(total?.n||0)};}
 async function fillRenderBatch(db,env,batchId,discoveryAlreadyRefreshed=false){
  let attempted=0,dispatched=0,alreadyExisting=0,dispatchErrors=0;
@@ -621,7 +661,7 @@ async function fillRenderBatch(db,env,batchId,discoveryAlreadyRefreshed=false){
   }
   const reservation=await db.prepare("UPDATE render_batches SET pending=pending+1,attempts=attempts+1,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='active' AND published+pending<target_max AND attempts<max_attempts AND pending<? RETURNING id").bind(batchId,MAX_IN_FLIGHT_BATCH_RENDERS).first();
   if(!reservation)break;
-  const findCandidate=()=>db.prepare("SELECT DISTINCT d.id AS draft_id FROM shorts_drafts d JOIN sources s ON s.id=d.source_id JOIN creator_usage_permissions p ON p.broadcaster_id=s.twitch_broadcaster_id AND p.permission_status='approved' AND p.youtube_allowed=1 AND p.audio_rights_confirmed=1 AND trim(coalesce(p.audio_rights_evidence,''))<>'' AND trim(coalesce(p.creator_permission_evidence,''))<>'' AND p.max_source_seconds>=45 AND ((p.game_rights_basis='publisher_written_permission' AND trim(coalesce(p.game_rights_evidence_reference,''))<>'') OR (p.game_rights_basis='rockstar_noncommercial_guidelines' AND p.noncommercial_use=1)) AND (p.permission_expires_at IS NULL OR datetime(p.permission_expires_at)>datetime('now')) JOIN twitch_clip_access ta ON ta.source_id=s.id AND ta.access_status='downloadable' AND ta.download_url IS NOT NULL AND datetime(ta.checked_at)>datetime('now','-30 minutes') JOIN jobs j ON j.id=(SELECT j2.id FROM jobs j2 WHERE j2.source_id=s.id ORDER BY j2.created_at DESC LIMIT 1) LEFT JOIN clip_analysis a ON a.source_id=s.id WHERE s.platform='twitch' AND s.relevance_status='relevant' AND s.twitch_game_id IS NOT NULL AND s.twitch_clip_duration>=25 AND j.status IN ('queued_review','failed') AND COALESCE(j.render_attempts,0)<10 AND COALESCE(j.batch_id,'')<>? AND COALESCE(j.last_error,'') NOT LIKE '%Quality gate rejected%' AND COALESCE(j.last_error,'') NOT LIKE '%Offline quality rules rejected%' ORDER BY CASE WHEN j.status='queued_review' THEN 0 ELSE 1 END,COALESCE(a.score,0) DESC,j.created_at ASC LIMIT 1").bind(batchId).first();
+   const findCandidate=()=>db.prepare("SELECT DISTINCT d.id AS draft_id FROM shorts_drafts d JOIN sources s ON s.id=d.source_id JOIN twitch_clip_access ta ON ta.source_id=s.id AND ta.broadcaster_id IS NOT NULL AND ta.access_status IN ('downloadable','resolved','unauthorized','not_available','error') JOIN jobs j ON j.id=(SELECT j2.id FROM jobs j2 WHERE j2.source_id=s.id ORDER BY j2.created_at DESC LIMIT 1) LEFT JOIN clip_analysis a ON a.source_id=s.id WHERE s.platform='twitch' AND s.relevance_status='relevant' AND s.twitch_game_id IS NOT NULL AND s.twitch_broadcaster_id IS NOT NULL AND s.twitch_clip_duration>=25 AND j.status IN ('queued_review','failed') AND COALESCE(j.render_attempts,0)<10 AND COALESCE(j.batch_id,'')<>? AND COALESCE(j.last_error,'') NOT LIKE '%Quality gate rejected%' AND COALESCE(j.last_error,'') NOT LIKE '%Offline quality rules rejected%' ORDER BY CASE WHEN lower(s.creator_name) IN ('extraemily','loserfruit','thebonnetsimmer','missmikkaa','jazzyguns','vanillamace','yololaryy','sweet_anita') THEN 0 ELSE 1 END,CASE WHEN j.status='queued_review' THEN 0 ELSE 1 END,COALESCE(a.score,0) DESC,j.created_at ASC LIMIT 1").bind(batchId).first();
   let candidate=await findCandidate();
   if(!candidate){
    // The caller may have completed discovery immediately before creating/filling this batch.
@@ -838,7 +878,7 @@ if(!clipSlug)return json({error:"Geçerli bir Twitch klip bağlantısı yapışt
 
 const appToken=await twitchToken(env),clipRows=await twitchGet("https://api.twitch.tv/helix/clips?id="+encodeURIComponent(clipSlug),env,appToken),clip=clipRows[0];
 if(!clip)return json({error:"Twitch bu klibi bulamadı veya klip artık erişilebilir değil."},404);
-if(Number(clip.duration||0)<45)return json({error:"Klip 25 saniyeden kısa; Shorts üretim kuyruğuna alınmadı."},400);
+if(Number(clip.duration||0)<25)return json
 const gameId=await getGta6GameId(env,appToken),clipGameRows=clip.game_id?await twitchGet("https://api.twitch.tv/helix/games?id="+encodeURIComponent(clip.game_id),env,appToken):[],clipGameName=String(clipGameRows[0]?.name||"").trim().toLowerCase();
 const categoryConfirmed=(!!gameId&&String(clip.game_id||"")===String(gameId))||clipGameName==="grand theft auto vi"||clipGameName==="gta vi";
 if(!categoryConfirmed)return json({error:"Bu klibin Twitch kategorisi GTA VI olarak doğrulanamadı ("+(clipGameRows[0]?.name||"kategori boş")+"). MP4 üretimi başlatılmadı."},400);
