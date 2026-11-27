@@ -98,7 +98,7 @@ def main() -> int:
             "# VI RUSH — YouTube Analytics\n\n"
             "**REAUTHORIZATION REQUIRED**\n\n"
             "The current refresh token can publish videos but cannot read private channel analytics. "
-            "Reauthorize the YouTube account with both scopes below, then replace the "
+            "Reauthorize the YouTube account with the read-only scope below, then replace the "
             "`YOUTUBE_REFRESH_TOKEN` GitHub Actions secret.\n\n"
             + "\n".join("- `" + scope + "`" for scope in sorted(missing))
             + "\n\nNo analytics values were available to this run."
