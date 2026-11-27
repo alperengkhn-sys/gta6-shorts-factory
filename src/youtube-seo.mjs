@@ -44,6 +44,7 @@ function clean(value, max = 240) {
 function getTopic(originalTitle) {
   return clean(originalTitle)
     .replace(/^(?:grand theft auto\s*(?:vi|6)?|gta\s*(?:vi|6)?)\s*[:|—–-]*\s*/i, "")
+    .replace(/\s+(?:in|at|during)\s+gta\s*(?:vi|6)\s*$/i, "")
     .replace(/^[|:—–-]+\s*/, "")
     .trim();
 }
