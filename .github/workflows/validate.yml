@@ -17,6 +17,7 @@ on:
       - 'src/render-batch-policy.mjs'
       - 'tests/test_render_batch_policy.mjs'
       - '.github/workflows/render-short.yml'
+      - '.github/workflows/deploy-worker.yml'
       - '.github/workflows/validate.yml'
       - '.github/workflows/youtube-analytics.yml'
       - 'renderer/youtube_analytics.py'
