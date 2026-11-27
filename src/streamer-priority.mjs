@@ -15,3 +15,19 @@ export function isSelfDeclaredWomanProfile(user) {
   ];
   return signals.some((pattern) => pattern.test(description));
 }
+
+/**
+ * Source-backed discovery hints for women creators currently playing GTA VI.
+ * This is not a trusted account list: every login is resolved against Twitch
+ * Helix on every discovery cycle, and only clips carrying the exact GTA VI
+ * game_id are considered. Renamed/deleted/unresolvable accounts are skipped.
+ * Source: https://www.hercampus.com/culture/female-twitch-streamers-gta-6/
+ */
+export const SOURCED_GTA6_WOMAN_CHANNELS = Object.freeze([
+  "extraemily",
+  "loserfruit",
+  "thebonnetsimmer",
+  "missmikkaa",
+  "jazzyguns",
+  "vanillamace"
+]);

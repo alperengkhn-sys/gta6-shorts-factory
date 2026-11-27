@@ -1,4 +1,4 @@
-import { isSelfDeclaredWomanProfile } from "./streamer-priority.mjs";
+import { isSelfDeclaredWomanProfile, SOURCED_GTA6_WOMAN_CHANNELS } from "./streamer-priority.mjs";
 
 import {
   MIN_BATCH_PUBLISHES,
@@ -9,7 +9,7 @@ import {
   batchCompletionStatus
 } from "./render-batch-policy.mjs";
 
-const VERSION = "GTA6-FACTORY-6.4-DYNAMIC-DISCOVERY";
+const VERSION = "GTA6-FACTORY-6.5-WOMEN-VERIFIED-DISCOVERY";
 // The [initial-production] deployment marker runs one permission-gated bootstrap cycle after deploy.
 const MIN_AUTOMATIC_PUBLISHES_PER_CYCLE = MIN_BATCH_PUBLISHES;
 const MAX_AUTOMATIC_RENDERS_PER_CYCLE = MAX_BATCH_PUBLISHES;
@@ -417,6 +417,7 @@ async function discover(db,env){
  const token=await twitchToken(env),gameId=await getGta6GameId(env,token);
  let clips=0,saved=0,duplicates=0,refreshed_existing=0,filtered=0,short_duration=0,wrong_category=0,channel_fallback_clips=0;
  let female_streamers_found=0,female_clips_seen=0;
+ let female_candidate_channels_checked=0,female_candidate_profiles_verified=0,female_candidate_clips_scanned=0,female_candidate_clips_added=0,female_candidate_lookup_errors=0;
  const creators=new Map(),femaleMatched=[];
  async function saveClip(clip,creatorFallback=null,isFemaleSeed=false){
   clips++;
@@ -477,6 +478,43 @@ async function discover(db,env){
    }
   }
   const priorityBroadcasterIds=new Set();
+  // Source-backed women-creator lane. Every candidate is resolved from Twitch
+  // by login at runtime; only clips with the exact GTA VI game_id are admitted.
+  female_candidate_channels_checked=SOURCED_GTA6_WOMAN_CHANNELS.length;
+  const candidateParams=new URLSearchParams();
+  for(const login of SOURCED_GTA6_WOMAN_CHANNELS)candidateParams.append("login",login);
+  let candidateUsers=[];
+  try{
+   candidateUsers=await twitchGet("https://api.twitch.tv/helix/users?"+candidateParams.toString(),env,token);
+  }catch(error){
+   female_candidate_lookup_errors++;
+  }
+  const candidateByLogin=new Map(candidateUsers.map(user=>[String(user.login||"").toLowerCase(),user]));
+  for(const login of SOURCED_GTA6_WOMAN_CHANNELS){
+   const profile=candidateByLogin.get(login);
+   if(!profile?.id)continue;
+   female_candidate_profiles_verified++;
+   profiles.set(String(profile.id),profile);
+   try{
+    const candidatePage=await twitchGetPage(
+     "https://api.twitch.tv/helix/clips?broadcaster_id="+encodeURIComponent(profile.id)+"&first=100",
+     env,token
+    );
+    female_candidate_clips_scanned+=candidatePage.items.length;
+    const gtaClips=candidatePage.items.filter(clip=>String(clip.game_id||"")===String(gameId));
+    if(!gtaClips.length)continue;
+    priorityBroadcasterIds.add(String(profile.id));
+    for(const clip of gtaClips){
+     const clipId=String(clip.id||"");
+     if(!clipId||seenClipIds.has(clipId))continue;
+     seenClipIds.add(clipId);
+     categoryClips.push(clip);
+     female_candidate_clips_added++;
+    }
+   }catch(error){
+    female_candidate_lookup_errors++;
+   }
+  }
   for(const [id,profile] of profiles){
    if(isSelfDeclaredWomanProfile(profile))priorityBroadcasterIds.add(id);
   }
@@ -509,7 +547,7 @@ async function discover(db,env){
    for(const clip of items){channel_fallback_clips++;await saveClip(clip,creator);}
   }
  }
- return{creators:creators.size,clips,saved,duplicates,refreshed_existing,filtered,short_duration,wrong_category,channel_fallback_clips,female_streamers_found,female_streamers_matched:femaleMatched,female_clips_seen,category_pages_scanned,category_clips_scanned,profile_lookup_errors,game_id:gameId||null};
+ return{creators:creators.size,clips,saved,duplicates,refreshed_existing,filtered,short_duration,wrong_category,channel_fallback_clips,female_streamers_found,female_streamers_matched:femaleMatched,female_clips_seen,category_pages_scanned,category_clips_scanned,profile_lookup_errors,female_candidate_channels_checked,female_candidate_profiles_verified,female_candidate_clips_scanned,female_candidate_clips_added,female_candidate_lookup_errors,game_id:gameId||null};
 }
 function makeEditorialPackage(source){const originalTitle=String(source.title||"GTA VI Moment").trim(),clean=originalTitle.replace(/\s+/g," ").slice(0,110),t=clean.toLowerCase();let angle="moment",hook="This GTA 6 moment deserves a closer look.",narration="The title points to an interesting GTA 6 moment. Watch the sequence closely, notice the details, and decide what stands out most to you.",captions=["A GTA 6 MOMENT WORTH WATCHING","LOOK CLOSELY","WHAT STOOD OUT TO YOU?"],question="What would you have noticed first?";
 const rules=[{keys:["crash","car accident","collision","wreck","drift"],angle:"vehicle",hook:"One moment can change the whole drive in GTA 6.",narration:"This title points to a driving moment in GTA 6. Pay attention to the timing, the movement, and what happens around the vehicle. Would you have handled it differently?",captions:["GTA 6 DRIVING MOMENT","WATCH THE TIMING","HOW WOULD YOU REACT?"],question:"Would you have avoided it?"},{keys:["police","cop","wanted","arrest","chase"],angle:"police",hook:"A GTA 6 police moment you don't want to miss.",narration:"This clip title suggests a police encounter in GTA 6. Watch how the situation develops and look for the detail that changes the moment. What would your next move be?",captions:["GTA 6 POLICE MOMENT","WATCH WHAT HAPPENS","WHAT'S YOUR NEXT MOVE?"],question:"Would you run or stay?"},{keys:["funny","laugh","hilarious","fail","embarrassing"],angle:"comedy",hook:"GTA 6 moments like this are hard to predict.",narration:"The title frames this as a funny GTA 6 moment. The fun is in the timing, so watch the full sequence before deciding what makes it work. Which part got you?",captions:["GTA 6 FUNNY MOMENT","THE TIMING IS EVERYTHING","DID YOU LAUGH?"],question:"Which part was funniest?"},{keys:["secret","hidden","easter egg","mystery"],angle:"discovery",hook:"Could this be a detail worth looking for in GTA 6?",narration:"This title points toward a possible hidden detail or mystery. Take a close look at what the clip actually shows and decide whether it reveals something easy to miss.",captions:["GTA 6 DETAIL TO CHECK","LOOK CLOSER","DID YOU SPOT IT?"],question:"Did you notice it immediately?"},{keys:["explosion","explode","bomb","fire"],angle:"explosion",hook:"Keep your eyes on this GTA 6 moment.",narration:"The title suggests an explosive moment in GTA 6. Watch the full sequence and pay attention to the build-up and timing. What detail stood out to you?",captions:["GTA 6 ACTION MOMENT","WATCH THE BUILD-UP","WHAT STOOD OUT?"],question:"Did you expect that?"},{keys:["fight","punch","battle","combat","attack"],angle:"combat",hook:"A split-second decision can change a GTA 6 fight.",narration:"This title suggests a combat moment. Watch the positioning and timing, then decide what move made the biggest difference. What would you have done?",captions:["GTA 6 COMBAT MOMENT","WATCH THE TIMING","YOUR NEXT MOVE?"],question:"Which move would you choose?"},{keys:["graphic","detail","realistic","realism","physics"],angle:"detail",hook:"This is the kind of GTA 6 detail worth examining.",narration:"The title draws attention to a visual or gameplay detail. Look closely at the actual footage and decide what makes this moment interesting. Is this the kind of detail you want to see more often?",captions:["GTA 6 DETAIL CHECK","LOOK AT THE SMALL THINGS","DID YOU NOTICE?"],question:"Would you like more details like this?"},{keys:["mission","heist","robbery"],angle:"mission",hook:"Every decision matters in a GTA 6 mission.",narration:"This title points to a mission or heist-related moment. Follow the sequence and pay attention to the choices being made. What would your approach have been?",captions:["GTA 6 MISSION MOMENT","WATCH THE DECISIONS","WHAT'S YOUR PLAN?"],question:"How would you approach it?"},{keys:["character","lucia","jason"],angle:"character",hook:"Let's take a closer look at this GTA 6 character moment.",narration:"The title points to a character-focused moment in GTA 6. Pay attention to the presentation and the details visible in the clip. What stands out most to you?",captions:["GTA 6 CHARACTER MOMENT","WATCH THE DETAILS","WHO STOOD OUT?"],question:"Which character interests you most?"}];

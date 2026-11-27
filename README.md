@@ -37,6 +37,8 @@ The discovery worker paginates the actual GTA VI category clip feed (up to 1,000
 This profile signal affects discovery order only. It is not evidence of permission to reuse a stream, creator voice, music, or game footage; the existing publishing rights checks remain in force.
 The deployment workflow checks the live `/api/system/status` version using the existing render webhook secret (the status endpoint is not opened publicly) and verifies that the production discovery response contains pagination/profile-lookup metrics (unless Twitch itself returns a discovery error). This prevents a stale Worker response from being silently reported as a successful deployment.
 
+The women-creator lane checks six source-backed GTA VI Twitch candidates by their actual Twitch login on every cycle. Only accounts returned by Twitch and clips carrying the exact GTA VI game ID are prioritised; deleted, renamed, unavailable, or non-GTA-VI channels/clips are skipped. The general GTA VI category feed remains open to all creators. Source list: Her Campus, “6 Female Twitch Streamers Playing ‘GTA 6’ To Watch” (https://www.hercampus.com/culture/female-twitch-streamers-gta-6/).
+
 ## Publishing batch
 
 The Worker runs every three hours (`0 */3 * * *` UTC). Each batch targets **5–10 successful public YouTube uploads**, not merely 5–10 render attempts. It can try up to 50 candidates. Quality, visual-duplicate, permission, source and upload failures are replaced with the next eligible source. If fewer than five properly licensed and technically usable clips exist, the batch is marked underfilled rather than pretending the target was met.
