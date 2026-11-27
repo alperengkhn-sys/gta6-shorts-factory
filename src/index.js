@@ -29,8 +29,9 @@ const HTML = String.raw`<!doctype html>
 <h2>Herkese açık Twitch klipleri</h2>
 <div id="twitchAccountStatus" class="notice">Gerçek Twitch hesapları ve GTA VI klipleri doğrulanarak taranır. Editör hesabı gerekmez.</div>
 <button type="button" id="twitchConnectBtn" style="display:none" aria-hidden="true">Optional Twitch API connection</button>
-Öncelikli kadın yayıncı listesi Twitch üzerinde birebir hesap eşleşmesiyle doğrulanır; bulunmayan hesaplar atlanır.
+<p class="muted">Öncelikli kadın yayıncı listesi Twitch üzerinde birebir hesap eşleşmesiyle doğrulanır; bulunmayan hesaplar atlanır. Resmî MP4 adresi yoksa yalnızca herkese açık klip sayfası yedek indirmeyle denenir. Gizli/aboneye özel klipler kullanılmaz.</p>
 </section>
+<section class="panel"><h2>Twitch kaynak alma</h2><p class="muted">Önce doğrulanan kadın GTA VI yayıncıları, ardından GTA VI kategorisindeki diğer gerçek kanallar taranır. Yalnızca varlığı ve kategori bilgisi Twitch API ile doğrulanan 25–60 saniyelik klipler kuyruğa girer. Resmî MP4 adresi yoksa herkese açık klip sayfası yedek indirmeyle denenir. Üç saatlik otomatik üretim döngüsü devam eder.</p></section>
 Resmî MP4 bağlantısı yoksa yalnızca herkese açık klip sayfası üzerinden indirme denenir.
 
 <section class="panel"><h2>Manuel kaynak ekle</h2><input id="url" placeholder="Klip URL"><input id="creator" placeholder="Yayıncı adı"><input id="title" placeholder="Klip başlığı"><button id="add">Kaynak ekle</button></section>

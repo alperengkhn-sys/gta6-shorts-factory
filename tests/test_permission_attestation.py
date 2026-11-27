@@ -79,7 +79,7 @@ class PermissionAttestationTests(unittest.TestCase):
     def test_rejects_twitch_clip_page_instead_of_direct_download_url(self):
         invalid = {**self.fields, "download_url": "https://www.twitch.tv/tester/clip/TestClip"}
         signature = make_permission_signature(self.secret, **invalid)
-        with self.assertRaisesRegex(ValueError, "not a direct download URL"):
+        with self.assertRaisesRegex(ValueError, "not an MP4 URL"):
             verify_permission_attestation(
                 secret=self.secret,
                 signature=signature,

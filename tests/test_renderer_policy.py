@@ -65,9 +65,9 @@ class RendererPolicyTests(unittest.TestCase):
         self.assertGreaterEqual(summary["active_motion_ratio"], 0.5)
         self.assertEqual(summary["max_static_seconds"], 1.0)
 
-    def test_source_shorter_than_45_seconds_is_rejected(self):
-        with self.assertRaisesRegex(RuntimeError, "45 seconds"):
-            render.validate_source_quality(44.9, {"width": 1920, "height": 1080, "fps": 60})
+    def test_source_shorter_than_25_seconds_is_rejected(self):
+        with self.assertRaisesRegex(RuntimeError, "25 seconds"):
+            render.validate_source_quality(24.9, {"width": 1920, "height": 1080, "fps": 60})
 
     def test_source_below_720p_is_rejected(self):
         with self.assertRaisesRegex(RuntimeError, "720p"):
