@@ -602,6 +602,7 @@ async function dispatchQueuedRenders(db,env,limit=MAX_AUTOMATIC_RENDERS_PER_CYCL
  return{batch_id:batchId,batch_status:batch?.status||"unknown",target_minimum:batch?.target_min||Math.min(MIN_AUTOMATIC_PUBLISHES_PER_CYCLE,maxSuccesses),maximum_successes:batch?.target_max||maxSuccesses,eligible,attempted:result.attempted,dispatched:result.dispatched,already_existing:result.already_existing,dispatchErrors:result.dispatchErrors,not_attempted:Math.max(0,eligible-result.attempted),attempts_total:Number(batch?.attempts||0),pending:Number(batch?.pending||0),published:Number(batch?.published||0),failed:Number(batch?.failed||0),errors:result.errors};
 }
 async function getData(db){const sources=await db.prepare(`SELECT s.id,s.platform,s.source_url,s.creator_name,s.title,s.rights_status,s.relevance_status,s.twitch_game_id,s.twitch_broadcaster_id,a.score,a.media_quality_score,a.media_duration,a.source_width,a.source_height,a.source_fps,a.source_has_audio,a.silence_ratio,a.media_usable,a.scene_change_count,a.mean_volume_db,a.media_analyzed_at FROM sources s LEFT JOIN clip_analysis a ON a.source_id=s.id ORDER BY s.created_at DESC LIMIT 500`).all(),drafts=await db.prepare(`SELECT d.id,d.source_id,d.status,d.title,d.script,d.source_url,d.creator_name,d.created_at,s.rights_status,j.status AS job_status,j.output_key,j.package_url,j.last_error,j.youtube_status,j.youtube_url,j.thumbnail_status FROM shorts_drafts d JOIN sources s ON s.id=d.source_id LEFT JOIN jobs j ON j.source_id=d.source_id ORDER BY d.created_at DESC LIMIT 500`).all();return{sources:sources.results||[],drafts:drafts.results||[]};}
+// [initial-production] Deploy the refreshed Twitch API download pipeline and run one permission-gated first cycle.
 async function runScheduled(env,event){
  const started=Date.now();
  const runContext={scheduled_time:event?.scheduledTime??null,cron:event?.cron??null};
@@ -613,7 +614,7 @@ async function runScheduled(env,event){
   let discovery,durationValidation,downloadAccess;
   try{discovery=await discover(env.DB,env);}catch(error){discovery={error:String(error&&error.message||error).slice(0,500)};}
   try{durationValidation=await validateResolvedClipDurations(env.DB,env,500);}catch(error){durationValidation={error:String(error&&error.message||error).slice(0,500)};}
-  try{downloadAccess=await checkTwitchDownloads(env.DB,env,500);}catch(error){downloadAccess={error:String(error&&error.message||error).slice(0,500)};}
+  try{downloadAccess=await checkTwitchDownloads(env.DB,env,25);}catch(error){downloadAccess={error:String(error&&error.message||error).slice(0,500)};}
   const staleJobs=await env.DB.prepare("SELECT batch_id,COUNT(*) AS n FROM jobs WHERE status='processing' AND dispatch_started_at IS NOT NULL AND dispatch_started_at<datetime('now','-45 minutes') AND batch_id IS NOT NULL GROUP BY batch_id").all();
   for(const stale of staleJobs.results||[]){
    const count=Math.max(0,Number(stale.n)||0);
@@ -724,7 +725,7 @@ if(path==="/api/permissions/revoke"&&method==="POST"){
 }
 if(path==="/api/discover"&&method==="POST")return json(await discover(env.DB,env));
 
-if(path==="/api/prepare"&&method==="POST"){let discovery,downloadAccess;try{discovery=await discover(env.DB,env);}catch(error){discovery={error:String(error&&error.message||error).slice(0,500)};}const clipValidation=await resolveTwitchClips(env.DB,env,500);const durationValidation=await validateResolvedClipDurations(env.DB,env,500);try{downloadAccess=await checkTwitchDownloads(env.DB,env,500);}catch(error){downloadAccess={error:String(error&&error.message||error).slice(0,500)};}const prepared=await prepareAll(env.DB);const rendering=await dispatchQueuedRenders(env.DB,env,10,true);return json({...prepared,discovery,clip_validation:clipValidation,duration_validation:durationValidation,download_access:downloadAccess,rendering});}
+if(path==="/api/prepare"&&method==="POST"){let discovery,downloadAccess;try{discovery=await discover(env.DB,env);}catch(error){discovery={error:String(error&&error.message||error).slice(0,500)};}const clipValidation=await resolveTwitchClips(env.DB,env,500);const durationValidation=await validateResolvedClipDurations(env.DB,env,500);try{downloadAccess=await checkTwitchDownloads(env.DB,env,25);}catch(error){downloadAccess={error:String(error&&error.message||error).slice(0,500)};}const prepared=await prepareAll(env.DB);const rendering=await dispatchQueuedRenders(env.DB,env,10,true);return json({...prepared,discovery,clip_validation:clipValidation,duration_validation:durationValidation,download_access:downloadAccess,rendering});}
 if(path==="/api/render/dispatch"&&method==="POST"){const data=await readBody(request);const result=await dispatchRender(env.DB,env,String(data.draft_id||""),data.evidence_reference,data.authorization_confirmation);return result.error?json({error:result.error},400):json(result);}
 if(path==="/api/source/quick"&&method==="POST"){
 if(!await authorized(request,env))return json({error:"Giriş gerekli."},401);
