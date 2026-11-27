@@ -38,9 +38,12 @@ class RendererHelpersTest(unittest.TestCase):
         with TemporaryDirectory() as directory:
             target = Path(directory) / "public-clip.mp4"
 
-            def fake_run(command):
+            def fake_run(command, timeout=300):
                 self.assertEqual(command[0], "yt-dlp")
                 self.assertIn("https://www.twitch.tv/example/clip/TestClip", command)
+                self.assertEqual(timeout, 180)
+                self.assertIn("--socket-timeout", command)
+                self.assertIn("--fragment-retries", command)
                 target.write_bytes(b"public-mp4-bytes")
                 return ""
 

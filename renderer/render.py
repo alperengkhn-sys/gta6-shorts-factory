@@ -16,14 +16,14 @@ ACTION_TERMS = (
     "shooting", "gameplay", "action"
 )
 
-def run(cmd):
+def run(cmd, timeout=300):
     try:
         p=subprocess.run(cmd,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,
-                         stdin=subprocess.DEVNULL,timeout=300)
+                         stdin=subprocess.DEVNULL,timeout=timeout)
     except subprocess.TimeoutExpired as e:
         output=e.stdout or ""
         if isinstance(output,bytes): output=output.decode("utf-8","replace")
-        raise RuntimeError(f"Command timed out after 300 seconds: {cmd[0]}\n{output[-5000:]}") from e
+        raise RuntimeError(f"Command timed out after {timeout} seconds: {cmd[0]}\n{output[-5000:]}") from e
     if p.returncode: raise RuntimeError(p.stdout[-5000:])
     return p.stdout
 
@@ -32,6 +32,8 @@ def build_twitch_download_command(source_url, destination):
     """Use FFmpeg for Twitch HLS; yt-dlp's native HLS path can truncate audio."""
     return [
         "yt-dlp", "--no-playlist",
+        "--socket-timeout", "20", "--retries", "2",
+        "--fragment-retries", "2", "--extractor-retries", "2",
         "-f", "bv*+ba/b",
         "--downloader", "m3u8:ffmpeg",
         "--downloader-args", "ffmpeg_i:-analyzeduration 20000000 -probesize 50000000",
@@ -90,7 +92,7 @@ def download_public_twitch_clip(source_url, destination):
         raise RuntimeError("Only an existing public HTTPS Twitch clip page can use the public downloader.")
     target = Path(destination)
     target.unlink(missing_ok=True)
-    run(build_twitch_download_command(source_url, target))
+    run(build_twitch_download_command(source_url, target), timeout=180)
     if not target.is_file() or target.stat().st_size == 0:
         target.unlink(missing_ok=True)
         raise RuntimeError("Public Twitch clip downloader returned no MP4 file.")
