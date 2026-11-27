@@ -20,6 +20,8 @@ The visual face/blur checks are deterministic OpenCV heuristics, not a perfect A
 A Twitch download URL is not the same as permission to republish the clip on YouTube. A streamer's permission also does not, by itself, grant rights to Rockstar/Take-Two game footage or third-party music/audio inside the recording.
 
 The dashboard has a **Yayıncı ve oyun görüntüsü kullanım izinleri** panel. Record each broadcaster separately, including:
+The renderer supports source-footage windows up to 175 seconds. The default new permission value is 120 seconds; every published render is still capped by the specific creator's approved maximum and current authorization evidence.
+
 - the written creator permission evidence;
 - the maximum source-footage seconds allowed;
 - expiry date, if any;
@@ -27,6 +29,12 @@ The dashboard has a **Yayıncı ve oyun görüntüsü kullanım izinleri** panel
 - the basis for using GTA VI game footage.
 
 Rockstar's public fan-use policy is generally limited to non-commercial use. A monetized or promotional channel should not rely on that general fan-use policy as a commercial licence; obtain written publisher permission or another valid rights basis. When rights are unclear, the source must not be published. See the [Rockstar policy](https://support.rockstargames.com/articles/7bNaeoMFTV0iUDGhStTXvz/policy-on-posting-copyrighted-rockstar-games-material).
+
+## Twitch discovery and creator prioritization
+
+The discovery worker paginates the actual GTA VI category clip feed (up to 1,000 clip records per cycle), removes duplicate clip IDs, and checks the corresponding public Twitch channel profiles in batches. Channels are only prioritized as women-led when the channel bio contains an explicit self-description such as "I'm a woman" or "female streamer/creator". The system does not infer gender from usernames, avatars, pronouns, or game category. Other verified GTA VI creators remain eligible in the general pool.
+
+This profile signal affects discovery order only. It is not evidence of permission to reuse a stream, creator voice, music, or game footage; the existing publishing rights checks remain in force.
 
 ## Publishing batch
 

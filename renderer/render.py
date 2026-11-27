@@ -654,7 +654,7 @@ def main():
     ap.add_argument("--title",required=True)
     ap.add_argument("--hook-text", default="", help="Factual on-screen opening hook shown for the first 2.8 seconds.")
     ap.add_argument("--output",default="short.mp4")
-    ap.add_argument("--max-source-seconds",type=float,default=60.0,
+    ap.add_argument("--max-source-seconds",type=float,default=120.0,
                     help="Maximum permitted seconds of the creator's source footage in the final edit.")
     ap.add_argument("--test-local-source", help=argparse.SUPPRESS)
     a=ap.parse_args()

@@ -66,6 +66,7 @@ on:
         description: Creator-authorized maximum seconds of source footage
         required: true
         type: string
+        default: '120'
 permissions:
   contents: write
   actions: read

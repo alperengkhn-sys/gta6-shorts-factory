@@ -12,6 +12,8 @@ on:
       - 'tests/test_permission_attestation.py'
       - '.github/workflows/backfill-published-fingerprints.yml'
       - 'src/index.js'
+      - 'src/streamer-priority.mjs'
+      - 'tests/test_streamer_priority.mjs'
       - 'src/render-batch-policy.mjs'
       - 'tests/test_render_batch_policy.mjs'
       - '.github/workflows/render-short.yml'
@@ -49,6 +51,8 @@ jobs:
         run: node --input-type=module --check < src/index.js
       - name: Test automatic five-to-ten publish batch policy
         run: node --test tests/test_render_batch_policy.mjs
+      - name: Test explicit Twitch creator profile priority
+        run: node --test tests/test_streamer_priority.mjs
       - name: Check dashboard JavaScript syntax
         run: |
           node --input-type=module <<'NODE'
@@ -103,7 +107,7 @@ jobs:
           video = info["streams"][0]
           assert (video["width"], video["height"], video["codec_name"]) == (1080, 1920, "h264"), video
           duration = float(info["format"]["duration"])
-          assert 60.0 < duration <= 180.0, duration
+          assert 80.0 < duration <= 180.0, duration
           PY
           test -s render-analysis.json
           test -s short-cover.jpg

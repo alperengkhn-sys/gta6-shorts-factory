@@ -33,6 +33,17 @@ class PermissionAttestationTests(unittest.TestCase):
         self.assertEqual(result["broadcaster_id"], "987654321")
         self.assertEqual(result["render_attempt"], "1")
 
+    def test_accepts_creator_authorized_source_limit_above_sixty_seconds(self):
+        fields = {**self.fields, "max_source_seconds": "80"}
+        signature = make_permission_signature(self.secret, **fields)
+        result = verify_permission_attestation(
+            secret=self.secret,
+            signature=signature,
+            now=dt.datetime(2026, 11, 26, tzinfo=dt.timezone.utc),
+            **fields,
+        )
+        self.assertEqual(result["max_source_seconds"], 80.0)
+
     def test_accepts_public_clip_page_fallback_without_editor_download_url(self):
         fields = {**self.fields, "download_url": "", "permission_expires_at": ""}
         signature = make_permission_signature(self.secret, **fields)
