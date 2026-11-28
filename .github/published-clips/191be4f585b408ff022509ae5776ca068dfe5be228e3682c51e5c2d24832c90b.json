@@ -1,0 +1,41 @@
+{
+  "source_url": "https://www.twitch.tv/tminnzy/clip/BlatantWimpySoymilkPrimeMe-8lBVgEuJ9jryDXOd",
+  "video_url": "https://www.youtube.com/watch?v=ZSBwJL48qMA",
+  "title": "GTA 6: I TRIED TO HELP AN OLD LADY AND SHE KIDNAPPED ME?! 👵🏼🫨 | VI RUSH #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 39.517,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "0080f5ebcfbc2ca6",
+      "810a183868501835",
+      "0012621000010035",
+      "0080004000000000",
+      "0000000000000000",
+      "0000000000000000",
+      "0000000000000000",
+      "0000000000000000",
+      "7371094f71f88c0f",
+      "b371094f71f88e0f",
+      "7371094f71f88e0f",
+      "7371094f71f89e17",
+      "7b71094f73fc9e2b",
+      "7b71094f73bc9e0f",
+      "b37109c678b89fa7",
+      "b371097071b88f9f",
+      "f37191a7b3f1e4f6"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 361.48,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 0,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
