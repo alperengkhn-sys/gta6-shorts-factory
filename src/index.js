@@ -903,8 +903,8 @@ async function runScheduled(env,event){
    const count=Math.max(0,Number(stale.n)||0);
    if(count)await env.DB.prepare("UPDATE render_batches SET pending=MAX(0,pending-?),failed=failed+?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='active'").bind(count,count,stale.batch_id).run();
   }
-  await env.DB.prepare("UPDATE jobs SET status='failed',last_error='Recovered stale dispatch after 24 hours without callback.',updated_at=CURRENT_TIMESTAMP WHERE status='processing' AND dispatch_started_at IS NOT NULL AND dispatch_started_at<datetime('now','-45 minutes')").run();
-  await env.DB.prepare("UPDATE shorts_drafts SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE source_id IN (SELECT source_id FROM jobs WHERE status='failed' AND last_error='Recovered stale dispatch after 45 minutes without callback.')").run();
+  await env.DB.prepare("UPDATE jobs SET status='failed',last_error='Recovered stale dispatch after 24 hours without callback.',updated_at=CURRENT_TIMESTAMP WHERE status='processing' AND dispatch_started_at IS NOT NULL AND dispatch_started_at<datetime('now','-24 hours')").run();
+  await env.DB.prepare("UPDATE shorts_drafts SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE source_id IN (SELECT source_id FROM jobs WHERE status='failed' AND last_error='Recovered stale dispatch after 24 hours without callback.')").run();
   const prepared=await prepareAll(env.DB);
   const rendering=await dispatchQueuedRenders(env.DB,env,MAX_AUTOMATIC_RENDERS_PER_CYCLE,true);
   const summary={
