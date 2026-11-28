@@ -1,0 +1,45 @@
+{
+  "source_url": "https://www.twitch.tv/vinesauce/clip/AuspiciousBrainyOrcaPupper-5eiY5qb-FEoyrOU4",
+  "video_url": "https://www.youtube.com/watch?v=3vFz8jXOSsw",
+  "title": "GTA 6: VAPORIZED | VI RUSH #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 47.4,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "66270717315c66b3",
+      "63460382317c60c7",
+      "6203120e397ce038",
+      "a527a593ff3d07c2",
+      "974fd7da01041fff",
+      "9c9c05032b40c845",
+      "856b112169c19123",
+      "a676137360f9b9c0",
+      "00089079548ae47f",
+      "00009079548ce37f",
+      "4a54253d6c2cf3ff",
+      "fe5b2b496494b4e4",
+      "371b099be0dce93e",
+      "3619099ae0dce93e",
+      "3f1b299be0dce93e",
+      "00801014c8dbf4fd",
+      "8041e3c0f0d3f0fd",
+      "848c1a5968a8ead3",
+      "bbf9f6dd74e29161",
+      "ffe3e3e0dd53f9e9",
+      "673314f8f9f06976"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 186.92,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 0,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
