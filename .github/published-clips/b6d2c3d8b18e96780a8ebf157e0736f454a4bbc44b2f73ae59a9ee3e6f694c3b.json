@@ -1,0 +1,45 @@
+{
+  "source_url": "https://www.twitch.tv/gtavitelevision/clip/FantasticAntediluvianMonitorKappaRoss-Z3ynAojjMqe5i0N3",
+  "video_url": "https://www.youtube.com/watch?v=5_B85ERrbs4",
+  "title": "GTA 6: pd shootout | VI RUSH #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 47.331,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "042189a187c08282",
+      "24818901a90f808c",
+      "084199290e0b828a",
+      "01335319902b8ffe",
+      "02397109901f8bcf",
+      "0c3ca010003fd7ef",
+      "050e9c50c08f958c",
+      "018e9c00c0188285",
+      "9e9b139e6461490c",
+      "61233535706868b0",
+      "34b848a0606140a0",
+      "fec64271f2e8c1d4",
+      "ef99168c2c7c6251",
+      "a8838bcb63606086",
+      "4353c96dece0c080",
+      "43434169f0f8f0e0",
+      "c9e1d314cdf3f877",
+      "028184b0e1f083b5",
+      "1839768e989b95d0",
+      "00004467b636c8f2",
+      "800a9a1e5c9bd7d8"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 315.33,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 0,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
