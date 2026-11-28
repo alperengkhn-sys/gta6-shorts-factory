@@ -1,0 +1,48 @@
+{
+  "source_url": "https://www.twitch.tv/ishowspeed/clip/InspiringFriendlyLemurJebaited-oFs8vW6U4uy5p44B",
+  "video_url": "https://www.youtube.com/watch?v=sB8a_WNkvs4",
+  "title": "GTA 6: LMAOOOOO | VI RUSH #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 52.284,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "eebede8eac32c301",
+      "8f9b86cedd95ae40",
+      "4b5a2b4958490cd4",
+      "1d56ef9928c809b6",
+      "881a5a199d3edf51",
+      "8929189ecbcecf33",
+      "2c79a028d1f360e0",
+      "39f189376fe673e0",
+      "c9e7278630f37b69",
+      "e6a74594f2f5f6d5",
+      "ce0685d5f4defe8e",
+      "c7058755f2c2f383",
+      "c763437471e5f797",
+      "8e174248f51b93e0",
+      "43c0191c9899c5a6",
+      "8d9c9d66ca657755",
+      "6532c54967d9f4e4",
+      "47e0991c9898e5a7",
+      "43c02138389aa7a6",
+      "477c78607278f978",
+      "4370c9cc5cca230c",
+      "43e0911a18d2e9ac",
+      "437c7c5850b91c14",
+      "4378595a70957771"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 755.21,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 0,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
