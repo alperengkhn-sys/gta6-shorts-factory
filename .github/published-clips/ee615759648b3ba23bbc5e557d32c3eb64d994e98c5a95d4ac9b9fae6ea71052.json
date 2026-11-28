@@ -1,0 +1,36 @@
+{
+  "source_url": "https://www.twitch.tv/jazzyguns/clip/FantasticPuzzledMoonNerfRedBlaster-Ev7l2h76EOOuvdYV",
+  "video_url": "https://www.youtube.com/watch?v=upSJHZ0iB6U",
+  "title": "GTA 6: lol | VI RUSH #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 30.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "16162369150c2e38",
+      "16862369140c2e38",
+      "16062d2d69692eb8",
+      "16062d4565692eb8",
+      "c09f015221276e70",
+      "e53ebfb848c3e38d",
+      "e53e7ffffdf8e6f3",
+      "3e5d3cfd4feff76f",
+      "8d353111d0c0c8db",
+      "5cf5c161e3e1e1f7",
+      "5cf5c161e3e1e1f6",
+      "5cf54161e3e1e1e7"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 200.69,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 0,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
