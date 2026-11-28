@@ -8,7 +8,7 @@ export function isRecoveredStaleJob(job) {
   return Boolean(
     job &&
     job.status === "failed" &&
-    String(job.last_error || "").startsWith("Recovered stale dispatch after 24 hours without callback.")
+    /^Recovered stale dispatch after (?:45 minutes|24 hours) without callback\.$/.test(String(job.last_error || ""))
   );
 }
 
