@@ -33,7 +33,7 @@ jobs:
           npx --yes wrangler@4.45.0 deploy
       - name: Verify deployed Worker build
         env:
-          EXPECTED_WORKER_VERSION: GTA6-FACTORY-6.6-SEO-DRAFT-PIPELINE
+          EXPECTED_WORKER_VERSION: GTA6-FACTORY-6.7-D1-READ-OPTIMIZED
           RENDER_WEBHOOK_SECRET: ${{ secrets.RENDER_WEBHOOK_SECRET }}
         run: |
           if [ -z "$RENDER_WEBHOOK_SECRET" ]; then
