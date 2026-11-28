@@ -453,8 +453,39 @@ jobs:
               payload["media_analysis_error"] = "Analysis file could not be parsed."
           print(json.dumps(payload))
           PY
-          curl --retry 5 --retry-all-errors --retry-delay 2 --max-time 45 --fail-with-body --silent --show-error -X POST \
+          if curl --retry 2 --retry-all-errors --retry-delay 3 --max-time 45 --fail-with-body --silent --show-error -X POST \
             "https://gta6-shorts-engine.alperen-gkhn.workers.dev/api/render/callback" \
             -H "Content-Type: application/json" \
             -H "X-Render-Secret: $WEBHOOK_SECRET" \
-            --data-binary @callback.json
+            --data-binary @callback.json; then
+            echo "Worker callback recorded."
+          else
+            echo "::warning::Worker callback was not accepted. Saving the exact result for automatic reconciliation; the YouTube upload result is unchanged."
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            QUEUE_FILE=".github/pending-worker-callbacks/${JOB_ID}-${RENDER_ATTEMPT:-0}.json"
+            QUEUED="false"
+            for attempt in 1 2 3 4 5; do
+              git fetch origin main
+              git reset --hard origin/main
+              mkdir -p .github/pending-worker-callbacks
+              cp callback.json "$QUEUE_FILE"
+              git add "$QUEUE_FILE"
+              if git diff --cached --quiet; then
+                QUEUED="true"
+                break
+              fi
+              git commit -m "Queue pending Worker publication callback"
+              if git push origin HEAD:main; then
+                QUEUED="true"
+                break
+              fi
+              echo "::warning::Concurrent callback-queue push; retrying."
+              sleep $((attempt * 2))
+            done
+            if [ "$QUEUED" != "true" ]; then
+              echo "::error::Worker callback failed and could not be persisted for retry."
+              exit 1
+            fi
+            echo "::notice::Worker callback persisted; the reconciliation workflow will retry it."
+          fi
