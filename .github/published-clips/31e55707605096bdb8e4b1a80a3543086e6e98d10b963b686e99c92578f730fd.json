@@ -1,0 +1,47 @@
+{
+  "source_url": "https://www.twitch.tv/caseoh_/clip/LuckyBenevolentDotterelOMGScoots-lFgr2IvDbbFYqy0L",
+  "video_url": "https://www.youtube.com/watch?v=c7lVE925kGY",
+  "title": "GTA 6: Lets not crash this time... | VI RUSH #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 51.783,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "f83b7d2b28c9c8cc",
+      "ffffefe3d968382e",
+      "a9200e163726a7ca",
+      "181544949070e071",
+      "43591a0c9b941193",
+      "d8703c0d30020202",
+      "d870ba0515114520",
+      "69440c244c2a2720",
+      "191d1c445cc21133",
+      "09bcb93934122738",
+      "4d096575d4147012",
+      "4035918cad13291e",
+      "24243a43aa07722b",
+      "db8d01e4ca0f6426",
+      "4433731581489823",
+      "4a1a80052878ec90",
+      "0a1c1f5f66733530",
+      "60d0e12316b2b844",
+      "00a00710951f3e29",
+      "9492a120188f4707",
+      "8a325130188f8f06",
+      "2df1f007cccc0e8e",
+      "418e8ecfe39990b4"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 307.77,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 1,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
