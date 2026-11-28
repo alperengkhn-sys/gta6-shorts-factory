@@ -1,0 +1,13 @@
+{
+  "job_id": "ae10a43f-49fd-4c05-9d4c-d42c44c2489a",
+  "render_attempt": 1,
+  "conclusion": "success",
+  "render_conclusion": "success",
+  "youtube_status": "uploaded_public",
+  "youtube_url": "https://www.youtube.com/watch?v=5_B85ERrbs4",
+  "thumbnail_status": "uploaded",
+  "error": "",
+  "artifact_url": "https://github.com/alperengkhn-sys/gta6-shorts-factory/releases/download/gta6-short-349/GTA6-Short-349.mp4",
+  "package_url": "https://github.com/alperengkhn-sys/gta6-shorts-factory/releases/download/gta6-short-349/GTA6-Short-349-PACKAGE.zip",
+  "run_url": "https://github.com/alperengkhn-sys/gta6-shorts-factory/actions/runs/46133187788"
+}

@@ -66,6 +66,19 @@ test("uses an optional supplied hook in the same shared SEO package", () => {
     hook: "Unexpected turn",
     angle: "police",
   });
-  assert.match(metadata.title, /Unexpected turn/);
+  assert.equal(metadata.title, "GTA 6 Police Action: Police chase | VI RUSH #Shorts");
   assert.ok(metadata.description.includes("Unexpected turn."));
+});
+
+test("classifies PD shootout titles with police metadata and a specific title prefix", () => {
+  const metadata = buildYouTubeMetadata({
+    originalTitle: "pd shootout",
+    creatorName: "gtavitelevision",
+    angle: "police",
+    hook: "A GTA 6 police moment you don't want to miss.",
+  });
+  assert.ok(metadata.title.startsWith("GTA 6 Police Action: pd shootout"));
+  assert.ok(metadata.tags.includes("GTA 6 police shootout"));
+  assert.ok(metadata.hashtags.includes("#GTA6Police"));
+  assert.ok(metadata.description.includes("A GTA 6 police moment"));
 });

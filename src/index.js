@@ -1,5 +1,6 @@
 import { isSelfDeclaredWomanProfile, SOURCED_GTA6_WOMAN_CHANNELS } from "./streamer-priority.mjs";
 import { buildYouTubeMetadata } from "./youtube-seo.mjs";
+import { canAcceptRenderCallback, isRecoveredStaleJob } from "./render-callback-policy.mjs";
 
 import {
   MIN_BATCH_PUBLISHES,
@@ -10,7 +11,7 @@ import {
   batchCompletionStatus
 } from "./render-batch-policy.mjs";
 
-const VERSION = "GTA6-FACTORY-6.6-SEO-DRAFT-PIPELINE";
+const VERSION = "GTA6-FACTORY-6.7-D1-READ-OPTIMIZED";
 // The [initial-production] deployment marker runs one permission-gated bootstrap cycle after deploy.
 const MIN_AUTOMATIC_PUBLISHES_PER_CYCLE = MIN_BATCH_PUBLISHES;
 const MAX_AUTOMATIC_RENDERS_PER_CYCLE = MAX_BATCH_PUBLISHES;
@@ -194,6 +195,22 @@ async function ensureTwitchSchema(db){
  await ensureColumn(db,"twitch_clip_access","download_url","TEXT");
  await db.prepare(`CREATE TABLE IF NOT EXISTS twitch_broadcaster_access (broadcaster_id TEXT PRIMARY KEY,broadcaster_name TEXT,access_status TEXT NOT NULL DEFAULT 'unknown',reason TEXT,checked_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
  for(const [c,d] of [["twitch_clip_id","TEXT"],["twitch_broadcaster_id","TEXT"],["twitch_resolved_at","TEXT"],["twitch_game_id","TEXT"],["twitch_clip_duration","REAL"],["relevance_status","TEXT DEFAULT 'unknown'"]])await ensureColumn(db,"sources",c,d);
+ await db.batch([
+  db.prepare("CREATE INDEX IF NOT EXISTS idx_sources_twitch_clip_id ON sources(twitch_clip_id)"),
+  db.prepare("CREATE INDEX IF NOT EXISTS idx_sources_source_url ON sources(source_url)"),
+  db.prepare("CREATE INDEX IF NOT EXISTS idx_sources_platform_clip_broadcaster ON sources(platform,twitch_clip_id,twitch_broadcaster_id)"),
+  db.prepare("CREATE INDEX IF NOT EXISTS idx_sources_platform_relevance_game_duration ON sources(platform,relevance_status,twitch_game_id,twitch_clip_duration)"),
+  db.prepare("CREATE INDEX IF NOT EXISTS idx_sources_twitch_broadcaster ON sources(twitch_broadcaster_id)"),
+  db.prepare("CREATE INDEX IF NOT EXISTS idx_shorts_drafts_source_created ON shorts_drafts(source_id,created_at DESC)"),
+  db.prepare("CREATE INDEX IF NOT EXISTS idx_shorts_drafts_status_source ON shorts_drafts(status,source_id)"),
+  db.prepare("CREATE INDEX IF NOT EXISTS idx_jobs_source_created ON jobs(source_id,created_at DESC)"),
+  db.prepare("CREATE INDEX IF NOT EXISTS idx_jobs_status_started_batch ON jobs(status,dispatch_started_at,batch_id)"),
+  db.prepare("CREATE INDEX IF NOT EXISTS idx_jobs_batch_status ON jobs(batch_id,status)"),
+  db.prepare("CREATE INDEX IF NOT EXISTS idx_render_batches_status_created ON render_batches(status,created_at)"),
+  db.prepare("CREATE INDEX IF NOT EXISTS idx_twitch_clip_access_status_checked ON twitch_clip_access(access_status,checked_at)"),
+  db.prepare("CREATE INDEX IF NOT EXISTS idx_twitch_clip_access_broadcaster_status_checked ON twitch_clip_access(broadcaster_id,access_status,checked_at)"),
+  db.prepare("CREATE INDEX IF NOT EXISTS idx_twitch_broadcaster_access_status_checked ON twitch_broadcaster_access(access_status,checked_at)")
+ ]);
 }
 async function ensureSchema(db){
  await db.prepare(`CREATE TABLE IF NOT EXISTS clip_analysis (source_id TEXT PRIMARY KEY,score INTEGER NOT NULL,relevance_score INTEGER NOT NULL,hook_score INTEGER NOT NULL,format_score INTEGER NOT NULL,score_reason TEXT,analyzed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
@@ -563,7 +580,7 @@ async function discover(db,env){
  return{creators:creators.size,clips,saved,duplicates,refreshed_existing,filtered,short_duration,wrong_category,channel_fallback_clips,female_streamers_found,female_streamers_matched:femaleMatched,female_clips_seen,category_pages_scanned,category_clips_scanned,profile_lookup_errors,female_candidate_channels_checked,female_candidate_profiles_verified,female_candidate_clips_scanned,female_candidate_clips_added,female_candidate_lookup_errors,game_id:gameId||null};
 }
 function makeEditorialPackage(source){const originalTitle=String(source.title||"GTA VI Moment").trim(),clean=originalTitle.replace(/\s+/g," ").slice(0,110),t=clean.toLowerCase();let angle="moment",hook="This GTA 6 moment deserves a closer look.",narration="The title points to an interesting GTA 6 moment. Watch the sequence closely, notice the details, and decide what stands out most to you.",captions=["A GTA 6 MOMENT WORTH WATCHING","LOOK CLOSELY","WHAT STOOD OUT TO YOU?"],question="What would you have noticed first?";
-const rules=[{keys:["crash","car accident","collision","wreck","drift"],angle:"vehicle",hook:"One moment can change the whole drive in GTA 6.",narration:"This title points to a driving moment in GTA 6. Pay attention to the timing, the movement, and what happens around the vehicle. Would you have handled it differently?",captions:["GTA 6 DRIVING MOMENT","WATCH THE TIMING","HOW WOULD YOU REACT?"],question:"Would you have avoided it?"},{keys:["police","cop","wanted","arrest","chase"],angle:"police",hook:"A GTA 6 police moment you don't want to miss.",narration:"This clip title suggests a police encounter in GTA 6. Watch how the situation develops and look for the detail that changes the moment. What would your next move be?",captions:["GTA 6 POLICE MOMENT","WATCH WHAT HAPPENS","WHAT'S YOUR NEXT MOVE?"],question:"Would you run or stay?"},{keys:["funny","laugh","hilarious","fail","embarrassing"],angle:"comedy",hook:"GTA 6 moments like this are hard to predict.",narration:"The title frames this as a funny GTA 6 moment. The fun is in the timing, so watch the full sequence before deciding what makes it work. Which part got you?",captions:["GTA 6 FUNNY MOMENT","THE TIMING IS EVERYTHING","DID YOU LAUGH?"],question:"Which part was funniest?"},{keys:["secret","hidden","easter egg","mystery"],angle:"discovery",hook:"Could this be a detail worth looking for in GTA 6?",narration:"This title points toward a possible hidden detail or mystery. Take a close look at what the clip actually shows and decide whether it reveals something easy to miss.",captions:["GTA 6 DETAIL TO CHECK","LOOK CLOSER","DID YOU SPOT IT?"],question:"Did you notice it immediately?"},{keys:["explosion","explode","bomb","fire"],angle:"explosion",hook:"Keep your eyes on this GTA 6 moment.",narration:"The title suggests an explosive moment in GTA 6. Watch the full sequence and pay attention to the build-up and timing. What detail stood out to you?",captions:["GTA 6 ACTION MOMENT","WATCH THE BUILD-UP","WHAT STOOD OUT?"],question:"Did you expect that?"},{keys:["fight","punch","battle","combat","attack"],angle:"combat",hook:"A split-second decision can change a GTA 6 fight.",narration:"This title suggests a combat moment. Watch the positioning and timing, then decide what move made the biggest difference. What would you have done?",captions:["GTA 6 COMBAT MOMENT","WATCH THE TIMING","YOUR NEXT MOVE?"],question:"Which move would you choose?"},{keys:["graphic","detail","realistic","realism","physics"],angle:"detail",hook:"This is the kind of GTA 6 detail worth examining.",narration:"The title draws attention to a visual or gameplay detail. Look closely at the actual footage and decide what makes this moment interesting. Is this the kind of detail you want to see more often?",captions:["GTA 6 DETAIL CHECK","LOOK AT THE SMALL THINGS","DID YOU NOTICE?"],question:"Would you like more details like this?"},{keys:["mission","heist","robbery"],angle:"mission",hook:"Every decision matters in a GTA 6 mission.",narration:"This title points to a mission or heist-related moment. Follow the sequence and pay attention to the choices being made. What would your approach have been?",captions:["GTA 6 MISSION MOMENT","WATCH THE DECISIONS","WHAT'S YOUR PLAN?"],question:"How would you approach it?"},{keys:["character","lucia","jason"],angle:"character",hook:"Let's take a closer look at this GTA 6 character moment.",narration:"The title points to a character-focused moment in GTA 6. Pay attention to the presentation and the details visible in the clip. What stands out most to you?",captions:["GTA 6 CHARACTER MOMENT","WATCH THE DETAILS","WHO STOOD OUT?"],question:"Which character interests you most?"}];
+const rules=[{keys:["crash","car accident","collision","wreck","drift"],angle:"vehicle",hook:"One moment can change the whole drive in GTA 6.",narration:"This title points to a driving moment in GTA 6. Pay attention to the timing, the movement, and what happens around the vehicle. Would you have handled it differently?",captions:["GTA 6 DRIVING MOMENT","WATCH THE TIMING","HOW WOULD YOU REACT?"],question:"Would you have avoided it?"},{keys:["police","cop","cops","pd","shootout","gunfight","law enforcement","wanted","arrest","chase"],angle:"police",hook:"A GTA 6 police moment you don't want to miss.",narration:"This clip title suggests a police encounter in GTA 6. Watch how the situation develops and look for the detail that changes the moment. What would your next move be?",captions:["GTA 6 POLICE MOMENT","WATCH WHAT HAPPENS","WHAT'S YOUR NEXT MOVE?"],question:"Would you run or stay?"},{keys:["funny","laugh","hilarious","fail","embarrassing"],angle:"comedy",hook:"GTA 6 moments like this are hard to predict.",narration:"The title frames this as a funny GTA 6 moment. The fun is in the timing, so watch the full sequence before deciding what makes it work. Which part got you?",captions:["GTA 6 FUNNY MOMENT","THE TIMING IS EVERYTHING","DID YOU LAUGH?"],question:"Which part was funniest?"},{keys:["secret","hidden","easter egg","mystery"],angle:"discovery",hook:"Could this be a detail worth looking for in GTA 6?",narration:"This title points toward a possible hidden detail or mystery. Take a close look at what the clip actually shows and decide whether it reveals something easy to miss.",captions:["GTA 6 DETAIL TO CHECK","LOOK CLOSER","DID YOU SPOT IT?"],question:"Did you notice it immediately?"},{keys:["explosion","explode","bomb","fire"],angle:"explosion",hook:"Keep your eyes on this GTA 6 moment.",narration:"The title suggests an explosive moment in GTA 6. Watch the full sequence and pay attention to the build-up and timing. What detail stood out to you?",captions:["GTA 6 ACTION MOMENT","WATCH THE BUILD-UP","WHAT STOOD OUT?"],question:"Did you expect that?"},{keys:["fight","punch","battle","combat","attack"],angle:"combat",hook:"A split-second decision can change a GTA 6 fight.",narration:"This title suggests a combat moment. Watch the positioning and timing, then decide what move made the biggest difference. What would you have done?",captions:["GTA 6 COMBAT MOMENT","WATCH THE TIMING","YOUR NEXT MOVE?"],question:"Which move would you choose?"},{keys:["graphic","detail","realistic","realism","physics"],angle:"detail",hook:"This is the kind of GTA 6 detail worth examining.",narration:"The title draws attention to a visual or gameplay detail. Look closely at the actual footage and decide what makes this moment interesting. Is this the kind of detail you want to see more often?",captions:["GTA 6 DETAIL CHECK","LOOK AT THE SMALL THINGS","DID YOU NOTICE?"],question:"Would you like more details like this?"},{keys:["mission","heist","robbery"],angle:"mission",hook:"Every decision matters in a GTA 6 mission.",narration:"This title points to a mission or heist-related moment. Follow the sequence and pay attention to the choices being made. What would your approach have been?",captions:["GTA 6 MISSION MOMENT","WATCH THE DECISIONS","WHAT'S YOUR PLAN?"],question:"How would you approach it?"},{keys:["character","lucia","jason"],angle:"character",hook:"Let's take a closer look at this GTA 6 character moment.",narration:"The title points to a character-focused moment in GTA 6. Pay attention to the presentation and the details visible in the clip. What stands out most to you?",captions:["GTA 6 CHARACTER MOMENT","WATCH THE DETAILS","WHO STOOD OUT?"],question:"Which character interests you most?"}];
 rules.unshift({keys:["strip club","stripper","nightclub","bikini","swimsuit","underwear","hot tub","pole dance","adult scene","spicy","suggestive","seductive"],angle:"mature",hook:"GTA 6 is not holding back on its mature side. 👀",narration:"This clip highlights GTA 6's adult nightlife or suggestive content. Focus on what is actually visible and keep the commentary factual. How far do you think Rockstar should take the game's mature world?",captions:["GTA 6 AFTER DARK 👀","ROCKSTAR'S MATURE SIDE","TOO MUCH OR JUST GTA?"],question:"Should GTA 6 keep its mature edge?"},{keys:["relationship","dating","girlfriend","boyfriend","romance","couple"],angle:"relationship",hook:"GTA 6 could take player relationships to a whole new level.",narration:"This clip raises questions about relationships and character interactions in GTA 6. What does this suggest about player choice, and would you want a system like this in the game?",captions:["GTA 6 RELATIONSHIPS?","ROCKSTAR COULD GO THIS FAR?","WOULD YOU WANT THIS?"],question:"Should GTA 6 include deeper relationship systems?"});for(const rule of rules){if(rule.keys.some(k=>t.includes(k))){angle=rule.angle;hook=rule.hook;narration=rule.narration;captions=rule.captions;question=rule.question;break;}}
 const englishTitles={mature:"GTA 6 AFTER DARK… ROCKSTAR WENT THERE?! 👀",relationship:"GTA 6 COULD CHANGE RELATIONSHIPS?! 😳",vehicle:"UNREAL GTA 6 DRIVING MOMENT! 🚗",police:"GTA 6 POLICE CHASE GETS WILD! 🚔",comedy:"THE FUNNIEST GTA 6 MOMENT! 😂",discovery:"HIDDEN GTA 6 DETAIL YOU MISSED! 👀",explosion:"INSANE GTA 6 ACTION! 💥",combat:"EPIC GTA 6 FIGHT! 👊",detail:"INCREDIBLE GTA 6 DETAIL! 👀",mission:"INTENSE GTA 6 MISSION MOMENT! 🎯",character:"GTA 6 CHARACTER MOMENT! 🔥",moment:"YOU HAVE TO SEE THIS GTA 6 MOMENT! 👀"};
 const titleLeads={mature:"GTA 6 After Dark",relationship:"GTA 6 Relationships",vehicle:"GTA 6 Driving",police:"GTA 6 Police Chase",comedy:"GTA 6 Funny Moment",discovery:"GTA 6 Hidden Detail",explosion:"GTA 6 Action",combat:"GTA 6 Combat",detail:"GTA 6 Gameplay Detail",mission:"GTA 6 Mission",character:"GTA 6 Character",moment:"GTA 6 Gameplay"};
@@ -626,7 +643,7 @@ async function dispatchRender(db,env,draftId,evidenceReference,authorizationConf
  const original=String(row.source_title||row.draft_title||"GTA 6 moment").replace(/\s+/g," ").trim().slice(0,180);
  const angleMatch=String(row.script||"").match(/EDITORIAL ANGLE:\s*([a-z_]+)/i);
  const angle=angleMatch?angleMatch[1].toLowerCase():"moment";
- const metadata=buildYouTubeMetadata({originalTitle:original,creatorName:row.creator_name,sourceUrl:row.source_url,angle});
+ const metadata=buildYouTubeMetadata({originalTitle:original,creatorName:row.creator_name,sourceUrl:row.source_url,angle,hook:hookText});
  const title=metadata.title,description=metadata.description,tags=metadata.tags,hashtags=metadata.hashtags;
  const packageText=String(row.script||"").replace(/(PROPOSED TITLE:\s*\n)[\s\S]*?(\n\nHOOK \/ OPENING:)/,(_match,prefix,suffix)=>prefix+metadata.title+suffix);
  
@@ -650,17 +667,27 @@ async function dispatchRender(db,env,draftId,evidenceReference,authorizationConf
  return {ok:true,job_id:row.job_id,status:"processing"};
 }
 async function renderCallback(request,env,db){
- if(!env.RENDER_WEBHOOK_SECRET||request.headers.get("X-Render-Secret")!==env.RENDER_WEBHOOK_SECRET)return json({error:"Webhook authentication failed."},401);
+ if(!env.RENDER_WEBHOOK_SECRET||request.headers.get("X-Render-Secret")!==env.RENDER_WEBHOOK_SECRET)
+  return json({error:"Webhook authentication failed."},401);
  const data=await readBody(request),jobId=String(data.job_id||"");
  if(!jobId)return json({error:"job_id required."},400);
- const job=await db.prepare("SELECT id,source_id,status,render_attempts,batch_id FROM jobs WHERE id=?").bind(jobId).first();
+ const job=await db.prepare("SELECT id,source_id,status,render_attempts,batch_id,last_error FROM jobs WHERE id=?").bind(jobId).first();
  if(!job)return json({error:"Job not found."},404);
- if(data.render_attempt!==undefined&&data.render_attempt!==null&&data.render_attempt!==""&&Number(data.render_attempt)!==Number(job.render_attempts))return json({error:"Stale render callback rejected."},409);
+ if(data.render_attempt!==undefined&&data.render_attempt!==null&&data.render_attempt!==""&&Number(data.render_attempt)!==Number(job.render_attempts))
+  return json({error:"Stale render callback rejected."},409);
  if(job.status==="ready")return json({ok:true,status:"ready",duplicate:true});
- if(job.status!=="processing")return json({ok:true,status:job.status,duplicate:true});
- const renderOk=(data.render_conclusion||data.conclusion)==="success",youtubeStatus=String(data.youtube_status||"not_run").slice(0,40),thumbnailStatus=String(data.thumbnail_status||"not_available").slice(0,40),youtubeUrl=String(data.youtube_url||"").slice(0,1000),youtubeOk=youtubeStatus.startsWith("uploaded_")&&/^https:\/\/www\.youtube\.com\/watch\?v=[A-Za-z0-9_-]{11}$/.test(youtubeUrl),ok=renderOk&&youtubeOk,status=ok?"ready":"failed",output=String(data.artifact_url||data.run_url||"").slice(0,2000),packageUrl=String(data.package_url||"").slice(0,2000);
+ const lateRecovered=isRecoveredStaleJob(job);
+ if(!canAcceptRenderCallback(job))return json({ok:true,status:job.status,duplicate:true});
+ const renderOk=(data.render_conclusion||data.conclusion)==="success";
+ const youtubeStatus=String(data.youtube_status||"not_run").slice(0,40);
+ const thumbnailStatus=String(data.thumbnail_status||"not_available").slice(0,40);
+ const youtubeUrl=String(data.youtube_url||"").slice(0,1000);
+ const youtubeOk=youtubeStatus.startsWith("uploaded_")&&/^https:\/\/www\.youtube\.com\/watch\?v=[A-Za-z0-9_-]{11}$/.test(youtubeUrl);
+ const ok=renderOk&&youtubeOk,status=ok?"ready":"failed";
+ const output=String(data.artifact_url||data.run_url||"").slice(0,2000);
+ const packageUrl=String(data.package_url||"").slice(0,2000);
  const thumbnailNote=thumbnailStatus==="uploaded"?"Custom thumbnail uploaded.":"Custom thumbnail status: "+thumbnailStatus+".";
- const note=[ok?"Render and YouTube upload completed.":(renderOk?"Render completed but YouTube upload was not confirmed.":"Render failed."), "YouTube: "+youtubeStatus,thumbnailNote,data.error||""].filter(Boolean).join(" ").slice(0,1500);
+ const note=[ok?"Render and YouTube upload completed.":(renderOk?"Render completed but YouTube upload was not confirmed.":"Render failed."),"YouTube: "+youtubeStatus,thumbnailNote,data.error||""].filter(Boolean).join(" ").slice(0,1500);
  let mediaSaved=false;
  const m=data.media_analysis&&typeof data.media_analysis==="object"?data.media_analysis:null;
  if(ok&&m){
@@ -669,7 +696,8 @@ async function renderCallback(request,env,db){
    await db.prepare("INSERT INTO clip_analysis(source_id,score,relevance_score,hook_score,format_score,score_reason) VALUES(?,0,0,0,0,'Media analysis received from render') ON CONFLICT(source_id) DO NOTHING").bind(job.source_id).run();
    const resolutionScore=Math.min(100,(width*height)/(1920*1080)*100),fpsScore=Math.min(100,(fps/30)*100),audioScore=m.audio?.present?100:65,silenceScore=Math.max(0,100-silence*100);
    const mediaQuality=Math.round(resolutionScore*0.4+fpsScore*0.2+audioScore*0.25+silenceScore*0.15);
-   const sceneChanges=Number.isInteger(m.scene_change_count)&&m.scene_change_count>=0?m.scene_change_count:null,meanVolume=m.mean_volume_db!==null&&m.mean_volume_db!==undefined&&Number.isFinite(Number(m.mean_volume_db))?Number(m.mean_volume_db):null;
+   const sceneChanges=Number.isInteger(m.scene_change_count)&&m.scene_change_count>=0?m.scene_change_count:null;
+   const meanVolume=m.mean_volume_db!==null&&m.mean_volume_db!==undefined&&Number.isFinite(Number(m.mean_volume_db))?Number(m.mean_volume_db):null;
    await db.prepare("UPDATE clip_analysis SET score=CASE WHEN media_analyzed_at IS NULL THEN ROUND(score*0.8+?*0.2) ELSE score END,media_quality_score=?,scene_change_count=?,mean_volume_db=?,media_duration=?,source_width=?,source_height=?,source_fps=?,source_has_audio=?,silence_ratio=?,media_usable=?,media_analysis_json=?,media_analyzed_at=COALESCE(media_analyzed_at,CURRENT_TIMESTAMP) WHERE source_id=?").bind(mediaQuality,mediaQuality,sceneChanges,meanVolume,duration,Math.round(width),Math.round(height),fps,m.audio?.present?1:0,silence,m.usable_for_shorts?1:0,JSON.stringify(m).slice(0,8000),job.source_id).run();
    mediaSaved=true;
   }
@@ -678,11 +706,18 @@ async function renderCallback(request,env,db){
  await db.prepare("UPDATE shorts_drafts SET status=?,updated_at=CURRENT_TIMESTAMP WHERE source_id=?").bind(status,job.source_id).run();
  let batch=null;
  if(job.batch_id){
-  await db.prepare("UPDATE render_batches SET pending=MAX(0,pending-1),published=published+?,failed=failed+?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='active'").bind(ok?1:0,ok?0:1,job.batch_id).run();
-  await fillRenderBatch(db,env,job.batch_id);
+  if(lateRecovered){
+   // The stale-job sweeper already decremented pending and counted a failure.
+   // Undo that failure only when a late callback proves a public YouTube upload.
+   if(ok)await db.prepare("UPDATE render_batches SET failed=MAX(0,failed-1),published=published+1,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(job.batch_id).run();
+  }else{
+   await db.prepare("UPDATE render_batches SET pending=MAX(0,pending-1),published=published+?,failed=failed+?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(ok?1:0,ok?0:1,job.batch_id).run();
+  }
+  const beforeFill=await db.prepare("SELECT id,status FROM render_batches WHERE id=?").bind(job.batch_id).first();
+  if(beforeFill?.status==="active")await fillRenderBatch(db,env,job.batch_id);
   batch=await db.prepare("SELECT id,status,target_min,target_max,attempts,pending,published,failed,eligible FROM render_batches WHERE id=?").bind(job.batch_id).first();
  }
- return json({ok:true,status,media_analysis_saved:mediaSaved,batch:batch||null});
+ return json({ok:true,status,media_analysis_saved:mediaSaved,late_recovered:lateRecovered,batch:batch||null});
 }
 async function prepareAll(db){
  const result=await db.prepare(`
@@ -705,6 +740,16 @@ async function prepareAll(db){
  const rows=result.results||[];
  let created=0,updated=0,existing=0,skippedIrrelevant=0,skippedPermission=0;
  const statements=[];
+ // Fetch latest job rows for the candidate set in one indexed query, not one SELECT per source.
+ const sourceIds=rows.map(row=>String(row.id||"")).filter(Boolean);
+ const latestJobs=new Map();
+ if(sourceIds.length){
+  const placeholders=sourceIds.map(()=>"?").join(",");
+  const jobRows=(await db.prepare(
+   "SELECT source_id,id,status,last_error,created_at FROM jobs WHERE source_id IN ("+placeholders+") ORDER BY source_id ASC,created_at DESC"
+  ).bind(...sourceIds).all()).results||[];
+  for(const job of jobRows)if(!latestJobs.has(job.source_id))latestJobs.set(job.source_id,job);
+ }
  for(const source of rows){
   if(!source.twitch_game_id||source.relevance_status!=="relevant"||
      !source.twitch_broadcaster_id||Number(source.twitch_clip_duration)<25||
@@ -712,12 +757,12 @@ async function prepareAll(db){
    skippedIrrelevant++;continue;
   }
   const pack=makeEditorialPackage(source);
-  const job=await db.prepare("SELECT id,status,last_error FROM jobs WHERE source_id=? ORDER BY created_at DESC LIMIT 1").bind(source.id).first();
+  const job=latestJobs.get(source.id)||null;
   if(source.existing_draft_id){
    if(job&&["processing","ready"].includes(job.status)){existing++;continue;}
    if(job&&/Quality gate rejected|Offline quality rules rejected/i.test(String(job.last_error||""))){existing++;continue;}
-   await db.prepare("UPDATE shorts_drafts SET title=?,script=?,source_url=?,creator_name=?,updated_at=CURRENT_TIMESTAMP WHERE id=?")
-    .bind(pack.title,pack.script,source.source_url,source.creator_name||"Unknown",source.existing_draft_id).run();
+   statements.push(db.prepare("UPDATE shorts_drafts SET title=?,script=?,source_url=?,creator_name=?,updated_at=CURRENT_TIMESTAMP WHERE id=?")
+    .bind(pack.title,pack.script,source.source_url,source.creator_name||"Unknown",source.existing_draft_id));
    if(!job){
     statements.push(db.prepare("INSERT INTO jobs(id,source_id,status,target_format,editorial_note,output_key) VALUES(?,?,'queued_review','shorts_9_16','New public GTA VI source prepared for cloud rendering.',NULL)")
      .bind(uid(),source.id));
@@ -757,7 +802,7 @@ async function fillRenderBatch(db,env,batchId,discoveryAlreadyRefreshed=false){
   }
   const reservation=await db.prepare("UPDATE render_batches SET pending=pending+1,attempts=attempts+1,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='active' AND published+pending<target_max AND attempts<max_attempts AND pending<? RETURNING id").bind(batchId,MAX_IN_FLIGHT_BATCH_RENDERS).first();
   if(!reservation)break;
-   const findCandidate=()=>db.prepare("SELECT DISTINCT d.id AS draft_id FROM shorts_drafts d JOIN sources s ON s.id=d.source_id JOIN jobs j ON j.id=(SELECT j2.id FROM jobs j2 WHERE j2.source_id=s.id ORDER BY j2.created_at DESC LIMIT 1) LEFT JOIN clip_analysis a ON a.source_id=s.id WHERE s.platform='twitch' AND s.relevance_status='relevant' AND s.twitch_game_id IS NOT NULL AND s.twitch_broadcaster_id IS NOT NULL AND s.twitch_clip_duration>=25 AND j.status IN ('queued_review','failed') AND COALESCE(j.render_attempts,0)<10 AND COALESCE(j.batch_id,'')<>? AND COALESCE(j.last_error,'') NOT LIKE '%Quality gate rejected%' AND COALESCE(j.last_error,'') NOT LIKE '%Offline quality rules rejected%' ORDER BY CASE WHEN lower(s.creator_name) IN ('extraemily','loserfruit','thebonnetsimmer','missmikkaa','jazzyguns','vanillamace','yololaryy','sweet_anita') THEN 0 ELSE 1 END,CASE WHEN j.status='queued_review' THEN 0 ELSE 1 END,COALESCE(a.score,0) DESC,j.created_at ASC LIMIT 1").bind(batchId).first();
+   const findCandidate=()=>db.prepare("SELECT DISTINCT d.id AS draft_id FROM shorts_drafts d JOIN sources s ON s.id=d.source_id JOIN jobs j ON j.id=(SELECT j2.id FROM jobs j2 WHERE j2.source_id=s.id ORDER BY j2.created_at DESC LIMIT 1) LEFT JOIN clip_analysis a ON a.source_id=s.id WHERE s.platform='twitch' AND s.relevance_status='relevant' AND s.twitch_game_id IS NOT NULL AND s.twitch_broadcaster_id IS NOT NULL AND s.twitch_clip_duration>=25 AND j.status IN ('queued_review','failed') AND COALESCE(j.render_attempts,0)<10 AND COALESCE(j.batch_id,'')<>? AND COALESCE(j.last_error,'') NOT LIKE '%Quality gate rejected%' AND COALESCE(j.last_error,'') NOT LIKE '%Offline quality rules rejected%' AND COALESCE(j.last_error,'') NOT LIKE 'Recovered stale dispatch after %' ORDER BY CASE WHEN lower(s.creator_name) IN ('extraemily','loserfruit','thebonnetsimmer','missmikkaa','jazzyguns','vanillamace','yololaryy','sweet_anita') THEN 0 ELSE 1 END,CASE WHEN j.status='queued_review' THEN 0 ELSE 1 END,COALESCE(a.score,0) DESC,j.created_at ASC LIMIT 1").bind(batchId).first();
   let candidate=await findCandidate();
   if(!candidate){
    // The caller may have completed discovery immediately before creating/filling this batch.
@@ -828,7 +873,7 @@ async function fillRenderBatch(db,env,batchId,discoveryAlreadyRefreshed=false){
 async function dispatchQueuedRenders(db,env,limit=MAX_AUTOMATIC_RENDERS_PER_CYCLE,discoveryAlreadyRefreshed=false){
  if(!env.GITHUB_TOKEN)return{batch_id:null,eligible:0,attempted:0,dispatched:0,already_existing:0,dispatchErrors:1,limit:MAX_AUTOMATIC_RENDERS_PER_CYCLE,errors:["GITHUB_TOKEN eksik."]};
  const maxSuccesses=Math.max(1,Math.min(MAX_AUTOMATIC_RENDERS_PER_CYCLE,Number(limit)||MAX_AUTOMATIC_RENDERS_PER_CYCLE));
-  const eligibleRow=await db.prepare("SELECT COUNT(DISTINCT d.id) AS n FROM shorts_drafts d JOIN sources s ON s.id=d.source_id JOIN jobs j ON j.id=(SELECT j2.id FROM jobs j2 WHERE j2.source_id=s.id ORDER BY j2.created_at DESC LIMIT 1) WHERE s.platform='twitch' AND s.relevance_status='relevant' AND s.twitch_game_id IS NOT NULL AND s.twitch_broadcaster_id IS NOT NULL AND s.twitch_clip_duration>=25 AND j.status IN ('queued_review','failed') AND COALESCE(j.render_attempts,0)<10 AND COALESCE(j.last_error,'') NOT LIKE '%Quality gate rejected%' AND COALESCE(j.last_error,'') NOT LIKE '%Offline quality rules rejected%'").first();
+  const eligibleRow=await db.prepare("SELECT COUNT(DISTINCT d.id) AS n FROM shorts_drafts d JOIN sources s ON s.id=d.source_id JOIN jobs j ON j.id=(SELECT j2.id FROM jobs j2 WHERE j2.source_id=s.id ORDER BY j2.created_at DESC LIMIT 1) WHERE s.platform='twitch' AND s.relevance_status='relevant' AND s.twitch_game_id IS NOT NULL AND s.twitch_broadcaster_id IS NOT NULL AND s.twitch_clip_duration>=25 AND j.status IN ('queued_review','failed') AND COALESCE(j.render_attempts,0)<10 AND COALESCE(j.last_error,'') NOT LIKE '%Quality gate rejected%' AND COALESCE(j.last_error,'') NOT LIKE '%Offline quality rules rejected%' AND COALESCE(j.last_error,'') NOT LIKE 'Recovered stale dispatch after %'").first();
  const eligible=Number(eligibleRow?.n||0);
  const existingBatch=await db.prepare("SELECT id FROM render_batches WHERE status='active' ORDER BY created_at ASC LIMIT 1").first();
  const batchId=existingBatch?.id||uid();
@@ -853,13 +898,13 @@ async function runScheduled(env,event){
   try{discovery=await discover(env.DB,env);}catch(error){discovery={error:String(error&&error.message||error).slice(0,500)};}
   try{durationValidation=await validateResolvedClipDurations(env.DB,env,100);}catch(error){durationValidation={error:String(error&&error.message||error).slice(0,500)};}
   try{downloadAccess=await checkTwitchDownloads(env.DB,env,6);}catch(error){downloadAccess={error:String(error&&error.message||error).slice(0,500)};}
-  const staleJobs=await env.DB.prepare("SELECT batch_id,COUNT(*) AS n FROM jobs WHERE status='processing' AND dispatch_started_at IS NOT NULL AND dispatch_started_at<datetime('now','-45 minutes') AND batch_id IS NOT NULL GROUP BY batch_id").all();
+  const staleJobs=await env.DB.prepare("SELECT batch_id,COUNT(*) AS n FROM jobs WHERE status='processing' AND dispatch_started_at IS NOT NULL AND dispatch_started_at<datetime('now','-24 hours') AND batch_id IS NOT NULL GROUP BY batch_id").all();
   for(const stale of staleJobs.results||[]){
    const count=Math.max(0,Number(stale.n)||0);
    if(count)await env.DB.prepare("UPDATE render_batches SET pending=MAX(0,pending-?),failed=failed+?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='active'").bind(count,count,stale.batch_id).run();
   }
-  await env.DB.prepare("UPDATE jobs SET status='failed',last_error='Recovered stale dispatch after 45 minutes without callback.',updated_at=CURRENT_TIMESTAMP WHERE status='processing' AND dispatch_started_at IS NOT NULL AND dispatch_started_at<datetime('now','-45 minutes')").run();
-  await env.DB.prepare("UPDATE shorts_drafts SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE source_id IN (SELECT source_id FROM jobs WHERE status='failed' AND last_error='Recovered stale dispatch after 45 minutes without callback.')").run();
+  await env.DB.prepare("UPDATE jobs SET status='failed',last_error='Recovered stale dispatch after 24 hours without callback.',updated_at=CURRENT_TIMESTAMP WHERE status='processing' AND dispatch_started_at IS NOT NULL AND dispatch_started_at<datetime('now','-24 hours')").run();
+  await env.DB.prepare("UPDATE shorts_drafts SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE source_id IN (SELECT source_id FROM jobs WHERE status='failed' AND last_error='Recovered stale dispatch after 24 hours without callback.')").run();
   const prepared=await prepareAll(env.DB);
   const rendering=await dispatchQueuedRenders(env.DB,env,MAX_AUTOMATIC_RENDERS_PER_CYCLE,true);
   const summary={
@@ -911,7 +956,6 @@ if(path==="/api/seo/generate"&&method==="POST"){
 }
 if(path==="/")return new Response(HTML,{headers:{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store"}});
 if(!env.DB)return json({error:"D1 DB binding bulunamadı."},500);
-await ensureSchema(env.DB);await ensureTwitchSchema(env.DB);
 if(path==="/api/login"&&method==="POST"){const data=await readBody(request);if(!env.APP_PASSWORD||data.password!==env.APP_PASSWORD)return json({error:"Şifre hatalı."},401);const session=await makeSession(env.APP_PASSWORD);return new Response(JSON.stringify({ok:true,version:VERSION}),{headers:{"Content-Type":"application/json","Set-Cookie":"gta6_session="+session+"; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=43200"}});}
 if(path==="/api/logout"&&method==="POST")return new Response(JSON.stringify({ok:true}),{headers:{"Content-Type":"application/json","Set-Cookie":"gta6_session=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0"}});
 if(path==="/api/me"&&method==="GET"){if(!await authorized(request,env))return json({error:"Giriş gerekli."},401);return json({ok:true,version:VERSION});}
@@ -973,9 +1017,9 @@ if(path==="/api/permissions/revoke"&&method==="POST"){
  await env.DB.prepare("UPDATE creator_usage_permissions SET permission_status='revoked',youtube_allowed=0,updated_at=CURRENT_TIMESTAMP WHERE broadcaster_id=?").bind(id).run();
  return json({ok:true,permission_status:"revoked"});
 }
-if(path==="/api/discover"&&method==="POST")return json(await discover(env.DB,env));
+if(path==="/api/discover"&&method==="POST"){await ensureSchema(env.DB);await ensureTwitchSchema(env.DB);return json(await discover(env.DB,env));}
 
-if(path==="/api/prepare"&&method==="POST"){let discovery,downloadAccess;try{discovery=await discover(env.DB,env);}catch(error){discovery={error:String(error&&error.message||error).slice(0,500)};}const clipValidation=await resolveTwitchClips(env.DB,env,500);const durationValidation=await validateResolvedClipDurations(env.DB,env,500);try{downloadAccess=await checkTwitchDownloads(env.DB,env,25);}catch(error){downloadAccess={error:String(error&&error.message||error).slice(0,500)};}const prepared=await prepareAll(env.DB);const rendering=await dispatchQueuedRenders(env.DB,env,10,true);return json({...prepared,discovery,clip_validation:clipValidation,duration_validation:durationValidation,download_access:downloadAccess,rendering});}
+if(path==="/api/prepare"&&method==="POST"){await ensureSchema(env.DB);await ensureTwitchSchema(env.DB);let discovery,downloadAccess;try{discovery=await discover(env.DB,env);}catch(error){discovery={error:String(error&&error.message||error).slice(0,500)};}const clipValidation=await resolveTwitchClips(env.DB,env,100);const durationValidation=await validateResolvedClipDurations(env.DB,env,100);try{downloadAccess=await checkTwitchDownloads(env.DB,env,6);}catch(error){downloadAccess={error:String(error&&error.message||error).slice(0,500)};}const prepared=await prepareAll(env.DB);const rendering=await dispatchQueuedRenders(env.DB,env,10,true);return json({...prepared,discovery,clip_validation:clipValidation,duration_validation:durationValidation,download_access:downloadAccess,rendering});}
 if(path==="/api/render/dispatch"&&method==="POST"){const data=await readBody(request);const result=await dispatchRender(env.DB,env,String(data.draft_id||""),data.evidence_reference,data.authorization_confirmation);return result.error?json({error:result.error},400):json(result);}
 if(path==="/api/source/quick"&&method==="POST"){
 if(!await authorized(request,env))return json({error:"Giriş gerekli."},401);

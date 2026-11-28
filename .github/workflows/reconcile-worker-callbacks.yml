@@ -1,0 +1,89 @@
+name: Reconcile pending Worker callbacks
+
+on:
+  schedule:
+    # Retry persisted callbacks shortly after the D1 daily quota reset and
+    # twice more during the day for transient Worker/API failures.
+    - cron: "15 0,6,12,18 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: vi-rush-worker-callback-reconciliation
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Retry persisted publication callbacks
+        env:
+          WEBHOOK_SECRET: ${{ secrets.RENDER_WEBHOOK_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "$WEBHOOK_SECRET" ]; then
+            echo "::error::RENDER_WEBHOOK_SECRET is required to reconcile pending callbacks."
+            exit 1
+          fi
+          shopt -s nullglob
+          files=(.github/pending-worker-callbacks/*.json)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No pending Worker callbacks."
+            exit 0
+          fi
+          if [ "${#files[@]}" -gt 100 ]; then
+            echo "::warning::More than 100 pending callbacks; this run will process the oldest 100."
+            files=( "${files[@]:0:100}" )
+          fi
+          : > /tmp/reconciled-callbacks.txt
+          for file in "${files[@]}"; do
+            echo "Retrying ${file}"
+            if curl --silent --show-error --fail-with-body --max-time 60 -X POST \
+              "https://gta6-shorts-engine.alperen-gkhn.workers.dev/api/render/callback" \
+              -H "Content-Type: application/json" \
+              -H "X-Render-Secret: $WEBHOOK_SECRET" \
+              --data-binary "@$file"; then
+              echo "$file" >> /tmp/reconciled-callbacks.txt
+              echo "Callback accepted: $file"
+            else
+              echo "::warning::Callback remains queued and will be retried on the next reconciliation run: $file"
+            fi
+            sleep 2
+          done
+          if [ ! -s /tmp/reconciled-callbacks.txt ]; then
+            echo "No callbacks were accepted; pending files were retained."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          PUSHED="false"
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            while IFS= read -r file; do
+              rm -f "$file"
+            done < /tmp/reconciled-callbacks.txt
+            git add -u .github/pending-worker-callbacks
+            if git diff --cached --quiet; then
+              PUSHED="true"
+              break
+            fi
+            git commit -m "Remove reconciled Worker publication callbacks"
+            if git push origin HEAD:main; then
+              PUSHED="true"
+              break
+            fi
+            echo "::warning::Concurrent main-branch update; retrying reconciliation commit."
+            sleep $((attempt * 2))
+          done
+          if [ "$PUSHED" != "true" ]; then
+            echo "::error::Worker callbacks were accepted but their queue files could not be cleared; duplicate callbacks are idempotent."
+            exit 1
+          fi
+          echo "Successfully reconciled and cleared $(wc -l < /tmp/reconciled-callbacks.txt) callback(s)."
