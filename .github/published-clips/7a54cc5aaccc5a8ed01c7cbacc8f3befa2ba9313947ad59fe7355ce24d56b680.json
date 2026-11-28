@@ -1,0 +1,49 @@
+{
+  "source_url": "https://www.twitch.tv/timthetatman/clip/BraveBashfulScallionCoolStoryBro-oNSTNnnOlCim8EVa",
+  "video_url": "https://www.youtube.com/watch?v=zDGFhw7C81Q",
+  "title": "GTA 6: im quick | VI RUSH #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 55.684,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "eee6f2f0baefcece",
+      "eee6f0f0baeeceda",
+      "fcebe3e1e5d9edcf",
+      "a2a0b031858a498b",
+      "a2e0a6a0a6c109aa",
+      "0000050d34989092",
+      "8001011d18d8d8b8",
+      "0001156d3138b096",
+      "0001050531d09038",
+      "0001050d31d89010",
+      "0001150d31b830b2",
+      "0001150d319090b6",
+      "8001150d31909049",
+      "37360b1419c8e223",
+      "6e1f00804482c19d",
+      "1f1f1c198e23000b",
+      "d79391c10444f03a",
+      "3030307b53459171",
+      "70b0323b7245102b",
+      "fbfafbfcdcecd4ad",
+      "fbf3f3e1f0dcbcb7",
+      "fbf3f3f1f1dc9c96",
+      "b2b234b8af8909aa",
+      "0000011d351058cc",
+      "8001016930b0b090"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 309.35,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 0,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
