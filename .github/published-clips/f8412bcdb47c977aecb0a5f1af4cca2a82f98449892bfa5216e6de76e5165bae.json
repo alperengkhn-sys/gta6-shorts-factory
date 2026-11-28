@@ -1,0 +1,52 @@
+{
+  "source_url": "https://www.twitch.tv/clix/clip/ExcitedAnimatedFennelCharlietheUnicorn-QA5ruBT2wWdQcrOM",
+  "video_url": "https://www.youtube.com/watch?v=shIvwHB8zuE",
+  "title": "GTA 6: club | VI RUSH #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.033,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "80818080808282a3",
+      "208040402000000b",
+      "68366e080406041b",
+      "a09a9c8804000169",
+      "5b3f0e1e0b0303aa",
+      "eab3b3f3b131c1cc",
+      "018161c080420595",
+      "0f65e18d800207d2",
+      "3f7c604701030400",
+      "3f7cf0470102040c",
+      "7bb68c8701030607",
+      "874f071d08008008",
+      "4602030307070b02",
+      "0f030c060c040488",
+      "0362690b0e0c4000",
+      "906a1c483838300c",
+      "6060400c1818181c",
+      "036b2c1618181c0c",
+      "000201070c8c0c0e",
+      "730b6c091b470623",
+      "98d3d3d806040623",
+      "38253d38a0008858",
+      "407270880008000c",
+      "00000e8ca9a9d2c8",
+      "71dd87f63c5c5cdc",
+      "698e1ee6749c8899",
+      "71361fef7c9c9c99",
+      "87c642b7e6e6e816"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 221.67,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 0,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
