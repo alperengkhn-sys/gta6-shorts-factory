@@ -1,0 +1,38 @@
+{
+  "source_url": "https://www.twitch.tv/thebonnetsimmer/clip/MushyTardyTortoiseFrankerZ-TaDzYx10fNItvZsj",
+  "video_url": "https://www.youtube.com/watch?v=UyaKqFvmu7A",
+  "title": "GTA 6: Bigfoot!!!! | VI RUSH #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 33.767,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "6f4352f8f9fd7b3f",
+      "6ce5f5ecccf4e82e",
+      "b9fd9e7afc9d7b3f",
+      "b9fd9e69fc9d7b3f",
+      "dd009c1c69f8f837",
+      "cc76143ef860befc",
+      "c4240338f8a096ee",
+      "0ac2367070b8f72e",
+      "8ca7ce8d35583f3e",
+      "c485d1c549e3c387",
+      "8c4d018385d1c94c",
+      "78babebdc2c5c313",
+      "64faf2dbcf925352",
+      "4f9e1f9f88890c48"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 415.7,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 0,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
