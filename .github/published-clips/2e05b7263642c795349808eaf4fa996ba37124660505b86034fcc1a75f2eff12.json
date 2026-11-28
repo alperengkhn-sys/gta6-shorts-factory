@@ -1,0 +1,36 @@
+{
+  "source_url": "https://www.twitch.tv/thebonnetsimmer/clip/DeterminedOddHamburgerRalpherZ-gmOf8mZq7dyoC6-3",
+  "video_url": "https://www.youtube.com/watch?v=5PtQyO8_tJM",
+  "title": "GTA 6: The Story Is Getting CRAZY… More Missions & Vice City Chaos 🔥 | VI RUSH #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 29.983,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "8100e08872d0a504",
+      "3300210174e6f8a0",
+      "8707c48024e778c5",
+      "01974617307018c0",
+      "f0d19101499168a8",
+      "5d98d68be8f048c0",
+      "0c2c2e0b78f0d4f8",
+      "0c2c2c0b78d0d4f0",
+      "0d2c2e0b78f0d4e0",
+      "0c3c3e0b70f0d4a0",
+      "0c1c1a0b78f0d4d0",
+      "0c2c2c0b78f0d4f0"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 170.82,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 0,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
