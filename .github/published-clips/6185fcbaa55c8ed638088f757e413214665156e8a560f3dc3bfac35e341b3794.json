@@ -1,0 +1,52 @@
+{
+  "source_url": "https://www.twitch.tv/carmen/clip/IcyTrustworthyMarrowPermaSmug-SxnUpVITxor3rn4V",
+  "video_url": "https://www.youtube.com/watch?v=HWFoguYXI-c",
+  "title": "GTA 6: learning things | VI RUSH #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.067,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "1090c44026b39603",
+      "a090a08472726613",
+      "0d00406001818181",
+      "0000e0c0c0e0e0f0",
+      "03031a1e1e1c1d1f",
+      "c3d3a68e9e556848",
+      "8642b23b575b7beb",
+      "37313521111c0c00",
+      "3d030b0383a9a008",
+      "062321b0b0bc36f3",
+      "80c0c0e08020e060",
+      "ead9da1202c1c686",
+      "37b5210141c9888f",
+      "0f0f0d0d09756131",
+      "7f6353cece1b7803",
+      "7f636b6347599d89",
+      "7fe7d7c6ce937f01",
+      "f78fafcdceb33c30",
+      "ff87c7c5ccd17841",
+      "7fc7d7dc4c927c10",
+      "3f3121a6a76c3e05",
+      "1e1898cb29630700",
+      "1d10911333364700",
+      "1f180802d3f43118",
+      "5120280112030b07",
+      "f0b051cc6c63de44",
+      "0302121a1b1f170c",
+      "fcdc1e9e9e4c4e4e"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 113.91,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 0,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
