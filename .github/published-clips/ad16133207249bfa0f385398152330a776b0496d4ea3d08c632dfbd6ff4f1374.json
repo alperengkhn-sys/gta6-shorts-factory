@@ -1,0 +1,36 @@
+{
+  "source_url": "https://www.twitch.tv/marlon/clip/EnchantingDepressedPhonePanicBasket-UQnlHGJbS_xgNgJp",
+  "video_url": "https://www.youtube.com/watch?v=_HW6azPo_fA",
+  "title": "GTA 6: marlon gets cracked | VI RUSH #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 30.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "4043038bc6933f17",
+      "9d9f9e9e9ebebc33",
+      "e3638f0f4f3f3e2c",
+      "f1c6c7181c0601a2",
+      "20f8ccd8d2b6dccc",
+      "7fc87d9ff2c0e0cf",
+      "060616bc6b377b90",
+      "0606163e60783066",
+      "0e82124232ff3f3f",
+      "ff0313032317e280",
+      "0000000000000051",
+      "63281a3ad4d52023"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 108.26,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 0,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
