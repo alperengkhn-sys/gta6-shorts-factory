@@ -1,0 +1,51 @@
+{
+  "source_url": "https://www.twitch.tv/woolieversus/clip/CrunchyCleanTapirBIRB-c1O4OFz7EiCQzsvh",
+  "video_url": "https://www.youtube.com/watch?v=yNcewJzYxeE",
+  "title": "GTA 6: QA POWERRR | VI RUSH #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "793b7b5c8b40c0cc",
+      "c2cecec6461e9c1e",
+      "8369f86821317327",
+      "ecf1e8627a3e3d07",
+      "fd74749a98086922",
+      "4ce0f4f2e0e3d684",
+      "29099396a1f4d6cf",
+      "fa39695d1948488f",
+      "ee4f37271f0f260f",
+      "f8eae9f9392c719c",
+      "c906a0401064652f",
+      "8ac087850e4e6616",
+      "48b7852a0081c046",
+      "6125254b05010501",
+      "09714b470c812865",
+      "e024602a03673127",
+      "d07390d210d06797",
+      "c8d648909cf47a1e",
+      "8e0086d50504488a",
+      "ce5c4b41060fce0e",
+      "22a9c9e6e2631b0f",
+      "884eaea022268727",
+      "8bc1870c5e0bc0a3",
+      "8861160f1cb6710f",
+      "8a0d0d182238710e",
+      "a8217bf50104940b",
+      "ee4eac6c3c746c17"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 851.13,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 0,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
