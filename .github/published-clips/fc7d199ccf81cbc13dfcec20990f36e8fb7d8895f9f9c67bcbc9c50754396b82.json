@@ -1,0 +1,37 @@
+{
+  "source_url": "https://www.twitch.tv/marlon/clip/ObservantCloudyMooseTwitchRPG-K07JO5z7K45kh4tG",
+  "video_url": "https://www.youtube.com/watch?v=klASbiPG0Eg",
+  "title": "GTA 6: Chat explodes | Grand Theft Auto VI | clipped with | VI RUSH #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 30.033,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "edcbcde4f06c7171",
+      "cfcfd3f0e1777639",
+      "cfcf99e0f2e27931",
+      "4fce8df0f870622e",
+      "cdcddde0f871632b",
+      "cfce8af0f0647931",
+      "cdcdcde0f8657d31",
+      "ecccb3d2f2f77638",
+      "cfcfc9e8f9617639",
+      "cfcfdbe0f4647b61",
+      "b3f3f439f3d24e8c",
+      "1b3d3d810b4bfa9c",
+      "c49a9a33d28fe1e1"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 206.4,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 2,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
