@@ -1,0 +1,45 @@
+{
+  "source_url": "https://www.twitch.tv/jazzyguns/clip/CredulousBlightedCourgetteDatSheffy-61w_8q1pOgaDgZFg",
+  "video_url": "https://www.youtube.com/watch?v=4v07GoinW_8",
+  "title": "GTA 6: chill | VI RUSH #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 47.2,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "653aa3e516eb9a67",
+      "613aa7e516eb9867",
+      "7bcf46c78ee3c9f9",
+      "ec2726f90937cc55",
+      "3d67e3c3ebe3f0f4",
+      "9a5c351d1e0f0f07",
+      "4f970b260f275523",
+      "077f74078f3f35d3",
+      "8d27830a7c3c3118",
+      "3b0b96db364cc600",
+      "17a6d32c3c191102",
+      "20500962236030b1",
+      "1a8b4bad767169b0",
+      "35578aba595a7812",
+      "8fe2b37fd8db5f58",
+      "1131787cf4ca3cb8",
+      "588d878ba6f0a605",
+      "2633e7e6676a4b32",
+      "f4bebe6f7757d73d",
+      "cf1ebb0f40001cec",
+      "cc41879313351c9a"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 267.48,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 0,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
