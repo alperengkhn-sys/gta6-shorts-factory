@@ -1,0 +1,47 @@
+{
+  "source_url": "https://www.twitch.tv/gtavitelevision/clip/SmilingJazzyInternYouDontSay-FM-4x1OAg3NOInUx",
+  "video_url": "https://www.youtube.com/watch?v=cmQ1MySFzoQ",
+  "title": "GTA 6: shootout | VI RUSH #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 50.801,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "f8c027763879a89a",
+      "4b4e989766a5de8f",
+      "1f0d9cc667677dc9",
+      "7b7c744d6fb59d06",
+      "f2727688494b1b0a",
+      "0948780f0e81e133",
+      "d1ad1d67fb61e7b3",
+      "09070181c1c4dffe",
+      "83cbd33c3c7ce421",
+      "d579393c70f0e025",
+      "308159c2d0d43ca5",
+      "189890a1f8f8f9d9",
+      "5858e87460c68c82",
+      "d9f4edecdef39133",
+      "f1f1cc4c6ce6466a",
+      "4c8e46e7ed6d6e2a",
+      "1e0c1f2f79d9dc8a",
+      "1e896d5f7d69c9d5",
+      "1e999fde5f969b2b",
+      "1f1f48eeed4d8f87",
+      "2f6e7e6ababf8fc7",
+      "2f6dfe699fcf8b81",
+      "79dfe30efcffcdd5"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 65.91,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 1,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
