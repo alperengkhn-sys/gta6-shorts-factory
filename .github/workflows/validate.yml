@@ -57,6 +57,8 @@ jobs:
         run: node --test tests/test_render_batch_policy.mjs
       - name: Test per-video multilingual YouTube SEO metadata
         run: node --test tests/test_youtube_seo.mjs
+      - name: Test stale publication callback recovery policy
+        run: node --test tests/test_render_callback_policy.mjs
       - name: Test explicit Twitch creator profile priority
         run: node --test tests/test_streamer_priority.mjs
       - name: Check dashboard JavaScript syntax
@@ -181,5 +183,7 @@ jobs:
           test -s tests/test_renderer.py
           test -s tests/test_render_batch_policy.mjs
           test -s src/render-batch-policy.mjs
+          test -s src/render-callback-policy.mjs
+          test -s tests/test_render_callback_policy.mjs
           test -s src/youtube-seo.mjs
           test -s tests/test_youtube_seo.mjs
