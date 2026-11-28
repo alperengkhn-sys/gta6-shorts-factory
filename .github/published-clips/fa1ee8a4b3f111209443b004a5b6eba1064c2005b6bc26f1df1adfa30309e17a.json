@@ -1,0 +1,51 @@
+{
+  "source_url": "https://www.twitch.tv/caseoh_/clip/MagnificentHilariousMonitorCclamChamp-u_WBK66Y7rsqXeUD",
+  "video_url": "https://www.youtube.com/watch?v=dmLrBYQLUmQ",
+  "title": "GTA 6: fail | VI RUSH #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "5a1e03743232d080",
+      "1dcf3fbe23c06160",
+      "8c83058432f1b028",
+      "065c5c893df1e864",
+      "39cab0d06c15e8c1",
+      "66e77fcf3677e80c",
+      "37b0dc4f3a313919",
+      "37b0dc4fb8353919",
+      "37b1dc4fb8353919",
+      "6613ce0338311b1c",
+      "b29c4f2699353939",
+      "a24243a9f0f63008",
+      "468e050b913030b3",
+      "1b980406b771f058",
+      "1069109690181918",
+      "8918162cc0808cf0",
+      "3836186480a030f8",
+      "2fd088c88488c5be",
+      "9e8e9e0e0c6f6b1a",
+      "d4d4d47071704f01",
+      "6809d17d41484249",
+      "0e8f4fda88694e43",
+      "5c2eca99110c9858",
+      "819ba29dc3ca8394",
+      "0e2e9b9e494e4743",
+      "77f7f7f171d08d0c",
+      "7777777179f09918"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 197.43,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 2,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
