@@ -1,5 +1,6 @@
 import { isSelfDeclaredWomanProfile, SOURCED_GTA6_WOMAN_CHANNELS } from "./streamer-priority.mjs";
 import { buildYouTubeMetadata } from "./youtube-seo.mjs";
+import { canAcceptRenderCallback, isRecoveredStaleJob } from "./render-callback-policy.mjs";
 
 import {
   MIN_BATCH_PUBLISHES,
@@ -666,17 +667,27 @@ async function dispatchRender(db,env,draftId,evidenceReference,authorizationConf
  return {ok:true,job_id:row.job_id,status:"processing"};
 }
 async function renderCallback(request,env,db){
- if(!env.RENDER_WEBHOOK_SECRET||request.headers.get("X-Render-Secret")!==env.RENDER_WEBHOOK_SECRET)return json({error:"Webhook authentication failed."},401);
+ if(!env.RENDER_WEBHOOK_SECRET||request.headers.get("X-Render-Secret")!==env.RENDER_WEBHOOK_SECRET)
+  return json({error:"Webhook authentication failed."},401);
  const data=await readBody(request),jobId=String(data.job_id||"");
  if(!jobId)return json({error:"job_id required."},400);
- const job=await db.prepare("SELECT id,source_id,status,render_attempts,batch_id FROM jobs WHERE id=?").bind(jobId).first();
+ const job=await db.prepare("SELECT id,source_id,status,render_attempts,batch_id,last_error FROM jobs WHERE id=?").bind(jobId).first();
  if(!job)return json({error:"Job not found."},404);
- if(data.render_attempt!==undefined&&data.render_attempt!==null&&data.render_attempt!==""&&Number(data.render_attempt)!==Number(job.render_attempts))return json({error:"Stale render callback rejected."},409);
+ if(data.render_attempt!==undefined&&data.render_attempt!==null&&data.render_attempt!==""&&Number(data.render_attempt)!==Number(job.render_attempts))
+  return json({error:"Stale render callback rejected."},409);
  if(job.status==="ready")return json({ok:true,status:"ready",duplicate:true});
- if(job.status!=="processing")return json({ok:true,status:job.status,duplicate:true});
- const renderOk=(data.render_conclusion||data.conclusion)==="success",youtubeStatus=String(data.youtube_status||"not_run").slice(0,40),thumbnailStatus=String(data.thumbnail_status||"not_available").slice(0,40),youtubeUrl=String(data.youtube_url||"").slice(0,1000),youtubeOk=youtubeStatus.startsWith("uploaded_")&&/^https:\/\/www\.youtube\.com\/watch\?v=[A-Za-z0-9_-]{11}$/.test(youtubeUrl),ok=renderOk&&youtubeOk,status=ok?"ready":"failed",output=String(data.artifact_url||data.run_url||"").slice(0,2000),packageUrl=String(data.package_url||"").slice(0,2000);
+ const lateRecovered=isRecoveredStaleJob(job);
+ if(!canAcceptRenderCallback(job))return json({ok:true,status:job.status,duplicate:true});
+ const renderOk=(data.render_conclusion||data.conclusion)==="success";
+ const youtubeStatus=String(data.youtube_status||"not_run").slice(0,40);
+ const thumbnailStatus=String(data.thumbnail_status||"not_available").slice(0,40);
+ const youtubeUrl=String(data.youtube_url||"").slice(0,1000);
+ const youtubeOk=youtubeStatus.startsWith("uploaded_")&&/^https:\/\/www\.youtube\.com\/watch\?v=[A-Za-z0-9_-]{11}$/.test(youtubeUrl);
+ const ok=renderOk&&youtubeOk,status=ok?"ready":"failed";
+ const output=String(data.artifact_url||data.run_url||"").slice(0,2000);
+ const packageUrl=String(data.package_url||"").slice(0,2000);
  const thumbnailNote=thumbnailStatus==="uploaded"?"Custom thumbnail uploaded.":"Custom thumbnail status: "+thumbnailStatus+".";
- const note=[ok?"Render and YouTube upload completed.":(renderOk?"Render completed but YouTube upload was not confirmed.":"Render failed."), "YouTube: "+youtubeStatus,thumbnailNote,data.error||""].filter(Boolean).join(" ").slice(0,1500);
+ const note=[ok?"Render and YouTube upload completed.":(renderOk?"Render completed but YouTube upload was not confirmed.":"Render failed."),"YouTube: "+youtubeStatus,thumbnailNote,data.error||""].filter(Boolean).join(" ").slice(0,1500);
  let mediaSaved=false;
  const m=data.media_analysis&&typeof data.media_analysis==="object"?data.media_analysis:null;
  if(ok&&m){
@@ -685,7 +696,8 @@ async function renderCallback(request,env,db){
    await db.prepare("INSERT INTO clip_analysis(source_id,score,relevance_score,hook_score,format_score,score_reason) VALUES(?,0,0,0,0,'Media analysis received from render') ON CONFLICT(source_id) DO NOTHING").bind(job.source_id).run();
    const resolutionScore=Math.min(100,(width*height)/(1920*1080)*100),fpsScore=Math.min(100,(fps/30)*100),audioScore=m.audio?.present?100:65,silenceScore=Math.max(0,100-silence*100);
    const mediaQuality=Math.round(resolutionScore*0.4+fpsScore*0.2+audioScore*0.25+silenceScore*0.15);
-   const sceneChanges=Number.isInteger(m.scene_change_count)&&m.scene_change_count>=0?m.scene_change_count:null,meanVolume=m.mean_volume_db!==null&&m.mean_volume_db!==undefined&&Number.isFinite(Number(m.mean_volume_db))?Number(m.mean_volume_db):null;
+   const sceneChanges=Number.isInteger(m.scene_change_count)&&m.scene_change_count>=0?m.scene_change_count:null;
+   const meanVolume=m.mean_volume_db!==null&&m.mean_volume_db!==undefined&&Number.isFinite(Number(m.mean_volume_db))?Number(m.mean_volume_db):null;
    await db.prepare("UPDATE clip_analysis SET score=CASE WHEN media_analyzed_at IS NULL THEN ROUND(score*0.8+?*0.2) ELSE score END,media_quality_score=?,scene_change_count=?,mean_volume_db=?,media_duration=?,source_width=?,source_height=?,source_fps=?,source_has_audio=?,silence_ratio=?,media_usable=?,media_analysis_json=?,media_analyzed_at=COALESCE(media_analyzed_at,CURRENT_TIMESTAMP) WHERE source_id=?").bind(mediaQuality,mediaQuality,sceneChanges,meanVolume,duration,Math.round(width),Math.round(height),fps,m.audio?.present?1:0,silence,m.usable_for_shorts?1:0,JSON.stringify(m).slice(0,8000),job.source_id).run();
    mediaSaved=true;
   }
@@ -694,11 +706,18 @@ async function renderCallback(request,env,db){
  await db.prepare("UPDATE shorts_drafts SET status=?,updated_at=CURRENT_TIMESTAMP WHERE source_id=?").bind(status,job.source_id).run();
  let batch=null;
  if(job.batch_id){
-  await db.prepare("UPDATE render_batches SET pending=MAX(0,pending-1),published=published+?,failed=failed+?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='active'").bind(ok?1:0,ok?0:1,job.batch_id).run();
-  await fillRenderBatch(db,env,job.batch_id);
+  if(lateRecovered){
+   // The stale-job sweeper already decremented pending and counted a failure.
+   // Undo that failure only when a late callback proves a public YouTube upload.
+   if(ok)await db.prepare("UPDATE render_batches SET failed=MAX(0,failed-1),published=published+1,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(job.batch_id).run();
+  }else{
+   await db.prepare("UPDATE render_batches SET pending=MAX(0,pending-1),published=published+?,failed=failed+?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(ok?1:0,ok?0:1,job.batch_id).run();
+  }
+  const beforeFill=await db.prepare("SELECT id,status FROM render_batches WHERE id=?").bind(job.batch_id).first();
+  if(beforeFill?.status==="active")await fillRenderBatch(db,env,job.batch_id);
   batch=await db.prepare("SELECT id,status,target_min,target_max,attempts,pending,published,failed,eligible FROM render_batches WHERE id=?").bind(job.batch_id).first();
  }
- return json({ok:true,status,media_analysis_saved:mediaSaved,batch:batch||null});
+ return json({ok:true,status,media_analysis_saved:mediaSaved,late_recovered:lateRecovered,batch:batch||null});
 }
 async function prepareAll(db){
  const result=await db.prepare(`
@@ -879,12 +898,12 @@ async function runScheduled(env,event){
   try{discovery=await discover(env.DB,env);}catch(error){discovery={error:String(error&&error.message||error).slice(0,500)};}
   try{durationValidation=await validateResolvedClipDurations(env.DB,env,100);}catch(error){durationValidation={error:String(error&&error.message||error).slice(0,500)};}
   try{downloadAccess=await checkTwitchDownloads(env.DB,env,6);}catch(error){downloadAccess={error:String(error&&error.message||error).slice(0,500)};}
-  const staleJobs=await env.DB.prepare("SELECT batch_id,COUNT(*) AS n FROM jobs WHERE status='processing' AND dispatch_started_at IS NOT NULL AND dispatch_started_at<datetime('now','-45 minutes') AND batch_id IS NOT NULL GROUP BY batch_id").all();
+  const staleJobs=await env.DB.prepare("SELECT batch_id,COUNT(*) AS n FROM jobs WHERE status='processing' AND dispatch_started_at IS NOT NULL AND dispatch_started_at<datetime('now','-24 hours') AND batch_id IS NOT NULL GROUP BY batch_id").all();
   for(const stale of staleJobs.results||[]){
    const count=Math.max(0,Number(stale.n)||0);
    if(count)await env.DB.prepare("UPDATE render_batches SET pending=MAX(0,pending-?),failed=failed+?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='active'").bind(count,count,stale.batch_id).run();
   }
-  await env.DB.prepare("UPDATE jobs SET status='failed',last_error='Recovered stale dispatch after 45 minutes without callback.',updated_at=CURRENT_TIMESTAMP WHERE status='processing' AND dispatch_started_at IS NOT NULL AND dispatch_started_at<datetime('now','-45 minutes')").run();
+  await env.DB.prepare("UPDATE jobs SET status='failed',last_error='Recovered stale dispatch after 24 hours without callback.',updated_at=CURRENT_TIMESTAMP WHERE status='processing' AND dispatch_started_at IS NOT NULL AND dispatch_started_at<datetime('now','-45 minutes')").run();
   await env.DB.prepare("UPDATE shorts_drafts SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE source_id IN (SELECT source_id FROM jobs WHERE status='failed' AND last_error='Recovered stale dispatch after 45 minutes without callback.')").run();
   const prepared=await prepareAll(env.DB);
   const rendering=await dispatchQueuedRenders(env.DB,env,MAX_AUTOMATIC_RENDERS_PER_CYCLE,true);
