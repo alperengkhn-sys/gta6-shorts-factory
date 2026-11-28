@@ -1,0 +1,36 @@
+{
+  "source_url": "https://www.twitch.tv/gtasty/clip/UnusualComfortableKimchiBrainSlug-VOtjIJqnwn4na5oN",
+  "video_url": "https://www.youtube.com/watch?v=gTRzPCA6L9w",
+  "title": "GTA 6: IN MAXIMALER QUALITÄT | VI RUSH #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 30.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "617dbfcfc7c6e6c6",
+      "9f8f8f66c9cfc6c7",
+      "979313c7d9cfc6cf",
+      "1c6ee28fb9981d9e",
+      "18aeab979b98d99f",
+      "1dafcb9fdbdad9df",
+      "1daecbcfdb9add9f",
+      "1dafcb879b9a9d9f",
+      "1d6fcad7d998dd9f",
+      "1defeb9799989d9f",
+      "1d5e6bd79998cdcf",
+      "1370a19c0c8c8c4c"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 230.29,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 0,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
