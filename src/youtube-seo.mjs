@@ -4,7 +4,7 @@ const BASE_TAGS = [
 ];
 
 const ANGLE_TAGS = {
-  police: ["GTA 6 police chase", "GTA 6 cops"],
+  police: ["GTA 6 police chase", "GTA 6 police shootout", "GTA 6 cops", "GTA 6 law enforcement"],
   vehicle: ["GTA 6 cars", "GTA 6 driving"],
   comedy: ["GTA 6 funny moments", "GTA 6 fails"],
   discovery: ["GTA 6 secrets", "GTA 6 hidden details"],
@@ -15,6 +15,20 @@ const ANGLE_TAGS = {
   character: ["GTA 6 characters"],
   mature: ["GTA 6 nightlife"],
   relationship: ["GTA 6 relationships"],
+};
+
+const ANGLE_TITLE_PREFIX = {
+  police: "GTA 6 Police Action: ",
+  vehicle: "GTA 6 Driving: ",
+  comedy: "GTA 6 Funny Moment: ",
+  discovery: "GTA 6 Hidden Detail: ",
+  explosion: "GTA 6 Explosive Action: ",
+  combat: "GTA 6 Combat: ",
+  detail: "GTA 6 Gameplay Detail: ",
+  mission: "GTA 6 Mission: ",
+  character: "GTA 6 Character Moment: ",
+  mature: "GTA 6 Nightlife: ",
+  relationship: "GTA 6 Story Moment: ",
 };
 
 const ANGLE_HASHTAGS = {
@@ -83,12 +97,12 @@ export function buildYouTubeMetadata({
   const titleSuffix = " | VI RUSH #Shorts";
   const hookText = clean(hook, 40);
   const titleBase = usefulTopic
-    ? "GTA 6: " + (hookText ? hookText + " — " : "") + topic
-    : creator ? "GTA 6 Stream Clip: " + (hookText ? hookText + " — " : "") + creator : "GTA 6 Gameplay Clip";
+    ? (ANGLE_TITLE_PREFIX[angle] || "GTA 6: ") + topic
+    : creator ? "GTA 6 Stream Clip: " + creator : "GTA 6 Gameplay Clip";
   const title = fitTitle(titleBase, 100 - titleSuffix.length) + titleSuffix;
 
   const descriptionParts = [
-    "A Grand Theft Auto VI (GTA 6) gameplay clip from " + (creator || "a Twitch creator") + ".",
+    "A Grand Theft Auto VI (GTA 6) " + (ANGLE_TITLE_PREFIX[angle] ? angle.replace(/_/g, " ") + " " : "") + "gameplay clip from " + (creator || "a Twitch creator") + ".",
     hookText ? hookText + "." : "",
     'Original clip title: "' + original + '".',
     "Follow VI RUSH for more GTA VI gameplay clips and creator highlights.",
