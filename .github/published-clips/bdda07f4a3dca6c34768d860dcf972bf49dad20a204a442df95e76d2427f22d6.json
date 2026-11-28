@@ -1,0 +1,36 @@
+{
+  "source_url": "https://www.twitch.tv/missmikkaa/clip/IncredulousGlamorousGoblinImGlitch-NRJ7doIS3afta35d",
+  "video_url": "https://www.youtube.com/watch?v=P8okVHfbuaA",
+  "title": "GTA 6: Mikkaa Attenborough | VI RUSH #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 29.084,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "21251d0b6db3f077",
+      "2a186ea882d5c331",
+      "0d153cabb294720b",
+      "4e45c2da25961505",
+      "9d0b99c121b06607",
+      "1d23512812307b37",
+      "07b34670b4333923",
+      "7ed696d7f05129ab",
+      "6617bdd39b76a32b",
+      "0b0d17e9e5b14b12",
+      "208c3699d0858b35",
+      "72d0a787ce83c2c5"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 485.9,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 0,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
