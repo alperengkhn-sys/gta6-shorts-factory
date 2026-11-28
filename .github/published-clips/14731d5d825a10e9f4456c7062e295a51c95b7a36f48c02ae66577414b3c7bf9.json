@@ -1,0 +1,48 @@
+{
+  "source_url": "https://www.twitch.tv/kaicenat/clip/FurryWealthyTurnipUWot-4BiO3HaSvEy0_4uV",
+  "video_url": "https://www.youtube.com/watch?v=lsbJujPnYiw",
+  "title": "GTA 6: his reaction | VI RUSH #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 53.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "54e0c06672b762e3",
+      "d0c0c066f0b6e2e7",
+      "50f0e0a7785bb375",
+      "80c08028e8a8a89a",
+      "80c088ae8e1c0d34",
+      "c0c11e1e1a193c35",
+      "40e0c99fcd8c0c1e",
+      "078f2737375ebeee",
+      "100909095defff9e",
+      "a8f0e2efe3c3038d",
+      "b0f0f0efe3d3878b",
+      "43034b43978e960f",
+      "25016561ebe7f663",
+      "acfcb086e7e58392",
+      "f8e3d9de98ccdf26",
+      "0c2c1dbdededf16b",
+      "83233786e3198c8e",
+      "72e7169ccd80220f",
+      "945536aa9a042607",
+      "f739ad3dbeb7b32d",
+      "da797d7d7cb3b30b",
+      "737c6ca2a3d4d446",
+      "381851514eca5a0e",
+      "6d4dcd4dcdcd9c1d"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 343.67,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 0,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
