@@ -20,6 +20,7 @@ on:
       - 'tests/test_render_batch_policy.mjs'
       - '.github/workflows/render-short.yml'
       - '.github/workflows/deploy-worker.yml'
+      - '.github/workflows/reconcile-worker-callbacks.yml'
       - '.github/workflows/validate.yml'
       - '.github/workflows/youtube-analytics.yml'
       - 'renderer/youtube_analytics.py'
@@ -176,6 +177,7 @@ jobs:
           test -s renderer/youtube_analytics.py
           test -s tests/test_youtube_analytics.py
           test -s .github/workflows/youtube-analytics.yml
+          test -s .github/workflows/reconcile-worker-callbacks.yml
           test -s tests/test_renderer.py
           test -s tests/test_render_batch_policy.mjs
           test -s src/render-batch-policy.mjs
