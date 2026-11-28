@@ -1,0 +1,46 @@
+{
+  "source_url": "https://www.twitch.tv/gtavitelevision/clip/SincereAbnegateBorkWholeWheat-SNxSs4DDULoODvmG",
+  "video_url": "https://www.youtube.com/watch?v=ocNGYZiHpyw",
+  "title": "GTA 6: fight | VI RUSH #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 49.049,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "b879383e3f3f8760",
+      "12129221193ab822",
+      "1212b230113a98ae",
+      "02123231113a98aa",
+      "02123220313a98a4",
+      "82123230113a98ac",
+      "2424203012361088",
+      "2424203c1e3c1088",
+      "2422286eac7c025c",
+      "2422284e3ce84d48",
+      "004840703030109a",
+      "989c171b119b858c",
+      "98993b3379b90400",
+      "4c5c1c6e78bea7d4",
+      "44548e717958e9b8",
+      "0a991cb763f781e0",
+      "08581c6f71273037",
+      "eae270e474708cbf",
+      "c0e0d0181d18e364",
+      "c0e0f0181c18c4c8",
+      "07490978383f8330",
+      "c7f6d93d3b325c59"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 344.7,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 3,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
