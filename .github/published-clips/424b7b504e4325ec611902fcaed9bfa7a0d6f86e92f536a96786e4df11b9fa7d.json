@@ -1,0 +1,36 @@
+{
+  "source_url": "https://www.twitch.tv/tminnzy/clip/HardVictoriousPeafowlTwitchRPG-j8Q8j8GsgrudaSJH",
+  "video_url": "https://www.youtube.com/watch?v=eRagxOq8fAs",
+  "title": "GTA 6: I STOLE THEIR LAMBO AND TOLD THEM TO BUY ANOTHER ONE 🤣🏎️ | VI RUSH #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 29.85,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "a6a76521e57ff77e",
+      "092a1a09faf0f8f0",
+      "05f179ffe0b0f4f8",
+      "23094bb1fcf07cf8",
+      "a6b1bbb7d4fc7cfe",
+      "9999984aecb4fdfc",
+      "be32960371c8c8f0",
+      "7363492be8f27af6",
+      "3167d3d5f87478fe",
+      "072b53ee60e86068",
+      "7d5f5c7c79687078",
+      "131d0c8668f8d8ba"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 604.11,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 1,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
