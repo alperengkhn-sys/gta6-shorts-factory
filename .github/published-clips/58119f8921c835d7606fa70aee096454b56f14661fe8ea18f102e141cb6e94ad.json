@@ -1,0 +1,51 @@
+{
+  "source_url": "https://www.twitch.tv/thebonnetsimmer/clip/FaithfulPunchyBananaSeemsGood-9f-83NSZT-cH1wBT",
+  "video_url": "https://www.youtube.com/watch?v=uar-O8A7LVM",
+  "title": "GTA 6: Matching Tattoes | VI RUSH #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "e0c0b9cbf0c44440",
+      "589d6d77f5f8ffdf",
+      "d858d833e5cc4888",
+      "cc87930bc6779fbf",
+      "5918392c39f36233",
+      "393c125853f32606",
+      "c0c1c14060389855",
+      "c99c7aa6e7671784",
+      "cde1f27eee73c78b",
+      "050103850f54da9e",
+      "798d22470e6cec3c",
+      "790544970c4cec1c",
+      "0183c3e2f28a1e20",
+      "8591d1d1d38d0e20",
+      "c1c1c9c9b98e2e22",
+      "0c14150f0ce83901",
+      "88a4e0e168052383",
+      "050b4398bccce040",
+      "61880f728ac18ebe",
+      "8dcb28352e9ae4c7",
+      "8c9b1405061eb4ae",
+      "80cb3815068abc8e",
+      "3d3c2804944c1613",
+      "309cc6364a69e760",
+      "1c1c1c971f9ede1e",
+      "2cbc9cde327eef2f",
+      "0cbcbcde3777e72f"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 244.23,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 0,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
