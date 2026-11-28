@@ -1,0 +1,39 @@
+{
+  "source_url": "https://www.twitch.tv/missmikkaa/clip/DependableDoubtfulTubersBrainSlug-sBQObHi-2omDTy2v",
+  "video_url": "https://www.youtube.com/watch?v=Y-Tuyb3H6WI",
+  "title": "GTA 6: titanic | VI RUSH #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 35.967,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "391bd9872323260d",
+      "fffd7663d4f868aa",
+      "fffafaba3bb9e17c",
+      "405094d457cd8d84",
+      "0002c34330cd5343",
+      "2000d8984080901c",
+      "c404646544849209",
+      "20818d61b0241403",
+      "8c8c489c889881e1",
+      "1878e1d3dbdad4c4",
+      "eb0f3ad5e6ecd2d6",
+      "3f1fcb71c0263729",
+      "f031d65359058483",
+      "1a105034969a8ab3",
+      "78718ca7b3098ec3"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 218.74,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 1,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
