@@ -1,0 +1,45 @@
+{
+  "source_url": "https://www.twitch.tv/xiteyy1_/clip/AdventurousAliveFinchThunBeast-n0sJA7QtwKibP8zl",
+  "video_url": "https://www.youtube.com/watch?v=Hh2eF7d_lBU",
+  "title": "GTA 6: seri ls | VI RUSH #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 47.317,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "02462001d0c0789c",
+      "a7a7436332181885",
+      "be7d786b4687839e",
+      "be7d786b2683839a",
+      "575b3b3155848e8f",
+      "5353770f1b3d2c17",
+      "5f76361f4b1b923b",
+      "b4a38d585aaf1b2b",
+      "52112a660f8a0905",
+      "200009030f8a0124",
+      "28020209038e8b04",
+      "0000092226030825",
+      "28282414054b0e1d",
+      "010289828e14054e",
+      "091198220206844e",
+      "111822820604041e",
+      "090c87938304042f",
+      "850989818302040c",
+      "00048485c483c98d",
+      "488452d309234e4e",
+      "e4a4a0e4d2d0cce8"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 253.22,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 0,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
