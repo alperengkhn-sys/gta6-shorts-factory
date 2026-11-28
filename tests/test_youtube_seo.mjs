@@ -66,7 +66,7 @@ test("uses an optional supplied hook in the same shared SEO package", () => {
     hook: "Unexpected turn",
     angle: "police",
   });
-  assert.match(metadata.title, /Unexpected turn/);
+  assert.equal(metadata.title, "GTA 6 Police Action: Police chase | VI RUSH #Shorts");
   assert.ok(metadata.description.includes("Unexpected turn."));
 });
 
