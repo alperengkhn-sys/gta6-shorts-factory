@@ -1,0 +1,51 @@
+{
+  "source_url": "https://www.twitch.tv/jazzyguns/clip/SaltySmilingSnailItsBoshyTime-BNLaUiXiqJdwlr5Y",
+  "video_url": "https://www.youtube.com/watch?v=Ws8Z1NXwAgY",
+  "title": "GTA 6: strippers | VI RUSH #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "f8f91b9a9981838a",
+      "89c189991a829e9f",
+      "3a3da37fc081e0fc",
+      "0738008080800006",
+      "8060101c0f0000e8",
+      "107efcfef8d00000",
+      "e0a0b02000001880",
+      "7c70f8fafe600000",
+      "e0f0e0b088801084",
+      "1af8f8f8fea20000",
+      "003bfffefcea2020",
+      "e171539180081882",
+      "1039fffa7c718080",
+      "39917d7951550010",
+      "0d0f3eecb73f7fff",
+      "fe7e3e96dea73e16",
+      "c0c0c8c840c8c888",
+      "60c0c44c4898c8e0",
+      "4040c4ccccd8d8c8",
+      "c0c0c4c4c8c4cc88",
+      "e06246cc4898cce0",
+      "c0c0c0c6ccccccc8",
+      "c0c0c0c244c4ccdc",
+      "c0e0644cd898d8e0",
+      "cdc494e4eccece6d",
+      "f6b0fa30324e4d64",
+      "38292b7b38385a18"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 36.19,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 0,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
