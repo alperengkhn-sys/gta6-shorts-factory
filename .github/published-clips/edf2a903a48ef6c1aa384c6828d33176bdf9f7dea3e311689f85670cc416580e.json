@@ -1,0 +1,51 @@
+{
+  "source_url": "https://www.twitch.tv/xqc/clip/ArborealVictoriousSnailDatSheffy-LUDJxQAqZjCXFVjP",
+  "video_url": "https://www.youtube.com/watch?v=yI2r-FdwfY4",
+  "title": "GTA 6: xQc refuses to leave the club | VI RUSH #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 59.2,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "1f171dce67e86676",
+      "3a4f2c2e61982c34",
+      "ecac98dc9471382e",
+      "4b23048604869229",
+      "fce4e7e1e4a160e1",
+      "070c6656c6718e2f",
+      "07467656d7714f5f",
+      "787dd69a929b8a8f",
+      "f2b2b222b31800d0",
+      "f36b595addde9ef2",
+      "84707878ed4ddf47",
+      "13787aba9261c403",
+      "57672335f5f5d0c8",
+      "143472e5f767de9f",
+      "07230b71b1731fd1",
+      "6768f32c8ea00b9d",
+      "86c6462b1ba79783",
+      "00309a296dfcdcee",
+      "0cd47c2364c0c086",
+      "46293675b0b1a960",
+      "a4296c6961c3c2e3",
+      "070c8e0dcc432321",
+      "c1f131e79ab4968e",
+      "0363638f332b2b83",
+      "46004cc48a181919",
+      "2c7eb77e5b1f65cd",
+      "ce9e0b393b1b2b32"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 285.07,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 1,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
