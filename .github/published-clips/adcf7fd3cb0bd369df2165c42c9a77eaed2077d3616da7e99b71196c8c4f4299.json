@@ -1,0 +1,51 @@
+{
+  "source_url": "https://www.twitch.tv/yugi2x/clip/ZanySaltyWatercressPanicVis-yPdETsO64K_qizkz",
+  "video_url": "https://www.youtube.com/watch?v=miswm47KkgI",
+  "title": "GTA 6 Stream Clip: Yugi2x | VI RUSH #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 59.983,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "17c88471e4c8c0e0",
+      "1e53909418020805",
+      "1005188862e25704",
+      "24052c6ce8d25925",
+      "c1ff0701ab55053b",
+      "0003030a081e1f1f",
+      "defc7c3c4ccfcfdf",
+      "e4b3c3c7178f7318",
+      "81c0a0b000c846cc",
+      "c0c03139e1e04ccc",
+      "03081c1c976384cc",
+      "3f9a2726b28789c8",
+      "9fcdb3f698c3c0cc",
+      "375393914f0d1e1f",
+      "011a989831686c0e",
+      "08181898eaeace6f",
+      "a6ce90b07861ffea",
+      "650c111f8f06270f",
+      "80e14c67c4c02780",
+      "c030138306060d05",
+      "783d13050a02051f",
+      "070743090d0c0044",
+      "082122e82500cf80",
+      "b2aa65a6ee5ed0d2",
+      "33f65c9c6869a830",
+      "27fff8f0e8e4e0e1",
+      "a0f770f16f6cb3cb"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 190.73,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 1,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
