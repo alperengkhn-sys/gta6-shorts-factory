@@ -1,0 +1,51 @@
+{
+  "source_url": "https://www.twitch.tv/ishowspeed/clip/ZealousObservantJaguarDuDudu-Qc_x4n8I-rW8rEJo",
+  "video_url": "https://www.youtube.com/watch?v=C8G9iRfcc9Y",
+  "title": "GTA 6: Best Mission | VI RUSH #Shorts",
+  "status": "uploaded_public",
+  "content_fingerprint": {
+    "version": "vertical-dhash-v1",
+    "duration_seconds": 60.0,
+    "interval_seconds": 2.0,
+    "frame_hashes": [
+      "c2c0e4209060e034",
+      "9cfcfcf0c5087937",
+      "088686927221480c",
+      "c580c9cd44f05e4c",
+      "e0f0c02125a14c6f",
+      "078f7afcfaf8f8b8",
+      "080040904241000b",
+      "c00081e0e0808144",
+      "cc6090b898c0a0b1",
+      "4b1f06ee8f0222ac",
+      "2f000c99e9333c1f",
+      "c7e8fdfeb163e184",
+      "2f933cd8863ab180",
+      "a8f81c666606ba91",
+      "6f9f4cd883b8b9a0",
+      "ee316198aeac0777",
+      "e007f9678a51e360",
+      "0f07f78ce4801215",
+      "07807bfb95dcc688",
+      "a94737bcf9f9b286",
+      "5c1e22470f14c99e",
+      "8d0d0606270f1898",
+      "1e0e13031b038e8e",
+      "0e795858cc1b0f4f",
+      "adaddfdfcd810721",
+      "4d759b8b05200101",
+      "c8fd1fde16717171"
+    ]
+  },
+  "visual_quality_review": {
+    "samples": 10,
+    "sharpness_median": 189.33,
+    "blur_rejected": false,
+    "facecam_detected": false,
+    "facecam_corner": null,
+    "facecam_sample_hits": 0,
+    "facecam_required_hits": 4,
+    "facecam_detection": "opencv-haar-persistent-edge-region",
+    "inspected_aspect_ratio": "9:16 centered crop"
+  }
+}
